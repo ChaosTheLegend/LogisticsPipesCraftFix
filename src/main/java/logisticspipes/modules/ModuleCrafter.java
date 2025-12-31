@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
+import logisticspipes.network.packets.pipe.*;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -67,14 +68,6 @@ import logisticspipes.network.packets.cpipe.CraftingAdvancedSatelliteId;
 import logisticspipes.network.packets.cpipe.CraftingPipeOpenConnectedGuiPacket;
 import logisticspipes.network.packets.hud.HUDStartModuleWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopModuleWatchingPacket;
-import logisticspipes.network.packets.pipe.CraftingPipePriorityDownPacket;
-import logisticspipes.network.packets.pipe.CraftingPipePriorityUpPacket;
-import logisticspipes.network.packets.pipe.CraftingPipeUpdatePacket;
-import logisticspipes.network.packets.pipe.CraftingPriority;
-import logisticspipes.network.packets.pipe.FluidCraftingAdvancedSatelliteId;
-import logisticspipes.network.packets.pipe.FluidCraftingAmount;
-import logisticspipes.network.packets.pipe.FluidCraftingPipeAdvancedSatelliteNextPacket;
-import logisticspipes.network.packets.pipe.FluidCraftingPipeAdvancedSatellitePrevPacket;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeFluidSatellite;
 import logisticspipes.pipes.PipeItemsCraftingLogistics;
@@ -158,6 +151,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     protected final DelayQueue<DelayedGeneric<Pair<ItemIdentifierStack, IAdditionalTargetInformation>>> _lostItems = new DelayQueue<>();
 
     protected final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
+    private boolean blockingMode;
 
     public ModuleCrafter() {
         for (int i = 0; i < fuzzyCraftingFlagArray.length; i++) {
@@ -240,7 +234,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                 dir = getUpgradeManager().getSneakyOrientation();
             }
             IInventoryUtil inv = SimpleServiceLocator.inventoryUtilFactory.getInventoryUtil(base, dir);
-            count += inv.roomForItem(item, 9999);
+                count += inv.roomForItem(item, 9999);
         }
         _service.getCacheHolder().setCache(CacheTypes.Inventory, key, count);
         if (includeInTransit) {
@@ -291,10 +285,13 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     }
 
     @Override
-    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
+    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        System.out.println("itemArrived: " + item + ", " + info);
+    }
 
     @Override
     public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        System.out.println("itemLost: " + item + ", " + info);
         _lostItems.add(new DelayedGeneric<>(new Pair<>(item, info), 5000));
     }
 
@@ -1271,44 +1268,43 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                     _service.getItemOrderManager().setMachineProgress((byte) 0);
                 }
             }
-        } else {
+        }
+        else {
             cachedAreAllOrderesToBuffer = false;
         }
 
-        if (!_service.isNthTick(6)) {
-            return;
-        }
+        if (!_service.isNthTick(6)) return;
 
         waitingForCraft = false;
 
         if (!_service.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
-            if (getUpgradeManager().getCrafterCleanup() > 0) {
-                List<AdjacentTile> crafters = locateCrafters();
-                ItemStack extracted = null;
-                for (AdjacentTile crafter : crafters) {
-                    extracted = extractFiltered(
-                            crafter,
-                            _cleanupInventory,
-                            cleanupModeIsExclude,
-                            getUpgradeManager().getCrafterCleanup() * 3);
-                    if (extracted != null && extracted.stackSize > 0) {
-                        break;
-                    }
-                }
-                if (extracted != null && extracted.stackSize > 0) {
-                    _service.queueRoutedItem(
-                            SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted),
-                            ForgeDirection.UP);
-                    _service.getCacheHolder().trigger(CacheTypes.Inventory);
-                }
+            if (getUpgradeManager().getCrafterCleanup() == 0) return;
+
+            ItemStack extracted = null;
+            for (AdjacentTile crafter : locateCrafters()) {
+                extracted = extractFiltered(
+                    crafter,
+                    _cleanupInventory,
+                    cleanupModeIsExclude,
+                    getUpgradeManager().getCrafterCleanup() * 3);
+
+                if (extracted != null && extracted.stackSize > 0) break;
             }
+
+            if (extracted != null && extracted.stackSize > 0) {
+                _service.queueRoutedItem(
+                    SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted),
+                    ForgeDirection.UP);
+                _service.getCacheHolder().trigger(CacheTypes.Inventory);
+            }
+
             return;
         }
 
         waitingForCraft = true;
 
         List<AdjacentTile> crafters = locateCrafters();
-        if (crafters.size() < 1) {
+        if (crafters.isEmpty()) {
             if (_service.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
                 _service.getItemOrderManager().sendFailed();
             }
@@ -1687,6 +1683,14 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     public IHUDModuleRenderer getHUDRenderer() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    public void setBlockingMode(boolean blockingMode) {
+        this.blockingMode = blockingMode;
+        if (_service instanceof PipeItemsCraftingLogistics craftingPipe){
+            craftingPipe.setBlockingMode(this.blockingMode);
+            MainProxy.sendPacketToServer(PacketHandler.getPacket(CraftingBlockingModePacket.class).setBlockingMode(blockingMode).setLPPos(craftingPipe.getLPPosition()));
+        }
     }
 
     public static class CraftingChassieInformation extends ChassiTargetInformation {

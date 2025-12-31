@@ -97,6 +97,7 @@ public abstract class PipeLogisticsChassi extends CoreRoutedPipe
     private boolean init = false;
 
     private boolean convertFromMeta = false;
+    private boolean blockingMode = false;
 
     // HUD
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
