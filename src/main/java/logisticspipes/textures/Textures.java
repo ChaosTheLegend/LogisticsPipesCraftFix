@@ -10,6 +10,7 @@ import logisticspipes.renderer.IIconProvider;
 import logisticspipes.textures.provider.LPActionTriggerIconProvider;
 import logisticspipes.textures.provider.LPPipeIconProvider;
 import logisticspipes.textures.provider.LPPipeIconTransformerProvider;
+import org.stringtemplate.v4.ST;
 
 public class Textures {
 
@@ -79,6 +80,13 @@ public class Textures {
     public static TextureType LOGISTICSPIPE_CHASSI3_TEXTURE = Textures.empty;
     public static TextureType LOGISTICSPIPE_CHASSI4_TEXTURE = Textures.empty;
     public static TextureType LOGISTICSPIPE_CHASSI5_TEXTURE = Textures.empty;
+
+    public static TextureType LOGISTICSPIPE_CRAFTING_CHASSI1_TEXTURE = Textures.empty;
+    public static TextureType LOGISTICSPIPE_CRAFTING_CHASSI2_TEXTURE = Textures.empty;
+    public static TextureType LOGISTICSPIPE_CRAFTING_CHASSI3_TEXTURE = Textures.empty;
+    public static TextureType LOGISTICSPIPE_CRAFTING_CHASSI4_TEXTURE = Textures.empty;
+    public static TextureType LOGISTICSPIPE_CRAFTING_CHASSI5_TEXTURE = Textures.empty;
+
     public static TextureType LOGISTICSPIPE_CRAFTERMK2_TEXTURE = Textures.empty;
     public static TextureType LOGISTICSPIPE_REQUESTERMK2_TEXTURE = Textures.empty;
     public static TextureType LOGISTICSPIPE_PROVIDERMK2_TEXTURE = Textures.empty;
@@ -172,6 +180,13 @@ public class Textures {
     public static String LOGISTICSPIPE_CHASSI3_TEXTURE_FILE = "pipes/chassi/chassi_mk3";
     public static String LOGISTICSPIPE_CHASSI4_TEXTURE_FILE = "pipes/chassi/chassi_mk4";
     public static String LOGISTICSPIPE_CHASSI5_TEXTURE_FILE = "pipes/chassi/chassi_mk5";
+
+    //Crafting chassi
+    public static String LOGISTICSPIPE_CRAFTING_CHASSI1_TEXTURE_FILE = "pipes/crafting_chassi/crafting_chassi_mk1";
+    public static String LOGISTICSPIPE_CRAFTING_CHASSI2_TEXTURE_FILE = "pipes/crafting_chassi/crafting_chassi_mk2";
+    public static String LOGISTICSPIPE_CRAFTING_CHASSI3_TEXTURE_FILE = "pipes/crafting_chassi/crafting_chassi_mk3";
+    public static String LOGISTICSPIPE_CRAFTING_CHASSI4_TEXTURE_FILE = "pipes/crafting_chassi/crafting_chassi_mk4";
+    public static String LOGISTICSPIPE_CRAFTING_CHASSI5_TEXTURE_FILE = "pipes/crafting_chassi/crafting_chassi_mk5";
 
     // Chassi status overlay
     public static String LOGISTICSPIPE_CHASSI_ROUTED_TEXTURE_FILE = "pipes/chassi/status_overlay/routed";
@@ -357,6 +372,28 @@ public class Textures {
         Textures.LOGISTICSPIPE_CHASSI5_TEXTURE = registerTexture(
                 par1IIconRegister,
                 Textures.LOGISTICSPIPE_CHASSI5_TEXTURE_FILE);
+
+        //Crafting chassi
+
+        Textures.LOGISTICSPIPE_CRAFTING_CHASSI1_TEXTURE = registerTexture(
+            par1IIconRegister,
+            Textures.LOGISTICSPIPE_CRAFTING_CHASSI1_TEXTURE_FILE);
+        Textures.LOGISTICSPIPE_CRAFTING_CHASSI2_TEXTURE = registerTexture(
+            par1IIconRegister,
+            Textures.LOGISTICSPIPE_CRAFTING_CHASSI2_TEXTURE_FILE
+        );
+        Textures.LOGISTICSPIPE_CRAFTING_CHASSI3_TEXTURE = registerTexture(
+            par1IIconRegister,
+            Textures.LOGISTICSPIPE_CRAFTING_CHASSI3_TEXTURE_FILE
+        );
+        Textures.LOGISTICSPIPE_CRAFTING_CHASSI4_TEXTURE = registerTexture(
+            par1IIconRegister,
+            Textures.LOGISTICSPIPE_CRAFTING_CHASSI4_TEXTURE_FILE
+        );
+        Textures.LOGISTICSPIPE_CRAFTING_CHASSI5_TEXTURE = registerTexture(
+            par1IIconRegister,
+            Textures.LOGISTICSPIPE_CRAFTING_CHASSI5_TEXTURE_FILE
+        );
 
         // Transport
         Textures.LOGISTICSPIPE_BASIC_TRANSPORT_TEXTURE = registerSmallTexture(
