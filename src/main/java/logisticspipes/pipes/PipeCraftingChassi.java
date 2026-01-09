@@ -4,20 +4,17 @@
  */
 package logisticspipes.pipes;
 
-import cpw.mods.fml.client.FMLClientHandler;
-import logisticspipes.LPConstants;
-import logisticspipes.LogisticsPipes;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import logisticspipes.api.IMUICompatiblePipe;
 import logisticspipes.config.Configs;
-import logisticspipes.gui.GuiChassiPipe;
 import logisticspipes.gui.hud.HudChassisPipe;
+import logisticspipes.gui.modularUI.GuiCraftingChassis;
 import logisticspipes.interfaces.*;
 import logisticspipes.interfaces.routing.*;
-import logisticspipes.items.ItemModule;
-import logisticspipes.logisticspipes.ChassiTransportLayer;
-import logisticspipes.logisticspipes.ItemModuleInformationManager;
 import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.logisticspipes.PipeTransportLayer;
-import logisticspipes.modules.ChassiModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule.ModulePositionType;
 import logisticspipes.network.NewGuiHandler;
@@ -26,12 +23,9 @@ import logisticspipes.network.guis.pipe.DummyPipeGuiProvider;
 import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
 import logisticspipes.network.packets.pipe.ChassiOrientationPacket;
-import logisticspipes.network.packets.pipe.ChassiePipeModuleContent;
 import logisticspipes.network.packets.pipe.RequestChassiOrientationPacket;
 import logisticspipes.network.packets.pipe.SendQueueContent;
-import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
-import logisticspipes.pipes.upgrades.ModuleUpgradeManager;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.proxy.computers.interfaces.CCCommand;
@@ -40,11 +34,8 @@ import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
-import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
-import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
-import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
@@ -53,17 +44,13 @@ import logisticspipes.ticks.HudUpdateTick;
 import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifier;
-import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
-import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -72,15 +59,8 @@ import java.util.*;
 @CCType(name = "LogisticsChassiePipe")
 public abstract class PipeCraftingChassi extends CoreRoutedPipe
         implements ICraftItems, IBufferItems, ISimpleInventoryEventHandler, ISendRoutedItem, IProvideItems,
-        IHeadUpDisplayRendererProvider, ISendQueueContentRecieiver {
+        IHeadUpDisplayRendererProvider, ISendQueueContentRecieiver, IMUICompatiblePipe {
 
-    public static ResourceLocation DummyGUI = new ResourceLocation(
-        "logisticspipes",
-        "textures/gui/chassipipe_size2.png");
-
-    private final ChassiModule _module;
-    private final ItemIdentifierInventory _moduleInventory;
-    private final ModuleUpgradeManager[] _upgradeManagers;
     private boolean switchOrientationOnTick = true;
     private boolean init = false;
 
@@ -93,9 +73,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     public PipeCraftingChassi(Item item) {
         super(item);
-        _moduleInventory = new ItemIdentifierInventory(getChassiSize(), "Crafting Chassi pipe", 1);
-        _upgradeManagers = new ModuleUpgradeManager[getChassiSize()];
-        _module = null;
         hud = null;
         pointedDirection = ForgeDirection.UNKNOWN;
     }
@@ -156,14 +133,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         return MainProxy.checkPipesConnections(container, tile, connection);
     }
 
-    public IInventory getModuleInventory() {
-        return _moduleInventory;
-    }
-
-    public ModuleUpgradeManager getModuleUpgradeManager(int slot) {
-        return _upgradeManagers[slot];
-    }
-
     @Override
     public TextureType getCenterTexture() {
         return Textures.LOGISTICSPIPE_TEXTURE;
@@ -207,7 +176,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         try {
             super.readFromNBT(nbttagcompound);
-            _moduleInventory.readFromNBT(nbttagcompound, "chassi");
             pointedDirection = ForgeDirection.values()[nbttagcompound.getInteger("Orientation") % 7];
             if (nbttagcompound.getInteger("Orientation") == 0) {
                 convertFromMeta = true;
@@ -221,7 +189,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     @Override
     public void writeToNBT(NBTTagCompound nbttagcompound) {
         super.writeToNBT(nbttagcompound);
-        _moduleInventory.writeToNBT(nbttagcompound, "chassi");
         if (pointedDirection == null) {
             pointedDirection = ForgeDirection.UNKNOWN;
         }
@@ -230,10 +197,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public void onAllowedRemoval() {
-        _moduleInventory.removeListener(this);
-        if (MainProxy.isServer(getWorld())) {
-            _moduleInventory.dropContents(getWorld(), getX(), getY(), getZ());
-        }
+
     }
 
     @Override
@@ -280,7 +244,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public final LogisticsModule getLogisticsModule() {
-        return _module;
+        return null;
     }
 
     @Override
@@ -343,11 +307,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         if (mode == 1) {
             localModeWatchers.add(player);
             MainProxy.sendPacketToPlayer(
-                    PacketHandler.getPacket(ChassiePipeModuleContent.class)
-                            .setIdentList(ItemIdentifierStack.getListFromInventory(_moduleInventory)).setPosX(getX())
-                            .setPosY(getY()).setPosZ(getZ()),
-                    player);
-            MainProxy.sendPacketToPlayer(
                     PacketHandler.getPacket(SendQueueContent.class)
                             .setIdentList(ItemIdentifierStack.getListSendQueue(_sendQueue)).setPosX(getX())
                             .setPosY(getY()).setPosZ(getZ()),
@@ -361,14 +320,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     public void playerStopWatching(EntityPlayer player, int mode) {
         super.playerStopWatching(player, mode);
         localModeWatchers.remove(player);
-    }
-
-    public void handleModuleItemIdentifierList(Collection<ItemIdentifierStack> _allItems) {
-        _moduleInventory.handleItemIdentifierList(_allItems);
-    }
-
-    public void handleContentItemIdentifierList(Collection<ItemIdentifierStack> _allItems) {
-        _moduleInventory.handleItemIdentifierList(_allItems);
     }
 
     @Override
@@ -394,10 +345,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     public void handleSendQueueItemIdentifierList(Collection<ItemIdentifierStack> _allItems) {
         displayList.clear();
         displayList.addAll(_allItems);
-    }
-
-    public ChassiModule getModules() {
-        return _module;
     }
 
     @Override
@@ -466,13 +413,30 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         return 0;
     }
 
-    public static class ChassiTargetInformation implements IAdditionalTargetInformation {
+    @Override
+    public String getId() {
+        return "crafting_chassis";
+    }
 
-        @Getter
-        private final int moduleSlot;
+    @Override
+    public int getGuiWidth() {
+        return 184;
+    }
 
-        public ChassiTargetInformation(int slot) {
-            moduleSlot = slot;
-        }
+    @Override
+    public int getGuiHeight() {
+        return 186;
+    }
+
+
+    @Override
+    public void onWrenchClicked(EntityPlayer entityplayer) {
+        openGui(entityplayer, this);
+    }
+
+
+    @Override
+    public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
+        //GuiCraftingChassis.addUIWidgets(panel, data, syncManager);
     }
 }

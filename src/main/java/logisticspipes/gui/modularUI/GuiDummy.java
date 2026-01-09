@@ -1,4 +1,4 @@
-package logisticspipes.gui;
+package logisticspipes.gui.modularUI;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;

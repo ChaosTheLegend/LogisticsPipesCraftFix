@@ -1,14 +1,14 @@
 package logisticspipes.network.guis.pipe;
 
+import logisticspipes.gui.modularUI.GuiCraftingChassis;
 import net.minecraft.entity.player.EntityPlayer;
 
-import logisticspipes.gui.GuiDummy;
+import logisticspipes.gui.modularUI.GuiDummy;
 import logisticspipes.network.abstractguis.CoordinatesGuiProvider;
 import logisticspipes.network.abstractguis.GuiProvider;
 import logisticspipes.pipes.PipeCraftingChassi;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.utils.gui.DummyContainer;
-import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 
 public class DummyPipeGuiProvider extends CoordinatesGuiProvider {
 
@@ -20,12 +20,9 @@ public class DummyPipeGuiProvider extends CoordinatesGuiProvider {
     public Object getClientGui(EntityPlayer player) {
         LogisticsTileGenericPipe pipe = getPipe(player.worldObj);
         if (pipe != null && pipe.pipe instanceof PipeCraftingChassi) {
-            PipeCraftingChassi craftingChassi = (PipeCraftingChassi) pipe.pipe;
-            int xSize = 194;
-            int ySize = craftingChassi.getChassiSize() > 4 ? 256 : 186;
-            return new GuiDummy(player, craftingChassi.getChassiGUITexture(), xSize, ySize);
+            return new GuiCraftingChassis();
         }
-        return new GuiDummy(player, PipeCraftingChassi.DummyGUI, 176, 166);
+        return new GuiCraftingChassis();
     }
 
     @Override
