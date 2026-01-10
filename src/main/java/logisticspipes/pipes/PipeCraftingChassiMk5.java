@@ -16,18 +16,4 @@ public class PipeCraftingChassiMk5 extends PipeCraftingChassi {
     public TextureType getCenterTexture() {
         return Textures.LOGISTICSPIPE_CRAFTING_CHASSI5_TEXTURE;
     }
-
-    @Override
-    public int getChassiSize() {
-        return 18;
-    }
-
-    private static final ResourceLocation TEXTURE = new ResourceLocation(
-            "logisticspipes",
-            "textures/gui/chassipipe_size8.png");
-
-    @Override
-    public ResourceLocation getChassiGUITexture() {
-        return PipeCraftingChassiMk5.TEXTURE;
-    }
 }

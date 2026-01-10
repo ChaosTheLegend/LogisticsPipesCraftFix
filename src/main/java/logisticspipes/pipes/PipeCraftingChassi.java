@@ -8,6 +8,7 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.config.Configs;
 import logisticspipes.gui.hud.HudChassisPipe;
 import logisticspipes.gui.modularUI.GuiCraftingChassis;
@@ -17,9 +18,7 @@ import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.logisticspipes.PipeTransportLayer;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule.ModulePositionType;
-import logisticspipes.network.NewGuiHandler;
 import logisticspipes.network.PacketHandler;
-import logisticspipes.network.guis.pipe.DummyPipeGuiProvider;
 import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
 import logisticspipes.network.packets.pipe.ChassiOrientationPacket;
@@ -37,7 +36,6 @@ import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.LogisticsOrder;
-import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.ticks.HudUpdateTick;
@@ -51,7 +49,6 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import java.util.*;
@@ -240,8 +237,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         }
     }
 
-    public abstract int getChassiSize();
-
     @Override
     public final LogisticsModule getLogisticsModule() {
         return null;
@@ -253,14 +248,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
             _transportLayer = new PipeTransportLayer(this, this, getRouter());
         }
         return _transportLayer;
-    }
-
-    @Override
-    public boolean handleClick(EntityPlayer entityplayer, SecuritySettings settings) {
-        if (MainProxy.isServer(entityplayer.worldObj)) {
-            NewGuiHandler.getGui(DummyPipeGuiProvider.class).setTilePos(container).open(entityplayer);
-        }
-        return true;
     }
 
     /*** IProvideItems ***/
@@ -372,16 +359,6 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         return null;
     }
 
-    @CCCommand(description = "Returns the size of this Chassie pipe")
-    public Integer getChassieSize() {
-        return getChassiSize();
-    }
-
-    public abstract ResourceLocation getChassiGUITexture();
-
-    /**
-     * ICraftItems
-     */
     public final LinkedList<LogisticsOrder> _extras = new LinkedList<>();
 
     @Override
@@ -437,6 +414,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
-        //GuiCraftingChassis.addUIWidgets(panel, data, syncManager);
+        GuiCraftingChassis gui = new GuiCraftingChassis(this);
+        gui.addWidgets(panel, data, syncManager);
     }
 }
