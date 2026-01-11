@@ -32,11 +32,13 @@ import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule.ModulePositionType;
 import logisticspipes.network.PacketHandler;
+import logisticspipes.pipes.upgrades.CraftingChassiUpgradeManager;
 import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
 import logisticspipes.network.packets.pipe.ChassiOrientationPacket;
 import logisticspipes.network.packets.pipe.RequestChassiOrientationPacket;
 import logisticspipes.network.packets.pipe.SendQueueContent;
+import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
@@ -47,8 +49,11 @@ import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.routing.LogisticsPromise;
+import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
+import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.ticks.HudUpdateTick;
@@ -83,12 +88,24 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
         super(item);
         hud = null;
         pointedDirection = ForgeDirection.UNKNOWN;
+        _upgradeManager = new CraftingChassiUpgradeManager(this);
     }
 
     @Override
     protected List<IInventory> getConnectedRawInventories() {
-        return Collections.emptyList();
+        if (_cachedAdjacentInventories != null) {
+            return _cachedAdjacentInventories;
+        }
+        List<IInventory> adjacent = new ArrayList<>(1);
+        IInventory adjinv = getRealInventory();
+        if (adjinv != null) {
+            adjacent.add(adjinv);
+        }
+        _cachedAdjacentInventories = adjacent;
+        return _cachedAdjacentInventories;
     }
+
+    private List<IInventory> _cachedAdjacentInventories;
 
     public BlockingModeState blockMode = BlockingModeState.OFF;
 
@@ -97,6 +114,8 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     protected ItemStackHandler patternInventory = new ItemStackHandler(36);
 
     protected ItemStackHandler upgradeInventory = new ItemStackHandler(4);
+
+    protected final CraftingChassiUpgradeManager _upgradeManager;
 
     public void nextOrientation() {
         boolean found = false;
@@ -200,6 +219,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
             this.bufferInventory.deserializeNBT(nbttagcompound.getCompoundTag("buffer_inventory"));
             this.patternInventory.deserializeNBT(nbttagcompound.getCompoundTag("pattern_inventory"));
             this.upgradeInventory.deserializeNBT(nbttagcompound.getCompoundTag("upgrade_inventory"));
+            this._upgradeManager.updateUpgrades();
             this.blockMode = BlockingModeState.values()[nbttagcompound.getInteger("blocking_mode")];
         } catch (Exception e) {
             e.printStackTrace();
@@ -225,13 +245,69 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     }
 
     @Override
-    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
+    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        if (MainProxy.isServer(getWorld())) {
+            for (ItemStack pattern : patternInventory.getStacks()) {
+                if (pattern == null) {
+                    continue;
+                }
+                if (!(pattern.getItem() instanceof ItemModule)) {
+                    continue;
+                }
+                if (!ItemModule.isCrafter(pattern)) {
+                    continue;
+                }
+                LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+                if (x instanceof IRequireReliableTransport) {
+                    logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                    ((IRequireReliableTransport) x).itemArrived(item, info);
+                }
+            }
+        }
+    }
 
     @Override
-    public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
+    public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        if (MainProxy.isServer(getWorld())) {
+            for (ItemStack pattern : patternInventory.getStacks()) {
+                if (pattern == null) {
+                    continue;
+                }
+                if (!(pattern.getItem() instanceof ItemModule)) {
+                    continue;
+                }
+                if (!ItemModule.isCrafter(pattern)) {
+                    continue;
+                }
+                LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+                if (x instanceof IRequireReliableTransport) {
+                    logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                    ((IRequireReliableTransport) x).itemLost(item, info);
+                }
+            }
+        }
+    }
 
     @Override
     public int addToBuffer(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        if (MainProxy.isServer(getWorld())) {
+            for (ItemStack pattern : patternInventory.getStacks()) {
+                if (pattern == null) {
+                    continue;
+                }
+                if (!(pattern.getItem() instanceof ItemModule)) {
+                    continue;
+                }
+                if (!ItemModule.isCrafter(pattern)) {
+                    continue;
+                }
+                LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+                if (x instanceof IBufferItems) {
+                    logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                    return ((IBufferItems) x).addToBuffer(item, info);
+                }
+            }
+        }
         return item.getStackSize();
     }
 
@@ -277,18 +353,86 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     /*** IProvideItems ***/
     @Override
     public void canProvide(RequestTreeNode tree, RequestTree root, List<IFilter> filters) {
+        if (!isEnabled()) {
+            return;
+        }
+        for (IFilter filter : filters) {
+            if (filter.isBlocked() == filter.isFilteredItem(tree.getRequestType()) || filter.blockProvider()) {
+                return;
+            }
+        }
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null) {
+                continue;
+            }
+            if (!(pattern.getItem() instanceof ItemModule)) {
+                continue;
+            }
+            if (!ItemModule.isCrafter(pattern)) {
+                continue;
+            }
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
 
-
+            if (x instanceof IProvideItems) {
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                ((IProvideItems) x).canProvide(tree, root, filters);
+            }
+        }
     }
 
     @Override
     public LogisticsOrder fullFill(LogisticsPromise promise, IRequestItems destination,
             IAdditionalTargetInformation info) {
+        if (!isEnabled()) {
+            return null;
+        }
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null) {
+                continue;
+            }
+            if (!(pattern.getItem() instanceof ItemModule)) {
+                continue;
+            }
+            if (!ItemModule.isCrafter(pattern)) {
+                continue;
+            }
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+
+            if (x instanceof IProvideItems) {
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                LogisticsOrder result = ((IProvideItems) x).fullFill(promise, destination, info);
+                if (result != null) {
+                    spawnParticle(Particles.WhiteParticle, 2);
+                    return result;
+                }
+            }
+        }
         return null;
     }
 
     @Override
-    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {}
+    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {
+        if (!isEnabled()) {
+            return;
+        }
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null) {
+                continue;
+            }
+            if (!(pattern.getItem() instanceof ItemModule)) {
+                continue;
+            }
+            if (!ItemModule.isCrafter(pattern)) {
+                continue;
+            }
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+
+            if (x instanceof IProvideItems) {
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                ((IProvideItems) x).getAllItems(list, filter);
+            }
+        }
+    }
 
     @Override
     public ItemSendMode getItemSendMode() {
@@ -371,11 +515,70 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public Set<ItemIdentifier> getSpecificInterests() {
-        return Collections.emptySet();
+        Set<ItemIdentifier> l1 = new TreeSet<>();
+        // if we don't have a pointed inventory we can't be interested in anything
+        if (getRealInventory() == null) {
+            return l1;
+        }
+
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null) {
+                continue;
+            }
+            if (!(pattern.getItem() instanceof ItemModule)) {
+                continue;
+            }
+            if (!ItemModule.isCrafter(pattern)) {
+                continue;
+            }
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+            if (x != null) {
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                if (x.interestedInAttachedInventory()) {
+                    IInventoryUtil inv = getSneakyInventory(false, x.getSlot(), x.getPositionInt());
+                    if (inv != null) {
+                        Set<ItemIdentifier> items = inv.getItems();
+                        l1.addAll(items);
+                        for (ItemIdentifier id : items) {
+                            l1.add(id.getIgnoringNBT());
+                        }
+                        if (x.interestedInUndamagedID()) {
+                            for (ItemIdentifier id : items) {
+                                l1.add(id.getUndamaged());
+                            }
+                        }
+                    }
+                }
+                Collection<ItemIdentifier> current = x.getSpecificInterests();
+                if (current != null) {
+                    l1.addAll(current);
+                }
+            }
+        }
+        return l1;
     }
 
     @Override
     public boolean hasGenericInterests() {
+        if (getRealInventory() == null) {
+            return false;
+        }
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null) {
+                continue;
+            }
+            if (!(pattern.getItem() instanceof ItemModule)) {
+                continue;
+            }
+            if (!ItemModule.isCrafter(pattern)) {
+                continue;
+            }
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+
+            if (x != null && x.hasGenericInterests()) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -388,7 +591,13 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public void registerExtras(IPromise promise) {
-
+        if (!(promise instanceof LogisticsPromise)) {
+            throw new UnsupportedOperationException("Extra has to be an item for a chassis pipe");
+        }
+        ItemIdentifierStack stack = new ItemIdentifierStack(
+                ((LogisticsPromise) promise).item,
+                ((LogisticsPromise) promise).numberOfItems);
+        _extras.add(new LogisticsItemOrder(new DictResource(stack, null), null, ResourceType.EXTRA, null));
     }
 
     @Override
@@ -451,7 +660,8 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public ISlotUpgradeManager getUpgradeManager(ModulePositionType slot, int positionInt) {
-        return null;
+        _upgradeManager.updateUpgrades();
+        return _upgradeManager;
     }
 
     @Override
