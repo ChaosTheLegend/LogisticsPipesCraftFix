@@ -4,18 +4,31 @@
  */
 package logisticspipes.pipes;
 
+import java.util.*;
+
+import logisticspipes.items.ItemModule;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
+
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+
 import logisticspipes.api.IMUICompatiblePipe;
-import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.config.Configs;
 import logisticspipes.gui.hud.HudChassisPipe;
 import logisticspipes.gui.modularUI.GuiCraftingChassis;
 import logisticspipes.interfaces.*;
 import logisticspipes.interfaces.routing.*;
-import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.logisticspipes.PipeTransportLayer;
+import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule.ModulePositionType;
 import logisticspipes.network.PacketHandler;
@@ -44,19 +57,17 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
-
-import java.util.*;
 
 @CCType(name = "LogisticsChassiePipe")
 public abstract class PipeCraftingChassi extends CoreRoutedPipe
         implements ICraftItems, IBufferItems, ISimpleInventoryEventHandler, ISendRoutedItem, IProvideItems,
         IHeadUpDisplayRendererProvider, ISendQueueContentRecieiver, IMUICompatiblePipe {
+
+    public enum BlockingModeState {
+        OFF,
+        NORMAL,
+        SMART
+    }
 
     private boolean switchOrientationOnTick = true;
     private boolean init = false;
@@ -78,6 +89,14 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     protected List<IInventory> getConnectedRawInventories() {
         return Collections.emptyList();
     }
+
+    public BlockingModeState blockMode = BlockingModeState.OFF;
+
+    protected ItemStackHandler bufferInventory = new ItemStackHandler(9);
+
+    protected ItemStackHandler patternInventory = new ItemStackHandler(36);
+
+    protected ItemStackHandler upgradeInventory = new ItemStackHandler(4);
 
     public void nextOrientation() {
         boolean found = false;
@@ -178,6 +197,10 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
                 convertFromMeta = true;
             }
             switchOrientationOnTick = (pointedDirection == ForgeDirection.UNKNOWN);
+            this.bufferInventory.deserializeNBT(nbttagcompound.getCompoundTag("buffer_inventory"));
+            this.patternInventory.deserializeNBT(nbttagcompound.getCompoundTag("pattern_inventory"));
+            this.upgradeInventory.deserializeNBT(nbttagcompound.getCompoundTag("upgrade_inventory"));
+            this.blockMode = BlockingModeState.values()[nbttagcompound.getInteger("blocking_mode")];
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -190,6 +213,10 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
             pointedDirection = ForgeDirection.UNKNOWN;
         }
         nbttagcompound.setInteger("Orientation", pointedDirection.ordinal());
+        nbttagcompound.setTag("buffer_inventory", this.bufferInventory.serializeNBT());
+        nbttagcompound.setTag("pattern_inventory", this.patternInventory.serializeNBT());
+        nbttagcompound.setTag("upgrade_inventory", this.upgradeInventory.serializeNBT());
+        nbttagcompound.setInteger("blocking_mode", this.blockMode.ordinal());
     }
 
     @Override
@@ -198,12 +225,10 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     }
 
     @Override
-    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
-    }
+    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
 
     @Override
-    public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
-    }
+    public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
 
     @Override
     public int addToBuffer(ItemIdentifierStack item, IAdditionalTargetInformation info) {
@@ -211,8 +236,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     }
 
     @Override
-    public void InventoryChanged(IInventory inventory) {
-    }
+    public void InventoryChanged(IInventory inventory) {}
 
     @Override
     public void ignoreDisableUpdateEntity() {
@@ -253,6 +277,8 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     /*** IProvideItems ***/
     @Override
     public void canProvide(RequestTreeNode tree, RequestTree root, List<IFilter> filters) {
+
+
     }
 
     @Override
@@ -262,8 +288,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     }
 
     @Override
-    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {
-    }
+    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {}
 
     @Override
     public ItemSendMode getItemSendMode() {
@@ -363,20 +388,64 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public void registerExtras(IPromise promise) {
+
     }
 
     @Override
     public ICraftingTemplate addCrafting(IResource toCraft) {
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if(pattern == null) continue;
+            if(!(pattern.getItem() instanceof ItemModule)) continue;
+            if(!ItemModule.isCrafter(pattern)) continue;
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+
+
+            if (x instanceof ICraftItems) {
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                if (((ICraftItems) x).canCraft(toCraft)) {
+                    return ((ICraftItems) x).addCrafting(toCraft);
+                }
+            }
+        }
         return null;
     }
 
     @Override
     public List<ItemIdentifierStack> getConfiguredCraftResults() {
-        return null;
+        List<ItemIdentifierStack> craftables = null;
+        for (ItemStack pattern : patternInventory.getStacks() ) {
+            if(pattern == null) continue;
+            if(!(pattern.getItem() instanceof ItemModule)) continue;
+            if(!ItemModule.isCrafter(pattern)) continue;
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+
+            if (x instanceof ICraftItems) {
+                if (craftables == null) {
+                    craftables = new LinkedList<>();
+                }
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+                List<ItemIdentifierStack> results = ((ICraftItems) x).getConfiguredCraftResults();
+                if (results != null) {
+                    craftables.addAll(results);
+                }
+            }
+        }
+        return craftables;
     }
 
     @Override
     public boolean canCraft(IResource toCraft) {
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if(pattern == null) continue;
+            if(!(pattern.getItem() instanceof ItemModule)) continue;
+            if(!ItemModule.isCrafter(pattern)) continue;
+
+            LogisticsModule module = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+            if(module instanceof ICraftItems){
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, module);
+                return ((ICraftItems) module).canCraft(toCraft);
+            }
+        }
         return false;
     }
 
@@ -402,19 +471,29 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     @Override
     public int getGuiHeight() {
-        return 186;
+        return 200;
     }
 
+    public abstract int getChassisTier();
 
     @Override
     public void onWrenchClicked(EntityPlayer entityplayer) {
         openGui(entityplayer, this);
     }
 
-
     @Override
     public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
         GuiCraftingChassis gui = new GuiCraftingChassis(this);
         gui.addWidgets(panel, data, syncManager);
     }
+
+    public IItemHandlerModifiable getBufferInventory() {
+        return bufferInventory;
+    }
+
+    public IItemHandlerModifiable getPatternInventory() {
+        return patternInventory;
+    }
+
+    public IItemHandlerModifiable getUpgradeInventory() { return upgradeInventory; }
 }

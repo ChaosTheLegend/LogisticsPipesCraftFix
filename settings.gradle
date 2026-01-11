@@ -9,6 +9,11 @@ pluginManagement {
                 includeGroupByRegex("com\\.gtnewhorizons\\..+")
             }
         }
+
+        maven {
+            name "Glease Maven Releases"
+            url "https://maven.glease.net/repos/releases/"
+        }
         gradlePluginPortal()
         mavenCentral()
         mavenLocal()
@@ -18,5 +23,3 @@ pluginManagement {
 plugins {
     id 'com.gtnewhorizons.gtnhsettingsconvention' version '1.0.46'
 }
-
-

@@ -164,6 +164,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         for (int i = 0; i < fuzzyCraftingFlagArray.length; i++) {
             fuzzyCraftingFlagArray[i] = new DictResource(null, null);
         }
+        registerPosition(ModulePositionType.IN_HAND, 0);
     }
 
     public ModuleCrafter(PipeItemsCraftingLogistics parent) {
