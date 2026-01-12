@@ -27,6 +27,8 @@ import logisticspipes.gui.hud.HudChassisPipe;
 import logisticspipes.gui.modularUI.GuiCraftingChassis;
 import logisticspipes.interfaces.*;
 import logisticspipes.interfaces.routing.*;
+import logisticspipes.logisticspipes.IRoutedItem;
+import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.logisticspipes.PipeTransportLayer;
 import logisticspipes.logisticspipes.TransportLayer;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -50,6 +52,7 @@ import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.DictResource;
+import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
@@ -108,6 +111,7 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     private List<IInventory> _cachedAdjacentInventories;
 
     public BlockingModeState blockMode = BlockingModeState.OFF;
+    public Map<ItemIdentifier, List<IRequestItems>> craftingRequests = new HashMap<>();
 
     protected ItemStackHandler bufferInventory = new ItemStackHandler(9);
 
@@ -338,6 +342,56 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     }
 
     @Override
+    public void enabledUpdateEntity() {
+        super.enabledUpdateEntity();
+        if (MainProxy.isServer(getWorld()) && isNthTick(6)) {
+            if (!craftingRequests.isEmpty()) {
+                IInventoryUtil inv = getPointedInventory(true);
+                if (inv != null) {
+                    for (ItemIdentifier item : new ArrayList<>(craftingRequests.keySet())) {
+                        int count = inv.itemCount(item);
+                        if (count > 0) {
+                            List<IRequestItems> reqlists = craftingRequests.get(item);
+                            if (reqlists != null && !reqlists.isEmpty()) {
+                                LogisticsItemOrder foundOrder = null;
+                                for (LogisticsItemOrder order : getItemOrderManager()) {
+                                    if (order.getResource().getItem().equals(item) && reqlists.contains(order.getDestination())) {
+                                        foundOrder = order;
+                                        break;
+                                    }
+                                }
+
+                                if (foundOrder != null) {
+                                    int toExtract = Math.min(count, foundOrder.getAmount());
+                                    toExtract = Math.min(toExtract, item.getMaxStackSize());
+                                    ItemStack extracted = inv.getMultipleItems(item, toExtract);
+                                    if (extracted != null && extracted.stackSize > 0) {
+                                        IRequestItems destination = foundOrder.getDestination();
+                                        IRoutedItem routedItem = SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted);
+                                        routedItem.setDestination(destination.getRouter().getSimpleID());
+                                        routedItem.setTransportMode(TransportMode.Active);
+                                        routedItem.setAdditionalTargetInformation(foundOrder.getInformation());
+                                        queueRoutedItem(routedItem, pointedDirection);
+
+                                        getItemOrderManager().sendSuccessfull(extracted.stackSize, false, routedItem);
+
+                                        if (foundOrder.isFinished()) {
+                                            reqlists.remove(destination);
+                                            if (reqlists.isEmpty()) {
+                                                craftingRequests.remove(item);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
     public final LogisticsModule getLogisticsModule() {
         return null;
     }
@@ -401,7 +455,15 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
             if (x instanceof IProvideItems) {
                 logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
                 LogisticsOrder result = ((IProvideItems) x).fullFill(promise, destination, info);
-                if (result != null) {
+                if (result instanceof LogisticsItemOrder) {
+                    ItemIdentifier item = ((LogisticsItemOrder) result).getResource().getItem();
+                    List<IRequestItems> list = craftingRequests.get(item);
+                    if (list != null) {
+                        list.remove(destination);
+                        if (list.isEmpty()) {
+                            craftingRequests.remove(item);
+                        }
+                    }
                     spawnParticle(Particles.WhiteParticle, 2);
                     return result;
                 }
@@ -612,7 +674,25 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
             if (x instanceof ICraftItems) {
                 logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
                 if (((ICraftItems) x).canCraft(toCraft)) {
-                    return ((ICraftItems) x).addCrafting(toCraft);
+                    ICraftingTemplate template = ((ICraftItems) x).addCrafting(toCraft);
+                    if (template != null) {
+                        ItemIdentifier result = template.getResultStack().getItemIdentifier();
+                        IRequestItems requester = null;
+                        if (toCraft instanceof ItemResource) {
+                            requester = ((ItemResource) toCraft).getTarget();
+                        } else if (toCraft instanceof DictResource) {
+                            requester = ((DictResource) toCraft).getTarget();
+                        } else if (toCraft.getRouter() != null) {
+                            CoreRoutedPipe pipe = toCraft.getRouter().getPipe();
+                            if (pipe instanceof IRequestItems) {
+                                requester = (IRequestItems) pipe;
+                            }
+                        }
+                        if (requester != null) {
+                            craftingRequests.computeIfAbsent(result, k -> new ArrayList<>()).add(requester);
+                        }
+                    }
+                    return template;
                 }
             }
         }
