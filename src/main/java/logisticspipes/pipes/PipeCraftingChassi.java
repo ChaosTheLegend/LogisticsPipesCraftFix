@@ -14,6 +14,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
+import logisticspipes.transport.LPTravelingItem.LPTravelingItemServer;
+import logisticspipes.utils.InventoryHelper;
+import logisticspipes.utils.InventoryUtil;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.modules.ModuleCrafter;
 
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -112,6 +117,8 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     public BlockingModeState blockMode = BlockingModeState.OFF;
     public Map<ItemIdentifier, List<IRequestItems>> craftingRequests = new HashMap<>();
+
+    public Queue<IRequestItems> craftingQueue = new PriorityQueue<>();
 
     protected ItemStackHandler bufferInventory = new ItemStackHandler(9);
 
@@ -248,6 +255,146 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
 
     }
 
+    public boolean handleArrival(LPTravelingItemServer arrivingItem, TileEntity tile, ForgeDirection dir) {
+        if (blockMode == BlockingModeState.OFF) {
+            ItemStack toInsert = arrivingItem.getItemIdentifierStack().makeNormalStack();
+            ItemStack remaining = InventoryHelper.getTransactorFor(tile, dir.getOpposite()).add(toInsert, dir.getOpposite(), true);
+            arrivingItem.getItemIdentifierStack().setStackSize(remaining.stackSize);
+            if (arrivingItem.getItemIdentifierStack().getStackSize() > 0) {
+                for (int i = 0; i < bufferInventory.getSlots(); i++) {
+                    ItemStack inBuffer = bufferInventory.getStackInSlot(i);
+                    if (inBuffer == null) {
+                        bufferInventory.setStackInSlot(i, arrivingItem.getItemIdentifierStack().makeNormalStack());
+                        arrivingItem.getItemIdentifierStack().setStackSize(0);
+                        break;
+                    } else if (ItemIdentifier.get(inBuffer).equals(arrivingItem.getItemIdentifierStack().getItem())) {
+                        int space = inBuffer.getMaxStackSize() - inBuffer.stackSize;
+                        int toAdd = Math.min(space, arrivingItem.getItemIdentifierStack().getStackSize());
+                        inBuffer.stackSize += toAdd;
+                        arrivingItem.getItemIdentifierStack().lowerStackSize(toAdd);
+                        if (arrivingItem.getItemIdentifierStack().getStackSize() <= 0) break;
+                    }
+                }
+            }
+            if (arrivingItem.getItemIdentifierStack().getStackSize() <= 0) {
+                extractFromBufferToMachine(tile, dir);
+                return true;
+            }
+        } else {
+            for (int i = 0; i < bufferInventory.getSlots(); i++) {
+                ItemStack inBuffer = bufferInventory.getStackInSlot(i);
+                if (inBuffer == null) {
+                    bufferInventory.setStackInSlot(i, arrivingItem.getItemIdentifierStack().makeNormalStack());
+                    arrivingItem.getItemIdentifierStack().setStackSize(0);
+                    break;
+                } else if (ItemIdentifier.get(inBuffer).equals(arrivingItem.getItemIdentifierStack().getItem())) {
+                    int space = inBuffer.getMaxStackSize() - inBuffer.stackSize;
+                    int toAdd = Math.min(space, arrivingItem.getItemIdentifierStack().getStackSize());
+                    inBuffer.stackSize += toAdd;
+                    arrivingItem.getItemIdentifierStack().lowerStackSize(toAdd);
+                    if (arrivingItem.getItemIdentifierStack().getStackSize() <= 0) break;
+                }
+            }
+            if (arrivingItem.getItemIdentifierStack().getStackSize() <= 0) {
+                handleBlockingModes(tile, dir);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void extractFromBufferToMachine(TileEntity tile, ForgeDirection dir) {
+        for (int i = 0; i < bufferInventory.getSlots(); i++) {
+            ItemStack inBuffer = bufferInventory.getStackInSlot(i);
+            if (inBuffer != null) {
+                ItemStack remaining = InventoryHelper.getTransactorFor(tile, dir.getOpposite()).add(inBuffer, dir.getOpposite(), true);
+                if (remaining == null || remaining.stackSize == 0) {
+                    bufferInventory.setStackInSlot(i, null);
+                } else {
+                    inBuffer.stackSize = remaining.stackSize;
+                }
+            }
+        }
+    }
+
+    private void handleBlockingModes(TileEntity tile, ForgeDirection dir) {
+        for (ItemStack pattern : patternInventory.getStacks()) {
+            if (pattern == null || !(pattern.getItem() instanceof ItemModule) || !ItemModule.isCrafter(pattern)) continue;
+            LogisticsModule x = ((ItemModule) pattern.getItem()).getModuleForItem(pattern, null, this, this);
+            if (x instanceof ModuleCrafter) {
+                ModuleCrafter crafter = (ModuleCrafter) x;
+                logisticspipes.logisticspipes.ItemModuleInformationManager.readInformation(pattern, x);
+
+                int multiples = 1;
+                if (blockMode == BlockingModeState.SMART) {
+                    // Try to find how many multiples we can craft based on buffer
+                    multiples = Integer.MAX_VALUE;
+                    boolean foundAny = false;
+                    for (int i = 0; i < 9; i++) {
+                        ItemIdentifierStack material = crafter.getMaterials(i);
+                        if (material != null) {
+                            foundAny = true;
+                            int inBuffer = countInBuffer(material.getItem());
+                            multiples = Math.min(multiples, inBuffer / material.getStackSize());
+                        }
+                    }
+                    if (!foundAny) multiples = 0;
+                }
+
+                if (multiples > 0) {
+                    // Check if all ingredients are present for at least one craft
+                    boolean allPresent = true;
+                    for (int i = 0; i < 9; i++) {
+                        ItemIdentifierStack material = crafter.getMaterials(i);
+                        if (material != null) {
+                            if (countInBuffer(material.getItem()) < material.getStackSize() * (blockMode == BlockingModeState.SMART ? multiples : 1)) {
+                                allPresent = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (allPresent) {
+                        // Send out ingredients
+                        for (int i = 0; i < 9; i++) {
+                            ItemIdentifierStack material = crafter.getMaterials(i);
+                            if (material != null) {
+                                removeFromBuffer(material.getItem(), material.getStackSize() * multiples, tile, dir);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private int countInBuffer(ItemIdentifier item) {
+        int count = 0;
+        for (int i = 0; i < bufferInventory.getSlots(); i++) {
+            ItemStack stack = bufferInventory.getStackInSlot(i);
+            if (stack != null && ItemIdentifier.get(stack).equals(item)) {
+                count += stack.stackSize;
+            }
+        }
+        return count;
+    }
+
+    private void removeFromBuffer(ItemIdentifier item, int count, TileEntity tile, ForgeDirection dir) {
+        int remaining = count;
+        for (int i = 0; i < bufferInventory.getSlots() && remaining > 0; i++) {
+            ItemStack stack = bufferInventory.getStackInSlot(i);
+            if (stack != null && ItemIdentifier.get(stack).equals(item)) {
+                int toTake = Math.min(remaining, stack.stackSize);
+                ItemStack toInsert = stack.splitStack(toTake);
+                InventoryHelper.getTransactorFor(tile, dir.getOpposite()).add(toInsert, dir.getOpposite(), true);
+                if (stack.stackSize <= 0) {
+                    bufferInventory.setStackInSlot(i, null);
+                }
+                remaining -= toTake;
+            }
+        }
+    }
+
     @Override
     public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         if (MainProxy.isServer(getWorld())) {
@@ -344,46 +491,57 @@ public abstract class PipeCraftingChassi extends CoreRoutedPipe
     @Override
     public void enabledUpdateEntity() {
         super.enabledUpdateEntity();
-        if (MainProxy.isServer(getWorld()) && isNthTick(6)) {
-            if (!craftingRequests.isEmpty()) {
-                IInventoryUtil inv = getPointedInventory(true);
-                if (inv != null) {
-                    for (ItemIdentifier item : new ArrayList<>(craftingRequests.keySet())) {
-                        int count = inv.itemCount(item);
-                        if (count > 0) {
-                            List<IRequestItems> reqlists = craftingRequests.get(item);
-                            if (reqlists != null && !reqlists.isEmpty()) {
-                                LogisticsItemOrder foundOrder = null;
-                                for (LogisticsItemOrder order : getItemOrderManager()) {
-                                    if (order.getResource().getItem().equals(item) && reqlists.contains(order.getDestination())) {
-                                        foundOrder = order;
-                                        break;
-                                    }
+        if (MainProxy.isServer(getWorld())) {
+            IInventoryUtil inv = getPointedInventory(true);
+            if (inv != null) {
+                for (ItemIdentifier item : inv.getItems()) {
+                    if (isNthTick(6) && !craftingRequests.isEmpty() && craftingRequests.containsKey(item)) {
+                        List<IRequestItems> reqlists = craftingRequests.get(item);
+                        if (reqlists != null && !reqlists.isEmpty()) {
+                            LogisticsItemOrder foundOrder = null;
+                            for (LogisticsItemOrder order : getItemOrderManager()) {
+                                if (order.getResource().getItem().equals(item) && reqlists.contains(order.getDestination())) {
+                                    foundOrder = order;
+                                    break;
                                 }
+                            }
 
-                                if (foundOrder != null) {
-                                    int toExtract = Math.min(count, foundOrder.getAmount());
-                                    toExtract = Math.min(toExtract, item.getMaxStackSize());
-                                    ItemStack extracted = inv.getMultipleItems(item, toExtract);
-                                    if (extracted != null && extracted.stackSize > 0) {
-                                        IRequestItems destination = foundOrder.getDestination();
-                                        IRoutedItem routedItem = SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted);
-                                        routedItem.setDestination(destination.getRouter().getSimpleID());
-                                        routedItem.setTransportMode(TransportMode.Active);
-                                        routedItem.setAdditionalTargetInformation(foundOrder.getInformation());
-                                        queueRoutedItem(routedItem, pointedDirection);
+                            if (foundOrder != null) {
+                                int count = inv.itemCount(item);
+                                int toExtract = Math.min(count, foundOrder.getAmount());
+                                toExtract = Math.min(toExtract, item.getMaxStackSize());
+                                ItemStack extracted = inv.getMultipleItems(item, toExtract);
+                                if (extracted != null && extracted.stackSize > 0) {
+                                    IRequestItems destination = foundOrder.getDestination();
+                                    IRoutedItem routedItem = SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted);
+                                    routedItem.setDestination(destination.getRouter().getSimpleID());
+                                    routedItem.setTransportMode(TransportMode.Active);
+                                    routedItem.setAdditionalTargetInformation(foundOrder.getInformation());
+                                    queueRoutedItem(routedItem, pointedDirection);
 
-                                        getItemOrderManager().sendSuccessfull(extracted.stackSize, false, routedItem);
+                                    getItemOrderManager().sendSuccessfull(extracted.stackSize, false, routedItem);
 
-                                        if (foundOrder.isFinished()) {
-                                            reqlists.remove(destination);
-                                            if (reqlists.isEmpty()) {
-                                                craftingRequests.remove(item);
-                                            }
+                                    if (foundOrder.isFinished()) {
+                                        reqlists.remove(destination);
+                                        if (reqlists.isEmpty()) {
+                                            craftingRequests.remove(item);
                                         }
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Also trigger handleBlockingModes periodically to push items from buffer to machine
+                if (isNthTick(6)) {
+                    LPPosition pos = getLPPosition();
+                    pos.moveForward(pointedDirection);
+                    TileEntity tile = pos.getTileEntity(getWorld());
+                    if (tile != null) {
+                        handleBlockingModes(tile, pointedDirection);
+                        if (blockMode == BlockingModeState.OFF) {
+                            extractFromBufferToMachine(tile, pointedDirection);
                         }
                     }
                 }

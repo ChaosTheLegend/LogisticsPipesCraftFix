@@ -43,6 +43,7 @@ import logisticspipes.network.packets.pipe.ItemBufferSyncPacket;
 import logisticspipes.network.packets.pipe.PipeContentPacket;
 import logisticspipes.network.packets.pipe.PipeContentRequest;
 import logisticspipes.network.packets.pipe.PipePositionPacket;
+import logisticspipes.pipes.PipeCraftingChassi;
 import logisticspipes.pipes.PipeItemsFluidSupplier;
 import logisticspipes.pipes.PipeLogisticsChassi;
 import logisticspipes.pipes.PipeLogisticsChassi.ChassiTargetInformation;
@@ -507,6 +508,11 @@ public class PipeTransportLogistics {
                 return;
             }
         } else if (tile instanceof IInventory && isRouted) {
+            if (getPipe() instanceof PipeCraftingChassi) {
+                if (((PipeCraftingChassi) getPipe()).handleArrival(arrivingItem, tile, dir)) {
+                    return;
+                }
+            }
             getRoutedPipe().getCacheHolder().trigger(CacheTypes.Inventory);
 
             // items.scheduleRemoval(arrivingItem);
