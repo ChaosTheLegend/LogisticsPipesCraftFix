@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.gui.orderer.GuiRequestTableMUI;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.SlotCrafting;
@@ -51,7 +56,7 @@ import logisticspipes.utils.item.SimpleStackInventory;
 import logisticspipes.utils.tuples.Pair;
 
 public class PipeBlockRequestTable extends PipeItemsRequestLogistics
-        implements ISimpleInventoryEventHandler, IRequestWatcher, IGuiOpenControler, IRotationProvider {
+        implements ISimpleInventoryEventHandler, IRequestWatcher, IRotationProvider, IMUICompatiblePipe {
 
     public SimpleStackInventory diskInv = new SimpleStackInventory(1, "Disk Slot", 1);
     public SimpleStackInventory inv = new SimpleStackInventory(27, "Crafting Resources", 64);
@@ -82,13 +87,7 @@ public class PipeBlockRequestTable extends PipeItemsRequestLogistics
         if (MainProxy.isPipeControllerEquipped(entityplayer) && !(entityplayer.isSneaking())) {
             return false;
         }
-        if (MainProxy.isServer(getWorld())) {
-            if (settings == null || settings.openGui) {
-                openGui(entityplayer);
-            } else {
-                entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
-            }
-        }
+        openGui(entityplayer, this);
         return true;
     }
 
@@ -574,28 +573,6 @@ public class PipeBlockRequestTable extends PipeItemsRequestLogistics
     }
 
     @Override
-    public void guiOpenedByPlayer(EntityPlayer player) {
-        MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(OrderWatchRemovePacket.class).setInteger(-1).setTilePos(container),
-                player);
-        MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(CraftingSetType.class).setTargetType(targetType).setTilePos(container),
-                player);
-        localGuiWatcher.add(player);
-        for (Entry<Integer, Pair<IResource, LinkedLogisticsOrderList>> entry : watchedRequests.entrySet()) {
-            MainProxy.sendPacketToPlayer(
-                    PacketHandler.getPacket(OrdererWatchPacket.class).setOrders(entry.getValue().getValue2())
-                            .setStack(entry.getValue().getValue1()).setInteger(entry.getKey()).setTilePos(container),
-                    player);
-        }
-    }
-
-    @Override
-    public void guiClosedByPlayer(EntityPlayer player) {
-        localGuiWatcher.remove(player);
-    }
-
-    @Override
     public void handleClientSideListInfo(int id, IResource stack, LinkedLogisticsOrderList orders) {
         if (MainProxy.isClient(getWorld())) {
             watchedRequests.put(id, new Pair<>(stack, orders));
@@ -636,5 +613,27 @@ public class PipeBlockRequestTable extends PipeItemsRequestLogistics
     @Override
     public boolean canHoldBCParts() {
         return false;
+    }
+
+    @Override
+    public String getId() {
+        return "request_table";
+    }
+
+    @Override
+    public int getGuiWidth() {
+        return 184;
+    }
+
+    @Override
+    public int getGuiHeight() {
+        return 186;
+    }
+
+
+
+    @Override
+    public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager){
+        new GuiRequestTableMUI(this).addUIWidgets(panel, data, syncManager);
     }
 }
