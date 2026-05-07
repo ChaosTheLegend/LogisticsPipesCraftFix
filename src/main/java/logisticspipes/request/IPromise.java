@@ -9,6 +9,8 @@ import logisticspipes.utils.item.ItemIdentifier;
 
 public interface IPromise {
 
+    boolean isFulfilled();
+
     boolean matches(IResource requestType);
 
     int getAmount();

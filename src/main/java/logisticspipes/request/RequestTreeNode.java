@@ -43,6 +43,9 @@ public class RequestTreeNode {
         this(null, requestType, parentNode, requestFlags, info);
     }
 
+    /**
+     * Main constructor for a RequestTreeNode. Explodes the request and checks if sub requests can be satisfied.
+     */
     private RequestTreeNode(ICraftingTemplate template, IResource requestType, RequestTreeNode parentNode,
             EnumSet<ActiveRequestType> requestFlags, IAdditionalTargetInformation info) {
         this.info = info;
@@ -58,29 +61,38 @@ public class RequestTreeNode {
             declareCrafterUsed(template);
         }
 
+        // Explosion happens here
+
+        // Check if provider can satisfy request
         if (requestFlags.contains(ActiveRequestType.Provide) && checkProvider()) {
             return;
         }
 
+        // Check if crafting can satisfy request including extras
         if (requestFlags.contains(ActiveRequestType.Craft) && checkExtras()) {
             return; // crafting was able to complete
         }
 
+        // Check if crafting can satisfy request
         if (requestFlags.contains(ActiveRequestType.Craft) && checkCrafting()) {
             // crafting was able to complete
         }
-
         // crafting is not done!
     }
 
     @Getter
     private final IResource requestType;
 
-    private final IAdditionalTargetInformation info;
+    final IAdditionalTargetInformation info;
     private final RequestTreeNode parentNode;
     protected final RequestTree root;
-    private final List<RequestTreeNode> subRequests = new ArrayList<>();
-    private final List<IPromise> promises = new ArrayList<>();
+    public final List<RequestTreeNode> subRequests = new ArrayList<>();
+    final List<IPromise> promises = new ArrayList<>();
+
+    @Getter
+    private boolean isCrafting = false;
+
+    private boolean isSimulated = false;
     private final List<IExtraPromise> extrapromises = new ArrayList<>();
     private final List<IExtraPromise> byproducts = new ArrayList<>();
     private final SortedSet<ICraftingTemplate> usedCrafters = new TreeSet<>();
@@ -142,8 +154,25 @@ public class RequestTreeNode {
         return getMissingAmount() <= 0;
     }
 
+    public boolean allPromisesFulfilled() {
+        for (var promise : promises) {
+            if (!promise.isFulfilled()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean isAllFulfilled() {
+        boolean result = allPromisesFulfilled();
+        for (RequestTreeNode node : subRequests) {
+            result &= node.isAllFulfilled();
+        }
+        return result;
+    }
+
     public boolean isAllDone() {
-        boolean result = getMissingAmount() <= 0;
+        boolean result = isDone();
         for (RequestTreeNode node : subRequests) {
             result &= node.isAllDone();
         }
@@ -358,11 +387,17 @@ public class RequestTreeNode {
         return isDone();
     }
 
+    /**
+     * Explodes the request into sub-requests, and checks if they can be satisfied
+     *
+     * @return
+     */
     private boolean checkCrafting() {
 
         // get all the routers
         BitSet routersIndex = ServerRouter.getRoutersInterestedIn(getRequestType());
         List<ExitRoute> validSources = new ArrayList<>(); // get the routing table
+
         for (int i = routersIndex.nextSetBit(0); i >= 0; i = routersIndex.nextSetBit(i + 1)) {
             IRouter r = SimpleServiceLocator.routerManager.getRouterUnsafe(i, false);
 
@@ -375,6 +410,7 @@ public class RequestTreeNode {
                 validSources.addAll(e);
             }
         }
+
         workWeightedSorter wSorter = new workWeightedSorter(0); // distance doesn't matter, because ingredients have to
         // be delivered to the crafter, and we can't
         // tell how long that will take.
@@ -509,6 +545,19 @@ public class RequestTreeNode {
 
     public void setQueried(LogisticsOrderManager<?, ?> orderManager) {
         usedExtrasFromManager.add(orderManager);
+    }
+
+    public void fulFillPromises() {
+        isCrafting = true;
+        for (IPromise promise : promises) {
+            promise.fullFill(requestType, info);
+        }
+        for (IExtraPromise promise : extrapromises) {
+            promise.registerExtras(requestType);
+        }
+        for (IExtraPromise promise : byproducts) {
+            promise.registerExtras(requestType);
+        }
     }
 
     private class CraftingSorterNode implements Comparable<CraftingSorterNode> {

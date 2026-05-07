@@ -49,6 +49,7 @@ import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree;
 import logisticspipes.routing.IRouter;
+import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.PlayerCollectionList;
@@ -588,6 +589,11 @@ public class ModuleActiveSupplier extends LogisticsGuiModule
     @Override
     public void itemCouldNotBeSend(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         itemLost(item, info);
+    }
+
+    @Override
+    public void observePromise(LogisticsPromise logisticsPromise) {
+        // TODO implement
     }
 
     @Override

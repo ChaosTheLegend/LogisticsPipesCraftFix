@@ -95,10 +95,9 @@ import logisticspipes.proxy.computers.interfaces.CCSecurtiyCheck;
 import logisticspipes.proxy.computers.interfaces.CCType;
 import logisticspipes.proxy.computers.interfaces.SetSourceMod;
 import logisticspipes.proxy.computers.wrapper.CCWrapperInformation.SourceMod;
-import logisticspipes.routing.ExitRoute;
-import logisticspipes.routing.IRouter;
-import logisticspipes.routing.ItemRoutingInformation;
-import logisticspipes.routing.ServerRouter;
+import logisticspipes.request.RequestTree;
+import logisticspipes.request.RequestTreeNode;
+import logisticspipes.routing.*;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.LogisticsItemOrderManager;
 import logisticspipes.routing.order.LogisticsOrderManager;
@@ -128,6 +127,70 @@ import lombok.Getter;
 public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         implements IClientState, IRequestItems, IAdjacentWorldAccess, ITrackStatistics, IWorldProvider,
         IWatchingHandler, IPipeServiceProvider, IQueueCCEvent, ILPPositionProvider {
+
+    private RequestTreeNode processingRequest = null;
+
+    private List<RequestTreeNode> queueNodes = new ArrayList<>();
+    private List<RequestTreeNode> processingNodes = new ArrayList<>();
+
+    public void processRequestTree(RequestTree tree) {
+        processingRequest = tree;
+        queueRequestNodes(tree);
+
+        // tree.fullFillAll();
+    }
+
+    private void queueRequestNodes(RequestTreeNode root) {
+        if (root == null) return;
+        for (RequestTreeNode node : root.subRequests) {
+            queueRequestNodes(node);
+        }
+
+        queueNodes.add(root);
+    }
+
+    @Override
+    public void observePromise(LogisticsPromise logisticsPromise) {
+        _observedPromises.add(logisticsPromise);
+    }
+
+    private void requestProcessTick() {
+        if (processingRequest.isAllFulfilled()) processingRequest = null;
+
+        // Move queued nodes to processing list
+        for (int i = 0; i < queueNodes.size(); i++) {
+            RequestTreeNode node = queueNodes.get(i);
+            if (node.subRequests.isEmpty()) {
+                queueNodes.remove(node);
+                processingNodes.add(node);
+                i--;
+                continue;
+            }
+
+            var remove = true;
+            for (RequestTreeNode subNode : node.subRequests) {
+                if (!subNode.allPromisesFulfilled()) remove = false;
+            }
+
+            if (remove) {
+                queueNodes.remove(node);
+                processingNodes.add(node);
+                i--;
+            }
+        }
+
+        // Process processing nodes
+        for (int i = 0; i < processingNodes.size(); i++) {
+            RequestTreeNode node = processingNodes.get(i);
+
+            if (!node.isCrafting()) node.fulFillPromises();
+
+            if (node.allPromisesFulfilled()) {
+                processingNodes.remove(node);
+                i--;
+            }
+        }
+    }
 
     public enum ItemSendMode {
         Normal,
@@ -377,6 +440,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
     public final void updateEntity() {
         debug.tick();
         spawnParticleTick();
+
         if (stillNeedReplace) {
             stillNeedReplace = false;
             getWorld().notifyBlockChange(getX(), getY(), getZ(), getWorld().getBlock(getX(), getY(), getZ()));
@@ -415,6 +479,9 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
                 this);
         recheckConnections = false;
         getOriginalUpgradeManager().securityTick();
+
+        if (processingRequest != null) requestProcessTick();
+
         super.updateEntity();
 
         if (isNthTick(200)) {
@@ -1355,7 +1422,21 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         return 0.0;
     }
 
+    private final List<LogisticsPromise> _observedPromises = new ArrayList<>();
+
     public void notifyOfItemArival(ItemRoutingInformation information) {
+
+        for (int i = 0; i < _observedPromises.size(); i++) {
+            LogisticsPromise promise = _observedPromises.get(i);
+            if (promise.getItemType().equals(information.getItem().getItem())) {
+                promise.registerItemArrived(information.getItem());
+                if (promise.isFulfilled()) {
+                    _observedPromises.remove(promise);
+                    i--;
+                }
+            }
+        }
+
         _inTransitToMe.remove(information);
         if (this instanceof IRequireReliableTransport) {
             ((IRequireReliableTransport) this).itemArrived(information.getItem(), information.targetInfo);

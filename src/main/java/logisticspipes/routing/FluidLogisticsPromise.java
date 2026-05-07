@@ -40,6 +40,12 @@ public class FluidLogisticsPromise implements IPromise {
     }
 
     @Override
+    public boolean isFulfilled() {
+        // TODO: Implement
+        return false;
+    }
+
+    @Override
     public boolean matches(IResource requestType) {
         if (requestType instanceof FluidResource) {
             FluidResource fluid = (FluidResource) requestType;

@@ -4,9 +4,12 @@
  */
 package logisticspipes.interfaces.routing;
 
+import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 public interface IRequestItems extends IRequest {
 
     void itemCouldNotBeSend(ItemIdentifierStack item, IAdditionalTargetInformation info);
+
+    void observePromise(LogisticsPromise logisticsPromise);
 }

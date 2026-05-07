@@ -101,12 +101,7 @@ import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
-import logisticspipes.routing.ExitRoute;
-import logisticspipes.routing.IRouter;
-import logisticspipes.routing.LogisticsDictPromise;
-import logisticspipes.routing.LogisticsExtraDictPromise;
-import logisticspipes.routing.LogisticsExtraPromise;
-import logisticspipes.routing.LogisticsPromise;
+import logisticspipes.routing.*;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
@@ -302,7 +297,18 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     }
 
     @Override
-    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
+    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        for (int i = 0; i < _observedPromises.size(); i++) {
+            LogisticsPromise promise = _observedPromises.get(i);
+            if (promise.getItemType().equals(item.getItem())) {
+                promise.registerItemArrived(item);
+                if (promise.isFulfilled()) {
+                    _observedPromises.remove(promise);
+                    i--;
+                }
+            }
+        }
+    }
 
     @Override
     public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
@@ -437,6 +443,13 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     @Override
     public void itemCouldNotBeSend(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         _invRequester.itemCouldNotBeSend(item, info);
+    }
+
+    private final List<LogisticsPromise> _observedPromises = new ArrayList<>();
+
+    @Override
+    public void observePromise(LogisticsPromise logisticsPromise) {
+        _observedPromises.add(logisticsPromise);
     }
 
     @Override

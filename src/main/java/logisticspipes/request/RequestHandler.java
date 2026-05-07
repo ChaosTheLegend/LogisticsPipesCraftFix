@@ -27,6 +27,7 @@ import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
 import logisticspipes.request.resources.IResource;
+import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.order.LinkedLogisticsOrderList;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
@@ -40,35 +41,28 @@ public class RequestHandler {
         CraftOnly
     }
 
+    /**
+     * Request an item from a pipe
+     *
+     * @param player The player requesting the item
+     * @param stack  The itemstack to request
+     * @param pipe   The pipe to request the item from and where item should be delivered to
+     */
     public static void request(final EntityPlayer player, final ItemIdentifierStack stack, final CoreRoutedPipe pipe) {
         if (!pipe.useEnergy(5)) {
             player.addChatMessage(new ChatComponentTranslation("lp.misc.noenergy"));
             return;
         }
-        RequestTree.request(stack.clone(), pipe, new RequestLog() {
 
-            @Override
-            public void handleMissingItems(List<IResource> resources) {
-                MainProxy.sendPacketToPlayer(
-                        PacketHandler.getPacket(MissingItems.class).setItems(resources).setFlag(true),
-                        player);
-            }
+        ItemResource req = new ItemResource(stack.clone(), pipe);
+        // Simulates the tree;
+        RequestTree tree = new RequestTree(req, null, RequestTree.defaultRequestFlags, null);
 
-            @Override
-            public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
-                Collection<IResource> coll = new ArrayList<>(1);
-                coll.add(item);
-                MainProxy.sendPacketToPlayer(
-                        PacketHandler.getPacket(MissingItems.class).setItems(coll).setFlag(false),
-                        player);
-                if (pipe instanceof IRequestWatcher) {
-                    ((IRequestWatcher) pipe).handleOrderList(item, parts);
-                }
-            }
+        pipe.processRequestTree(tree);
 
-            @Override
-            public void handleSucessfullRequestOfList(List<IResource> resources, LinkedLogisticsOrderList parts) {}
-        }, null);
+        // List<IRequestJob> jobs = getJobsForTree(tree);
+
+        //
     }
 
     public static void simulate(final EntityPlayer player, final ItemIdentifierStack stack, CoreRoutedPipe pipe) {
@@ -94,6 +88,13 @@ public class RequestHandler {
                 player);
     }
 
+    /**
+     * Refresh the available and craftable items for requester and send packet back with the displayed items
+     *
+     * @param player The player requesting the refresh
+     * @param pipe   The pipe to refresh the items for
+     * @param option The display options to use
+     */
     public static void refresh(EntityPlayer player, CoreRoutedPipe pipe, DisplayOptions option) {
         Map<ItemIdentifier, Integer> _availableItems;
         LinkedList<ItemIdentifier> _craftableItems;

@@ -183,11 +183,17 @@ public class RequestTree extends RequestTreeNode {
         }
     }
 
+    /**
+     * Main entry point for requesting items.
+     */
     public static int request(ItemIdentifierStack item, IRequestItems requester, RequestLog log, boolean acceptPartial,
             boolean simulateOnly, boolean logMissing, boolean logUsed, EnumSet<ActiveRequestType> requestFlags,
             IAdditionalTargetInformation info) {
         ItemResource req = new ItemResource(item, requester);
+
+        // This is where the simulation is done!
         RequestTree tree = new RequestTree(req, null, requestFlags, info);
+
         if (!simulateOnly && (tree.isDone() || ((tree.getPromiseAmount() > 0) && acceptPartial))) {
             LinkedLogisticsOrderList list = tree.fullFillAll();
             if (log != null) {
@@ -195,6 +201,7 @@ public class RequestTree extends RequestTreeNode {
             }
             return tree.getPromiseAmount();
         } else {
+            // and this only logs simulation, but simulation is done either way
             if (log != null) {
                 if (!tree.isDone()) {
                     tree.recurseFailedRequestTree();
@@ -223,6 +230,9 @@ public class RequestTree extends RequestTreeNode {
                 .request(item, requester, null, true, false, true, false, RequestTree.defaultRequestFlags, info);
     }
 
+    /**
+     * Wrapper function for simulating the request, identical to calling request with simulateOnly set to true.
+     */
     public static int simulate(ItemIdentifierStack item, IRequestItems requester, RequestLog log) {
         return RequestTree
                 .request(item, requester, log, true, true, false, true, RequestTree.defaultRequestFlags, null);

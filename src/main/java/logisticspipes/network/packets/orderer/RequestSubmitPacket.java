@@ -9,6 +9,9 @@ import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.request.RequestHandler;
 
+/**
+ * Packet to submit a request for an item
+ */
 public class RequestSubmitPacket extends RequestPacket {
 
     public RequestSubmitPacket(int id) {
