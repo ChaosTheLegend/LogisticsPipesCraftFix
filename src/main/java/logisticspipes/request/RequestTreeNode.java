@@ -305,6 +305,8 @@ public class RequestTreeNode {
         for (IPromise promise : promises) {
             promiseCopies.add(promise.copy());
         }
+        List<IExtraPromise> extraCopies = copyExtraPromises(extrapromises);
+        List<IExtraPromise> byproductCopies = copyExtraPromises(byproducts);
         List<PatternCraftingBranch> children = new ArrayList<>();
         for (RequestTreeNode subRequest : subRequests) {
             children.add(subRequest.toPatternCraftingBranch());
@@ -313,7 +315,20 @@ public class RequestTreeNode {
                 requestType.copyForDisplayWith(requestType.getRequestedAmount()),
                 info,
                 promiseCopies,
+                extraCopies,
+                byproductCopies,
                 children);
+    }
+
+    /**
+     * Copies extra promises into a staged crafting branch so branch fulfilment can register the matching extra output later.
+     */
+    private List<IExtraPromise> copyExtraPromises(List<IExtraPromise> promises) {
+        List<IExtraPromise> copies = new ArrayList<>();
+        for (IExtraPromise promise : promises) {
+            copies.add(promise.copy());
+        }
+        return copies;
     }
 
     protected void buildMissingMap(Map<IResource, Integer> missing) {

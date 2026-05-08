@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
@@ -18,16 +19,22 @@ public class PatternCraftingBranch {
     private final IAdditionalTargetInformation info;
     private final int originalAmount;
     private int remainingAmount;
+    private final int originalCraftingAmount;
+    private int remainingCraftingAmount;
     private final List<PromiseState> promises;
+    private final List<ExtraState> extraPromises;
+    private final List<ExtraState> byproducts;
     private final List<PatternCraftingBranch> subRequests;
 
     public PatternCraftingBranch(
             IResource requestType,
             IAdditionalTargetInformation info,
             List<IPromise> promises,
+            List<IExtraPromise> extraPromises,
+            List<IExtraPromise> byproducts,
             List<PatternCraftingBranch> subRequests) {
         this(requestType, info, requestType.getRequestedAmount(), requestType.getRequestedAmount(),
-                copyPromiseStates(promises), subRequests);
+                copyPromiseStates(promises), copyExtraStates(extraPromises), copyExtraStates(byproducts), subRequests);
     }
 
     private PatternCraftingBranch(
@@ -36,12 +43,18 @@ public class PatternCraftingBranch {
             int originalAmount,
             int remainingAmount,
             List<PromiseState> promises,
+            List<ExtraState> extraPromises,
+            List<ExtraState> byproducts,
             List<PatternCraftingBranch> subRequests) {
         this.requestType = requestType;
         this.info = info;
         this.originalAmount = originalAmount;
         this.remainingAmount = remainingAmount;
         this.promises = promises;
+        this.originalCraftingAmount = countCraftingAmount(promises);
+        this.remainingCraftingAmount = this.originalCraftingAmount;
+        this.extraPromises = extraPromises;
+        this.byproducts = byproducts;
         this.subRequests = subRequests;
     }
 
@@ -99,6 +112,10 @@ public class PatternCraftingBranch {
                 }
                 promise.fullFill(request, info);
             }
+            if (promise.getType() == ResourceType.CRAFTING) {
+                registerExtrasFor(toRequest);
+                remainingCraftingAmount -= toRequest;
+            }
             promiseState.remainingAmount -= toRequest;
             remainingAmount -= toRequest;
             requested += toRequest;
@@ -116,6 +133,9 @@ public class PatternCraftingBranch {
         int copiedAmount = Math.min(amount, remainingAmount);
         IResource copiedRequest = requestType.copyForDisplayWith(copiedAmount);
         List<PromiseState> copiedPromises = copyPromiseStatesFor(copiedAmount);
+        int copiedCraftingAmount = countCraftingAmount(copiedPromises);
+        List<ExtraState> copiedExtras = copyExtraStatesFor(extraPromises, copiedCraftingAmount);
+        List<ExtraState> copiedByproducts = copyExtraStatesFor(byproducts, copiedCraftingAmount);
         List<PatternCraftingBranch> copiedChildren = new ArrayList<>();
         for (BranchAllocation allocation : allocateChildrenFor(copiedAmount)) {
             copiedChildren.add(allocation.branch.copyForAmount(allocation.amount));
@@ -126,7 +146,35 @@ public class PatternCraftingBranch {
                 copiedAmount,
                 copiedAmount,
                 copiedPromises,
+                copiedExtras,
+                copiedByproducts,
                 copiedChildren);
+    }
+
+    /**
+     * Registers the extra promises and recipe byproducts that belong to the next consumed crafting slice of this branch.
+     */
+    private void registerExtrasFor(int craftingAmount) {
+        registerExtrasFor(extraPromises, craftingAmount);
+        registerExtrasFor(byproducts, craftingAmount);
+    }
+
+    /**
+     * Registers amount-proportional extras using cumulative floor allocation so rounded craft outputs are registered when
+     * the craft set that actually produces the surplus is ordered.
+     */
+    private void registerExtrasFor(List<ExtraState> states, int craftingAmount) {
+        int consumedBefore = originalCraftingAmount - remainingCraftingAmount;
+        int consumedAfter = Math.min(originalCraftingAmount, consumedBefore + craftingAmount);
+        for (ExtraState state : states) {
+            int extraAmount = state.amountForRange(consumedBefore, consumedAfter, originalCraftingAmount);
+            if (extraAmount <= 0) {
+                continue;
+            }
+            IExtraPromise promise = state.promise.copy();
+            promise.setAmount(extraAmount);
+            promise.registerExtras(requestType.copyForDisplayWith(Math.max(1, craftingAmount)));
+        }
     }
 
     /**
@@ -244,6 +292,9 @@ public class PatternCraftingBranch {
             }
             int moved = Math.min(amountLeft, promise.remainingAmount);
             promise.remainingAmount -= moved;
+            if (promise.promise.getType() == ResourceType.CRAFTING) {
+                remainingCraftingAmount -= moved;
+            }
             amountLeft -= moved;
         }
     }
@@ -276,6 +327,49 @@ public class PatternCraftingBranch {
             result.add(new PromiseState(promise.copy(), promise.getAmount(), false));
         }
         return result;
+    }
+
+    /**
+     * Copies extra promises with their original branch amount.
+     */
+    private static List<ExtraState> copyExtraStates(List<IExtraPromise> promises) {
+        List<ExtraState> result = new ArrayList<>();
+        for (IExtraPromise promise : promises) {
+            result.add(new ExtraState(promise.copy()));
+        }
+        return result;
+    }
+
+    /**
+     * Copies the extra promise amounts that belong to the next {@code craftingAmount} crafted items of this branch.
+     */
+    private List<ExtraState> copyExtraStatesFor(List<ExtraState> states, int craftingAmount) {
+        List<ExtraState> copied = new ArrayList<>();
+        int consumedBefore = originalCraftingAmount - remainingCraftingAmount;
+        int consumedAfter = Math.min(originalCraftingAmount, consumedBefore + craftingAmount);
+        for (ExtraState state : states) {
+            int extraAmount = state.amountForRange(consumedBefore, consumedAfter, originalCraftingAmount);
+            if (extraAmount <= 0) {
+                continue;
+            }
+            IExtraPromise promise = state.promise.copy();
+            promise.setAmount(extraAmount);
+            copied.add(new ExtraState(promise));
+        }
+        return copied;
+    }
+
+    /**
+     * Counts how much of this branch is fulfilled by crafting promises and can therefore produce extras or byproducts.
+     */
+    private static int countCraftingAmount(List<PromiseState> promises) {
+        int amount = 0;
+        for (PromiseState promise : promises) {
+            if (promise.promise.getType() == ResourceType.CRAFTING) {
+                amount += promise.remainingAmount;
+            }
+        }
+        return amount;
     }
 
     /**
@@ -325,6 +419,28 @@ public class PatternCraftingBranch {
             this.promise = promise;
             this.remainingAmount = remainingAmount;
             this.providerReserved = providerReserved;
+        }
+    }
+
+    private static class ExtraState {
+
+        private final IExtraPromise promise;
+        private final int originalAmount;
+
+        private ExtraState(IExtraPromise promise) {
+            this.promise = promise;
+            this.originalAmount = promise.getAmount();
+        }
+
+        private int amountForRange(int consumedBefore, int consumedAfter, int parentAmount) {
+            return scaledAmount(consumedAfter, parentAmount) - scaledAmount(consumedBefore, parentAmount);
+        }
+
+        private int scaledAmount(int consumed, int parentAmount) {
+            if (originalAmount <= 0 || consumed <= 0 || parentAmount <= 0) {
+                return 0;
+            }
+            return (int) ((long) originalAmount * consumed / parentAmount);
         }
     }
 }

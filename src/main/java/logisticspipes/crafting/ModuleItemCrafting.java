@@ -19,9 +19,11 @@ import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.IRouter;
+import logisticspipes.routing.LogisticsDictPromise;
 import logisticspipes.routing.LogisticsExtraPromise;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
@@ -50,6 +52,9 @@ import java.util.*;
 import java.util.concurrent.DelayQueue;
 
 public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItems, IRequireReliableTransport, IStagedCraftingProvider {
+
+    private static final int MAX_EXTRACTED_ITEMS_PER_TICK = 64;
+    private static final int MAX_EXTRACTED_STACKS_PER_TICK = 16;
 
     private final PipeItemsPatternCraftingLogistics pipe;
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
@@ -326,7 +331,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
 
     @Override
     public void registerExtras(IPromise promise) {
-        pipe.getItemOrderManager().addExtra(new logisticspipes.request.resources.DictResource(new ItemIdentifierStack(promise.getItemType(), promise.getAmount()), null));
+        if (promise instanceof LogisticsDictPromise) {
+            DictResource resource = ((LogisticsDictPromise) promise).getResource().clone();
+            resource.getItemStack().setStackSize(promise.getAmount());
+            pipe.getItemOrderManager().addExtra(resource);
+            return;
+        }
+        pipe.getItemOrderManager().addExtra(new DictResource(new ItemIdentifierStack(promise.getItemType(), promise.getAmount()), null));
     }
 
     @Override
@@ -786,6 +797,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Drains completed craft results, including extra and byproduct orders that were produced by the same staged craft.
+     */
     private void craftFromAdjacentInventory() {
         if (!pipe.isNthTick(6) || !pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
             return;
@@ -800,19 +814,38 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (order == null) {
             return;
         }
-        int maxToSend = Math.min(order.getAmount(), order.getResource().getItem().getMaxStackSize());
-        for (AdjacentTile tile : inventories) {
-            ItemStack extracted = adjacentInventory.extract(tile, order.getResource(), maxToSend);
-            if (extracted == null || extracted.stackSize <= 0) {
-                continue;
+
+        int itemsLeft = MAX_EXTRACTED_ITEMS_PER_TICK;
+        int stacksLeft = MAX_EXTRACTED_STACKS_PER_TICK;
+        boolean extractedAny = false;
+        while (itemsLeft > 0 && stacksLeft > 0
+                && pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
+            order = pipe.getItemOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
+            int maxToSend = Math.min(order.getAmount(), order.getResource().getItem().getMaxStackSize());
+            maxToSend = Math.min(maxToSend, itemsLeft);
+            ItemStack extracted = null;
+            AdjacentTile source = null;
+            for (AdjacentTile tile : inventories) {
+                extracted = adjacentInventory.extract(tile, order.getResource(), maxToSend);
+                if (extracted != null && extracted.stackSize > 0) {
+                    source = tile;
+                    break;
+                }
             }
+            if (extracted == null || extracted.stackSize <= 0 || source == null) {
+                pipe.getItemOrderManager().deferSend();
+                break;
+            }
+            extractedAny = true;
+            itemsLeft -= extracted.stackSize;
+            stacksLeft--;
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-            lastAccessedCrafter = new WeakReference<>(tile.tile);
-            sendExtracted(order, extracted, tile.orientation);
-            requestIngredientsForStagedCrafts();
-            return;
+            lastAccessedCrafter = new WeakReference<>(source.tile);
+            sendExtracted(order, extracted, source.orientation);
         }
-        pipe.getItemOrderManager().deferSend();
+        if (extractedAny) {
+            requestIngredientsForStagedCrafts();
+        }
     }
 
     private void sendExtracted(LogisticsItemOrder order, ItemStack extracted, ForgeDirection orientation) {
