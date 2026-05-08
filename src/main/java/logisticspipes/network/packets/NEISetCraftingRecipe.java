@@ -73,7 +73,6 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
             Pattern.setStackInSlot(pattern, Pattern.INGREDIENT_SLOTS + i, i == 0 ? copy(result) : null);
         }
-        Pattern.setPatternType(pattern, Pattern.PatternType.CRAFTING);
         player.inventory.markDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();

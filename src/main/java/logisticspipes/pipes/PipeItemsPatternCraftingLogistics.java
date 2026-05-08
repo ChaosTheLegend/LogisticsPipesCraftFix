@@ -1,15 +1,26 @@
 package logisticspipes.pipes;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import logisticspipes.crafting.ModuleItemCrafting;
 import logisticspipes.gui.hud.HUDPatternCrafting;
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IHeadUpDisplayRenderer;
@@ -28,6 +39,7 @@ import logisticspipes.network.packets.orderer.OrdererManagerContent;
 import logisticspipes.network.packets.orderer.PatternCraftingHudContent;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
@@ -35,10 +47,13 @@ import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.LogisticsOrder;
+import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.transport.PipeTransportLogistics;
+import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.PlayerCollectionList;
+import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
@@ -51,6 +66,8 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
         SMART
     }
 
+    private static final String CONNECTED_INVENTORY_DIRECTION_TAG = "patternConnectedInventoryDirection";
+
     private final ModuleItemCrafting module;
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
@@ -58,6 +75,8 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private final LinkedList<ItemIdentifierStack> displayResultList = new LinkedList<>();
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     private final HUDPatternCrafting HUD = new HUDPatternCrafting(this);
+    private ForgeDirection connectedInventoryDirection = ForgeDirection.UNKNOWN;
+    private AdjacentTile cachedConnectedInventory;
     private boolean doContentUpdate = true;
 
     public PipeItemsPatternCraftingLogistics(Item item) {
@@ -70,6 +89,159 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     @Override
     protected void onAllowedRemoval() {
         module.onAllowedRemoval();
+    }
+
+    @Override
+    public void onNeighborBlockChange(int blockId) {
+        cachedConnectedInventory = null;
+        super.onNeighborBlockChange(blockId);
+    }
+
+    @Override
+    public boolean disconnectPipe(TileEntity tile, ForgeDirection dir) {
+        if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
+            return false;
+        }
+        if (tile instanceof IInventory) {
+            return !isSelectedInventory(tile, dir);
+        }
+        return true;
+    }
+
+    @Override
+    protected boolean handleClick(EntityPlayer entityplayer, SecuritySettings settings) {
+        if (!entityplayer.isSneaking()
+                || !SimpleServiceLocator.toolWrenchHandler.isWrenchEquipped(entityplayer)
+                || !SimpleServiceLocator.toolWrenchHandler.canWrench(entityplayer, getX(), getY(), getZ())) {
+            return false;
+        }
+        if (MainProxy.isServer(entityplayer.worldObj)) {
+            if (settings == null || settings.openGui) {
+                cycleConnectedInventory(entityplayer);
+            } else {
+                entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
+            }
+        }
+        SimpleServiceLocator.toolWrenchHandler.wrenchUsed(entityplayer, getX(), getY(), getZ());
+        return true;
+    }
+
+    public AdjacentTile getConnectedInventoryTile() {
+        if (isCachedConnectedInventoryValid()) {
+            return cachedConnectedInventory;
+        }
+        cachedConnectedInventory = resolveConnectedInventoryTile();
+        return cachedConnectedInventory;
+    }
+
+    private boolean isCachedConnectedInventoryValid() {
+        return cachedConnectedInventory != null
+                && cachedConnectedInventory.orientation == connectedInventoryDirection
+                && cachedConnectedInventory.tile != null
+                && !cachedConnectedInventory.tile.isInvalid()
+                && getAdjacentTile(cachedConnectedInventory.orientation) == cachedConnectedInventory.tile
+                && isSelectableInventory(cachedConnectedInventory.tile, cachedConnectedInventory.orientation);
+    }
+
+    private AdjacentTile resolveConnectedInventoryTile() {
+        AdjacentTile selected = getSelectableAdjacentInventory(connectedInventoryDirection);
+        if (selected != null) {
+            return selected;
+        }
+        if (connectedInventoryDirection != ForgeDirection.UNKNOWN) {
+            return null;
+        }
+        List<AdjacentTile> inventories = getSelectableAdjacentInventories();
+        if (inventories.isEmpty()) {
+            return null;
+        }
+        selected = inventories.get(0);
+        connectedInventoryDirection = selected.orientation;
+        return selected;
+    }
+
+    private boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
+        AdjacentTile selected = getConnectedInventoryTile();
+        return selected != null
+                && selected.tile == tile
+                && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
+    }
+
+    private void cycleConnectedInventory(EntityPlayer player) {
+        List<AdjacentTile> inventories = getSelectableAdjacentInventories();
+        if (inventories.isEmpty()) {
+            connectedInventoryDirection = ForgeDirection.UNKNOWN;
+            cachedConnectedInventory = null;
+            refreshSelectedInventoryConnection();
+            player.addChatComponentMessage(new ChatComponentText("Pattern crafting target: none"));
+            return;
+        }
+        int current = -1;
+        for (int i = 0; i < inventories.size(); i++) {
+            if (inventories.get(i).orientation == connectedInventoryDirection) {
+                current = i;
+                break;
+            }
+        }
+        AdjacentTile selected = inventories.get((current + 1) % inventories.size());
+        connectedInventoryDirection = selected.orientation;
+        cachedConnectedInventory = selected;
+        refreshSelectedInventoryConnection();
+        player.addChatComponentMessage(new ChatComponentText("Pattern crafting target: "
+                + connectedInventoryDirection.name().toLowerCase(Locale.ENGLISH)));
+    }
+
+    private void refreshSelectedInventoryConnection() {
+        clearCache();
+        triggerConnectionCheck();
+        connectionUpdate();
+        refreshRender(false);
+    }
+
+    private List<AdjacentTile> getSelectableAdjacentInventories() {
+        List<AdjacentTile> inventories = new ArrayList<>();
+        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
+            AdjacentTile tile = getSelectableAdjacentInventory(direction);
+            if (tile != null) {
+                inventories.add(tile);
+            }
+        }
+        return inventories;
+    }
+
+    private AdjacentTile getSelectableAdjacentInventory(ForgeDirection direction) {
+        if (direction == null || direction == ForgeDirection.UNKNOWN) {
+            return null;
+        }
+        TileEntity tile = getAdjacentTile(direction);
+        if (!isSelectableInventory(tile, direction)) {
+            return null;
+        }
+        return new AdjacentTile(tile, direction);
+    }
+
+    private TileEntity getAdjacentTile(ForgeDirection direction) {
+        if (direction == null || direction == ForgeDirection.UNKNOWN) {
+            return null;
+        }
+        return new WorldUtil(getWorld(), getX(), getY(), getZ()).getAdjacentTileEntitie(direction);
+    }
+
+    private ForgeDirection getDirectionTo(TileEntity tile) {
+        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
+            if (getAdjacentTile(direction) == tile) {
+                return direction;
+            }
+        }
+        return ForgeDirection.UNKNOWN;
+    }
+
+    private boolean isSelectableInventory(TileEntity tile, ForgeDirection direction) {
+        return tile instanceof IInventory
+                && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
+                && ((IInventory) tile).getSizeInventory() > 0
+                && !isSideBlocked(direction, false)
+                && transport.canPipeConnect(tile, direction);
     }
 
     @Override
@@ -193,6 +365,42 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
                             .setPosY(getY()).setPosZ(getZ()),
                     localModeWatchers);
         }
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound nbttagcompound) {
+        super.writeToNBT(nbttagcompound);
+        nbttagcompound.setInteger(CONNECTED_INVENTORY_DIRECTION_TAG, connectedInventoryDirection.ordinal());
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbttagcompound) {
+        super.readFromNBT(nbttagcompound);
+        connectedInventoryDirection = nbttagcompound.hasKey(CONNECTED_INVENTORY_DIRECTION_TAG)
+                ? directionFromOrdinal(nbttagcompound.getInteger(CONNECTED_INVENTORY_DIRECTION_TAG))
+                : ForgeDirection.UNKNOWN;
+        cachedConnectedInventory = null;
+    }
+
+    @Override
+    public void writeData(LPDataOutputStream data) throws IOException {
+        super.writeData(data);
+        data.writeInt(connectedInventoryDirection.ordinal());
+    }
+
+    @Override
+    public void readData(LPDataInputStream data) throws IOException {
+        super.readData(data);
+        connectedInventoryDirection = directionFromOrdinal(data.readInt());
+        cachedConnectedInventory = null;
+    }
+
+    private ForgeDirection directionFromOrdinal(int ordinal) {
+        ForgeDirection[] values = ForgeDirection.values();
+        if (ordinal < 0 || ordinal >= values.length) {
+            return ForgeDirection.UNKNOWN;
+        }
+        return values[ordinal];
     }
 
     @Override

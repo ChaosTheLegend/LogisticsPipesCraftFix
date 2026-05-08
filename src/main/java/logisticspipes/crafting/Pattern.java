@@ -1,8 +1,10 @@
 package logisticspipes.crafting;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import com.emoniph.witchery.util.Count;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -21,15 +23,26 @@ public class Pattern extends LogisticsItem {
     public static final int RESULT_SLOTS = 3;
     public static final int SLOT_COUNT = INGREDIENT_SLOTS + RESULT_SLOTS;
     private static final String ITEMS_TAG = "patternItems";
-    private static final String TYPE_TAG = "patternType";
-
-    public enum PatternType {
-        CRAFTING,
-        PROCESSING
-    }
 
     public Pattern() {
         setMaxStackSize(1);
+    }
+
+    public static List<ItemIdentifierStack> getAggregatedIngredients(ItemStack pattern) {
+        var ingredientCounts = new HashMap<ItemIdentifierStack, Integer>();
+
+        for (ItemIdentifierStack ingredient: getIngredients(pattern)) {
+            ingredientCounts.putIfAbsent(ingredient, 0);
+            ingredientCounts.compute(ingredient, (key, value) -> value + ingredient.getStackSize());
+        }
+
+        var result = new ArrayList<ItemIdentifierStack>();
+        for (var entry: ingredientCounts.entrySet()) {
+            entry.getKey().setStackSize(entry.getValue());
+            result.add(entry.getKey());
+        }
+
+        return result;
     }
 
     @Override
@@ -97,31 +110,6 @@ public class Pattern extends LogisticsItem {
             return null;
         }
         return results.get(0).makeNormalStack();
-    }
-
-    public static PatternType getPatternType(ItemStack pattern) {
-        if (pattern == null || !pattern.hasTagCompound()) {
-            return PatternType.CRAFTING;
-        }
-        PatternType[] values = PatternType.values();
-        int type = pattern.getTagCompound().getInteger(TYPE_TAG);
-        return values[Math.max(0, Math.min(values.length - 1, type))];
-    }
-
-    public static void setPatternType(ItemStack pattern, PatternType type) {
-        if (pattern == null || type == null) {
-            return;
-        }
-        getOrCreateTag(pattern).setInteger(TYPE_TAG, type.ordinal());
-    }
-
-    public static PatternType getNextPatternType(ItemStack pattern) {
-        PatternType[] values = PatternType.values();
-        return values[(getPatternType(pattern).ordinal() + 1) % values.length];
-    }
-
-    public static boolean respectsIngredientSlots(ItemStack pattern) {
-        return getPatternType(pattern) == PatternType.CRAFTING;
     }
 
     public static boolean isConfigured(ItemStack pattern) {

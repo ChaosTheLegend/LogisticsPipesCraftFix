@@ -342,7 +342,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                     continue;
                 }
                 PatternCraftingTemplate template = new PatternCraftingTemplate(result, this, 0, slot);
-                for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
+                for (ItemIdentifierStack ingredient : Pattern.getAggregatedIngredients(pattern)) {
                     template.addIngredient(new ItemResource(ingredient, this), new PatternTargetInformation(slot));
                 }
                 for (ItemIdentifierStack byproduct : results) {
@@ -383,7 +383,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     @Override
     public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         if (info instanceof PatternTargetInformation && item != null) {
-            requestedIngredient.remove(((PatternTargetInformation) info).getPatternSlot(), item.getItem(), item.getStackSize());
+            requestedIngredient.remove(((PatternTargetInformation) info).patternSlot(), item.getItem(), item.getStackSize());
         }
         lostItems.add(new DelayedGeneric<>(new Pair<>(item, info), 5000));
     }
@@ -401,7 +401,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (!(info instanceof PatternTargetInformation) || item == null || item.getStackSize() <= 0) {
             return;
         }
-        int patternSlot = ((PatternTargetInformation) info).getPatternSlot();
+        int patternSlot = ((PatternTargetInformation) info).patternSlot();
         ItemStack pattern = getPatternStack(patternSlot);
         if (pattern == null || !patternContains(pattern, item.getItem())) {
 
@@ -508,7 +508,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private int spaceForPatternIngredient(int patternSlot, ItemStack pattern, ItemIdentifier item) {
         int sets = 1;
         if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
-            sets += adjacentInventory.availablePatternSets(pattern, Pattern.respectsIngredientSlots(pattern));
+            sets += adjacentInventory.availablePatternSets(pattern);
         }
         int capacity = sets * patternHandler.ingredientAmount(pattern, item);
         return Math.max(0, capacity - ingredientBuffer.amount(patternSlot, item));
@@ -574,12 +574,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             if (bufferedIngredients.get(patternSlot).isEmpty()) bufferedIngredients.remove(patternSlot);
             return;
         }
-        int insertableSets = adjacentInventory.availablePatternSets(pattern, Pattern.respectsIngredientSlots(pattern));
+        int insertableSets = adjacentInventory.availablePatternSets(pattern);
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
             insertableSets = Math.min(insertableSets, 1);
         }
         int sets = Math.min(bufferedSets, insertableSets);
-        if (sets <= 0 || !adjacentInventory.insertPatternSets(pattern, sets, Pattern.respectsIngredientSlots(pattern))) {
+        if (sets <= 0 || !adjacentInventory.insertPatternSets(pattern, sets)) {
             return;
         }
         ingredientBuffer.removePatternSets(patternSlot, pattern, sets);

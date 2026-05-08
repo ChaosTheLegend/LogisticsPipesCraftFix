@@ -14,6 +14,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import logisticspipes.interfaces.IStack;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
@@ -821,5 +822,87 @@ public class RequestTreeNode {
             resources.add(entry.getKey().copyForDisplayWith(entry.getValue()));
         }
         return resources;
+    }
+
+    @Override
+    public String toString() {
+        var out = new StringBuilder();
+
+        appendToString(
+            out,
+            "",
+            true,
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>())
+        );
+
+        return out.toString();
+    }
+
+    private void appendToString(
+        StringBuilder out,
+        String prefix,
+        boolean isLast,
+        java.util.Set<RequestTreeNode> visited
+    ) {
+        out.append(prefix)
+            .append(isLast ? "└── " : "├── ")
+            .append("RequestTreeNode@")
+            .append(Integer.toHexString(System.identityHashCode(this)));
+
+        if (!visited.add(this)) {
+            out.append(" (already shown)\n");
+            return;
+        }
+
+        out.append("\n");
+
+        var childPrefix = prefix + (isLast ? "    " : "│   ");
+
+        var details = new java.util.ArrayList<String>();
+
+        if (!promises.isEmpty()) {
+            details.add("Promises: " + formatPromises(promises, true));
+        }
+
+        if (!extrapromises.isEmpty()) {
+            details.add("Extras: " + formatPromises(extrapromises, false));
+        }
+
+        if (!byproducts.isEmpty()) {
+            details.add("Byproducts: " + formatPromises(byproducts, false));
+        }
+
+        for (int i = 0; i < details.size(); i++) {
+            boolean detailIsLast = subRequests.isEmpty() && i == details.size() - 1;
+
+            out.append(childPrefix)
+                .append(detailIsLast ? "└── " : "├── ")
+                .append(details.get(i))
+                .append("\n");
+        }
+
+        for (int i = 0; i < subRequests.size(); i++) {
+            var child = subRequests.get(i);
+            boolean childIsLast = i == subRequests.size() - 1;
+
+            child.appendToString(out, childPrefix, childIsLast, visited);
+        }
+    }
+
+    private String formatPromises(
+        java.util.Collection<? extends IPromise> promises,
+        boolean includeType
+    ) {
+        return promises.stream()
+            .map(promise -> {
+                var text = promise.getAmount() + "x " + promise.getItemType();
+
+                if (includeType) {
+                    text += " " + promise.getType();
+                }
+
+                return text;
+            })
+            .collect(java.util.stream.Collectors.joining(", "));
     }
 }

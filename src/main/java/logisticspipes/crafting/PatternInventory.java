@@ -85,18 +85,6 @@ public class PatternInventory implements IInventory {
         return inventorySlot;
     }
 
-    public Pattern.PatternType getPatternType() {
-        return Pattern.getPatternType(getPatternStack());
-    }
-
-    public void setPatternType(Pattern.PatternType type) {
-        Pattern.setPatternType(getPatternStack(), type);
-    }
-
-    public ItemStack getPatternItemStack() {
-        return getPatternStack();
-    }
-
     private ItemStack getPatternStack() {
         if (inventorySlot < 0 || inventorySlot >= player.inventory.mainInventory.length) {
             return null;

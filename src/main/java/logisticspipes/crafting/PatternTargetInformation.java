@@ -1,16 +1,9 @@
 package logisticspipes.crafting;
 
+import com.github.bsideup.jabel.Desugar;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 
-public class PatternTargetInformation implements IAdditionalTargetInformation {
+@Desugar
+public record PatternTargetInformation(int patternSlot) implements IAdditionalTargetInformation {
 
-    private final int patternSlot;
-
-    public PatternTargetInformation(int patternSlot) {
-        this.patternSlot = patternSlot;
-    }
-
-    public int getPatternSlot() {
-        return patternSlot;
-    }
 }

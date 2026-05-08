@@ -7,7 +7,6 @@ import logisticspipes.request.resources.IResource;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.InventoryHelper;
 import logisticspipes.utils.SidedInventoryMinecraftAdapter;
-import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.transactor.ITransactor;
@@ -31,11 +30,7 @@ class AdjacentInventoryHandler {
     }
 
     AdjacentTile getConnected() {
-        WorldUtil worldUtil = new WorldUtil(pipe.getWorld(), pipe.getX(), pipe.getY(), pipe.getZ());
-        for (AdjacentTile tile : worldUtil.getAdjacentTileEntities(true)) {
-            if (tile.tile instanceof IInventory) return tile;
-        }
-        return null;
+        return pipe.getConnectedInventoryTile();
     }
 
     boolean isConnectedToPatternCraftingTable() {
@@ -45,11 +40,9 @@ class AdjacentInventoryHandler {
 
     List<AdjacentTile> locateInventories() {
         List<AdjacentTile> inventories = new ArrayList<>();
-        WorldUtil worldUtil = new WorldUtil(pipe.getWorld(), pipe.getX(), pipe.getY(), pipe.getZ());
-        for (AdjacentTile tile : worldUtil.getAdjacentTileEntities(true)) {
-            if (tile.tile instanceof IInventory) {
-                inventories.add(tile);
-            }
+        AdjacentTile connected = getConnected();
+        if (connected != null && connected.tile instanceof IInventory) {
+            inventories.add(connected);
         }
         return inventories;
     }
@@ -72,7 +65,7 @@ class AdjacentInventoryHandler {
         return inv.roomForItem(item, 9999);
     }
 
-    int availablePatternSets(ItemStack pattern, boolean respectPatternSlots) {
+    int availablePatternSets(ItemStack pattern) {
         AdjacentTile connected = getConnected();
         if (connected == null || pattern == null) {
             return 0;
@@ -80,22 +73,16 @@ class AdjacentInventoryHandler {
         if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
             return availablePatternSetsForPatternTable(pattern, (PatternLogisticsCraftingTableTileEntity) connected.tile);
         }
-        if (respectPatternSlots) {
-            return availablePatternSetsRespectingSlots(pattern, connected);
-        }
         return availablePatternSetsDisregardingSlots(pattern, connected);
     }
 
-    boolean insertPatternSets(ItemStack pattern, int sets, boolean respectPatternSlots) {
+    boolean insertPatternSets(ItemStack pattern, int sets) {
         if (sets <= 0) {
             return false;
         }
         AdjacentTile connected = getConnected();
         if (connected != null && connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
             return ((PatternLogisticsCraftingTableTileEntity) connected.tile).insertPatternFromPatternPipe(pattern, sets);
-        }
-        if (respectPatternSlots) {
-            return insertPatternSetsRespectingSlots(pattern, sets);
         }
         for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
             ItemIdentifierStack stack = new ItemIdentifierStack(ingredient.getItem(), ingredient.getStackSize() * sets);
@@ -104,33 +91,6 @@ class AdjacentInventoryHandler {
             }
         }
         return true;
-    }
-
-    private int availablePatternSetsRespectingSlots(ItemStack pattern, AdjacentTile connected) {
-        IInventory inventory = (IInventory) connected.tile;
-        int sets = Integer.MAX_VALUE;
-        boolean hasIngredient = false;
-        for (int slot = 0; slot < Pattern.INGREDIENT_SLOTS; slot++) {
-            ItemStack ingredient = Pattern.getStackInSlot(pattern, slot);
-            if (ingredient == null) {
-                continue;
-            }
-            hasIngredient = true;
-            if (slot >= inventory.getSizeInventory()) {
-                return 0;
-            }
-            if (!canInsertIntoSlot(inventory, connected, slot, ingredient)) {
-                return 0;
-            }
-            ItemStack existing = inventory.getStackInSlot(slot);
-            if (existing != null && !ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(ingredient))) {
-                return 0;
-            }
-            int stored = existing != null ? existing.stackSize : 0;
-            int room = Math.min(inventory.getInventoryStackLimit(), ingredient.getMaxStackSize()) - stored;
-            sets = Math.min(sets, room / ingredient.stackSize);
-        }
-        return hasIngredient ? Math.max(0, sets) : 0;
     }
 
     private int availablePatternSetsDisregardingSlots(ItemStack pattern, AdjacentTile connected) {
@@ -226,56 +186,6 @@ class AdjacentInventoryHandler {
         return hasIngredient ? Math.max(0, sets) : 0;
     }
 
-    private boolean insertPatternSetsRespectingSlots(ItemStack pattern, int sets) {
-        AdjacentTile connected = getConnected();
-        if (connected == null || pattern == null) return false;
-
-        if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
-            return insertPatternSetsIntoPatternTable(pattern, sets, (PatternLogisticsCraftingTableTileEntity) connected.tile);
-        }
-        IInventory inventory = (IInventory) connected.tile;
-        for (int slot = 0; slot < Pattern.INGREDIENT_SLOTS; slot++) {
-            ItemStack ingredient = Pattern.getStackInSlot(pattern, slot);
-            if (ingredient == null) {
-                continue;
-            }
-            if (slot >= inventory.getSizeInventory()) {
-                return false;
-            }
-            if (!canInsertIntoSlot(inventory, connected, slot, ingredient)) {
-                return false;
-            }
-            ItemStack existing = inventory.getStackInSlot(slot);
-            if (existing != null && !ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(ingredient))) {
-                return false;
-            }
-            int amount = ingredient.stackSize * sets;
-            int stored = existing != null ? existing.stackSize : 0;
-            int room = Math.min(inventory.getInventoryStackLimit(), ingredient.getMaxStackSize()) - stored;
-            if (room < amount) {
-                return false;
-            }
-            ItemStack toStore = ingredient.copy();
-            toStore.stackSize = stored + amount;
-            inventory.setInventorySlotContents(slot, toStore);
-        }
-        inventory.markDirty();
-        return true;
-    }
-
-    private boolean insertPatternSetsIntoPatternTable(ItemStack pattern, int sets, PatternLogisticsCraftingTableTileEntity table) {
-        return table.insertPatternFromPatternPipe(pattern, sets);
-    }
-
-    private boolean canInsertIntoSlot(IInventory inventory, AdjacentTile connected, int slot, ItemStack stack) {
-        if (!inventory.isItemValidForSlot(slot, stack)) {
-            return false;
-        }
-        if (inventory instanceof net.minecraft.inventory.ISidedInventory) {
-            return ((net.minecraft.inventory.ISidedInventory) inventory).canInsertItem(slot, stack, connected.orientation.getOpposite().ordinal());
-        }
-        return true;
-    }
 
     private int insert(ItemStack pattern, ItemIdentifierStack item) {
         AdjacentTile connected = getConnected();
