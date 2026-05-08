@@ -21,6 +21,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.IStagedProviderReservation;
 import logisticspipes.gui.hud.HUDProvider;
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IChestContentReceiver;
@@ -73,11 +74,12 @@ import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
-        IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver {
+        IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IStagedProviderReservation {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
 
     private final Map<ItemIdentifier, Integer> displayMap = new TreeMap<>();
+    private final Map<ItemIdentifier, Integer> stagedCraftingReservations = new TreeMap<>();
     public final ArrayList<ItemIdentifierStack> displayList = new ArrayList<>();
     private final ArrayList<ItemIdentifierStack> oldList = new ArrayList<>();
 
@@ -249,7 +251,9 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         if (!isEnabled()) {
             return 0;
         }
-        return getTotalItemCount(item) - _orderManager.totalItemsCountInOrders(item);
+        return getTotalItemCount(item)
+                - _orderManager.totalItemsCountInOrders(item)
+                - getReservedStagedCrafting(item);
     }
 
     @Override
@@ -348,6 +352,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
     public LogisticsOrder fullFill(LogisticsPromise promise, IRequestItems destination,
             IAdditionalTargetInformation info) {
         spawnParticle(Particles.WhiteParticle, 2);
+        releaseStagedCrafting(promise.item, promise.numberOfItems);
         return _orderManager.addOrder(
                 new ItemIdentifierStack(promise.item, promise.numberOfItems),
                 destination,
@@ -396,13 +401,50 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
         // Reduce what has been reserved, add.
         for (Entry<ItemIdentifier, Integer> item : addedItems.entrySet()) {
-            int remaining = item.getValue() - _orderManager.totalItemsCountInOrders(item.getKey());
+            int remaining = item.getValue()
+                    - _orderManager.totalItemsCountInOrders(item.getKey())
+                    - getReservedStagedCrafting(item.getKey());
             if (remaining < 1) {
                 continue;
             }
 
             items.put(item.getKey(), remaining);
         }
+    }
+
+    /**
+     * Tracks provider stock that belongs to a staged crafting tree but has not been sent yet.
+     */
+    @Override
+    public void reserveStagedCrafting(ItemIdentifier item, int amount) {
+        if (item == null || amount <= 0) {
+            return;
+        }
+        stagedCraftingReservations.put(item, getReservedStagedCrafting(item) + amount);
+    }
+
+    /**
+     * Releases staged provider stock before the real provider order is inserted into this pipe's order manager.
+     */
+    @Override
+    public void releaseStagedCrafting(ItemIdentifier item, int amount) {
+        if (item == null || amount <= 0) {
+            return;
+        }
+        int remaining = getReservedStagedCrafting(item) - amount;
+        if (remaining <= 0) {
+            stagedCraftingReservations.remove(item);
+        } else {
+            stagedCraftingReservations.put(item, remaining);
+        }
+    }
+
+    /**
+     * Returns the staged reservation amount for an item.
+     */
+    private int getReservedStagedCrafting(ItemIdentifier item) {
+        Integer reserved = stagedCraftingReservations.get(item);
+        return reserved != null ? reserved : 0;
     }
 
     @Override

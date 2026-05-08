@@ -38,13 +38,25 @@ public class GuiRecipeImport extends SubGuiScreen {
 
     private final RenderItem itemRenderer = new RenderItem();
     private final TileEntity tile;
+    private final int patternInventorySlot;
+    private final ItemStack result;
     private final Canidates[] grid = new Canidates[9];
     private final List<Canidates> list;
     private Object[] tooltip = null;
 
     public GuiRecipeImport(TileEntity tile, ItemStack[][] stacks) {
+        this(tile, -1, stacks, null);
+    }
+
+    public GuiRecipeImport(int patternInventorySlot, ItemStack[][] stacks, ItemStack result) {
+        this(null, patternInventorySlot, stacks, result);
+    }
+
+    private GuiRecipeImport(TileEntity tile, int patternInventorySlot, ItemStack[][] stacks, ItemStack result) {
         super(150, 200, 0, 0);
         this.tile = tile;
+        this.patternInventorySlot = patternInventorySlot;
+        this.result = result;
         list = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             if (stacks[i] == null) {
@@ -81,7 +93,9 @@ public class GuiRecipeImport extends SubGuiScreen {
         super.initGui();
         buttonList.clear();
         buttonList.add(new SmallGuiButton(0, guiLeft + 100, guiTop + 180, 40, 10, "Done"));
-        buttonList.add(new SmallGuiButton(1, guiLeft + 10, guiTop + 180, 60, 10, "Most likely"));
+        if (tile != null) {
+            buttonList.add(new SmallGuiButton(1, guiLeft + 10, guiTop + 180, 60, 10, "Most likely"));
+        }
         int x = 0;
         int y = 0;
         for (int i = 0; i < list.size(); i++) {
@@ -234,11 +248,18 @@ public class GuiRecipeImport extends SubGuiScreen {
                 }
                 stack[i++] = canidate.order.get(canidate.pos).makeNormalStack();
             }
-            NEISetCraftingRecipe packet = PacketHandler.getPacket(NEISetCraftingRecipe.class);
-            MainProxy.sendPacketToServer(
-                    packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
+            if (tile != null) {
+                NEISetCraftingRecipe packet = PacketHandler.getPacket(NEISetCraftingRecipe.class);
+                MainProxy.sendPacketToServer(
+                        packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
+            } else {
+                MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetCraftingRecipe.class)
+                        .setPatternInventorySlot(patternInventorySlot)
+                        .setContent(stack)
+                        .setResult(result));
+            }
             exitGui();
-        } else if (id == 1) {
+        } else if (id == 1 && tile != null) {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(FindMostLikelyRecipeComponents.class).setContent(list).setTilePos(tile));
         } else if (id >= 10 && id < 30) {

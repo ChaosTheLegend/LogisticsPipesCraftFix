@@ -18,6 +18,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.gui.hud.modules.HUDProviderModule;
+import logisticspipes.crafting.IStagedProviderReservation;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -68,7 +69,8 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 
 @CCType(name = "Provider Module")
 public class ModuleProvider extends LogisticsSneakyDirectionModule implements ILegacyActiveModule,
-        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive {
+        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive,
+        IStagedProviderReservation {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -86,6 +88,7 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     protected ExtractionMode _extractionMode = ExtractionMode.Normal;
 
     private final Map<ItemIdentifier, Integer> displayMap = new TreeMap<>();
+    private final Map<ItemIdentifier, Integer> stagedCraftingReservations = new TreeMap<>();
     public final ArrayList<ItemIdentifierStack> displayList = new ArrayList<>();
     private final ArrayList<ItemIdentifierStack> oldList = new ArrayList<>();
 
@@ -272,6 +275,7 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     @Override
     public LogisticsOrder fullFill(LogisticsPromise promise, IRequestItems destination,
             IAdditionalTargetInformation info) {
+        releaseStagedCrafting(promise.item, promise.numberOfItems);
         return _service.getItemOrderManager().addOrder(
                 new ItemIdentifierStack(promise.item, promise.numberOfItems),
                 destination,
@@ -280,7 +284,9 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     }
 
     private int getAvailableItemCount(ItemIdentifier item) {
-        return getTotalItemCount(item) - _service.getItemOrderManager().totalItemsCountInOrders(item);
+        return getTotalItemCount(item)
+                - _service.getItemOrderManager().totalItemsCountInOrders(item)
+                - getReservedStagedCrafting(item);
     }
 
     @Override
@@ -310,13 +316,49 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
             }
 
             int remaining = currItem.getValue()
-                    - _service.getItemOrderManager().totalItemsCountInOrders(currItem.getKey());
+                    - _service.getItemOrderManager().totalItemsCountInOrders(currItem.getKey())
+                    - getReservedStagedCrafting(currItem.getKey());
             if (remaining < 1) {
                 continue;
             }
 
             items.put(currItem.getKey(), remaining);
         }
+    }
+
+    /**
+     * Tracks provider stock that belongs to a staged crafting tree but has not been sent yet.
+     */
+    @Override
+    public void reserveStagedCrafting(ItemIdentifier item, int amount) {
+        if (item == null || amount <= 0) {
+            return;
+        }
+        stagedCraftingReservations.put(item, getReservedStagedCrafting(item) + amount);
+    }
+
+    /**
+     * Releases staged provider stock before the real provider order is inserted into this module's order manager.
+     */
+    @Override
+    public void releaseStagedCrafting(ItemIdentifier item, int amount) {
+        if (item == null || amount <= 0) {
+            return;
+        }
+        int remaining = getReservedStagedCrafting(item) - amount;
+        if (remaining <= 0) {
+            stagedCraftingReservations.remove(item);
+        } else {
+            stagedCraftingReservations.put(item, remaining);
+        }
+    }
+
+    /**
+     * Returns the staged reservation amount for an item.
+     */
+    private int getReservedStagedCrafting(ItemIdentifier item) {
+        Integer reserved = stagedCraftingReservations.get(item);
+        return reserved != null ? reserved : 0;
     }
 
     // returns -1 on permanently failed, don't try another stack this tick

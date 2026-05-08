@@ -14,6 +14,7 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.client.FMLClientHandler;
+import logisticspipes.crafting.PatternGui;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.orderer.GuiRequestTable;
 import logisticspipes.gui.popup.GuiRecipeImport;
@@ -27,20 +28,25 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean shift) {
 
-        TileEntity tile;
+        TileEntity tile = null;
         LogisticsBaseGuiScreen gui;
+        int patternInventorySlot = -1;
         if (firstGui instanceof GuiLogisticsCraftingTable) {
             tile = ((GuiLogisticsCraftingTable) firstGui)._crafter;
             gui = (GuiLogisticsCraftingTable) firstGui;
         } else if (firstGui instanceof GuiRequestTable) {
             tile = ((GuiRequestTable) firstGui)._table.container;
             gui = (GuiRequestTable) firstGui;
+        } else if (firstGui instanceof PatternGui) {
+            patternInventorySlot = ((PatternGui) firstGui).getInventorySlot();
+            gui = (PatternGui) firstGui;
         } else {
             return;
         }
 
         ItemStack[] stack = new ItemStack[9];
         ItemStack[][] stacks = new ItemStack[9][];
+        ItemStack result = getRecipeResult(recipe, recipeIndex);
         boolean hasCanidates = false;
         NEISetCraftingRecipe packet = PacketHandler.getPacket(NEISetCraftingRecipe.class);
         for (PositionedStack ps : recipe.getIngredientStacks(recipeIndex)) {
@@ -76,10 +82,27 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             }
         }
         if (hasCanidates) {
-            gui.setSubGui(new GuiRecipeImport(tile, stacks));
+            if (patternInventorySlot >= 0) {
+                gui.setSubGui(new GuiRecipeImport(patternInventorySlot, stacks, result));
+            } else {
+                gui.setSubGui(new GuiRecipeImport(tile, stacks));
+            }
+        } else if (patternInventorySlot >= 0) {
+            MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetCraftingRecipe.class)
+                    .setPatternInventorySlot(patternInventorySlot)
+                    .setContent(stack)
+                    .setResult(result));
         } else {
             MainProxy.sendPacketToServer(
                     packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
         }
+    }
+
+    private ItemStack getRecipeResult(IRecipeHandler recipe, int recipeIndex) {
+        PositionedStack result = recipe.getResultStack(recipeIndex);
+        if (result == null || result.items == null || result.items.length == 0 || result.items[0] == null) {
+            return null;
+        }
+        return result.items[0].copy();
     }
 }

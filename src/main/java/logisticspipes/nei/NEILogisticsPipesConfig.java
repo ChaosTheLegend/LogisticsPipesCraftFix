@@ -9,6 +9,7 @@ import codechicken.nei.guihook.GuiContainerManager;
 import cpw.mods.fml.common.Mod;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.config.Configs;
+import logisticspipes.crafting.PatternGui;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.GuiSolderingStation;
 import logisticspipes.gui.orderer.GuiRequestTable;
@@ -47,6 +48,7 @@ public class NEILogisticsPipesConfig implements IConfigureNEI {
                 GuiLogisticsCraftingTable.class,
                 new LogisticsCraftingOverlayHandler(),
                 "crafting");
+        API.registerGuiOverlayHandler(PatternGui.class, new LogisticsCraftingOverlayHandler(), "crafting");
         API.registerGuiOverlayHandler(GuiRequestTable.class, new LogisticsCraftingOverlayHandler(), "crafting");
 
         if (LogisticsPipes.isGTNH) {

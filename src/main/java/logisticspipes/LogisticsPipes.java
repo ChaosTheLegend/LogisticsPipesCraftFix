@@ -12,6 +12,7 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import logisticspipes.pipes.*;
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -41,6 +42,7 @@ import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
+import logisticspipes.crafting.Pattern;
 import logisticspipes.asm.LogisticsPipesClassInjector;
 import logisticspipes.asm.wrapper.LogisticsWrapperHandler;
 import logisticspipes.blocks.LogisticsSolidBlock;
@@ -67,37 +69,7 @@ import logisticspipes.logistics.LogisticsManager;
 import logisticspipes.network.GuiHandler;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.network.PacketHandler;
-import logisticspipes.pipes.PipeBlockRequestTable;
-import logisticspipes.pipes.PipeFluidBasic;
-import logisticspipes.pipes.PipeFluidExtractor;
-import logisticspipes.pipes.PipeFluidInsertion;
-import logisticspipes.pipes.PipeFluidProvider;
-import logisticspipes.pipes.PipeFluidRequestLogistics;
-import logisticspipes.pipes.PipeFluidSatellite;
-import logisticspipes.pipes.PipeFluidSupplierMk2;
-import logisticspipes.pipes.PipeItemsApiaristAnalyser;
-import logisticspipes.pipes.PipeItemsApiaristSink;
-import logisticspipes.pipes.PipeItemsBasicLogistics;
-import logisticspipes.pipes.PipeItemsCraftingLogistics;
-import logisticspipes.pipes.PipeItemsCraftingLogisticsMk2;
-import logisticspipes.pipes.PipeItemsCraftingLogisticsMk3;
-import logisticspipes.pipes.PipeItemsFirewall;
-import logisticspipes.pipes.PipeItemsFluidSupplier;
-import logisticspipes.pipes.PipeItemsInvSysConnector;
-import logisticspipes.pipes.PipeItemsProviderLogistics;
-import logisticspipes.pipes.PipeItemsProviderLogisticsMk2;
-import logisticspipes.pipes.PipeItemsRemoteOrdererLogistics;
-import logisticspipes.pipes.PipeItemsRequestLogistics;
-import logisticspipes.pipes.PipeItemsRequestLogisticsMk2;
-import logisticspipes.pipes.PipeItemsSatelliteLogistics;
-import logisticspipes.pipes.PipeItemsSupplierLogistics;
-import logisticspipes.pipes.PipeItemsSystemDestinationLogistics;
-import logisticspipes.pipes.PipeItemsSystemEntranceLogistics;
-import logisticspipes.pipes.PipeLogisticsChassiMk1;
-import logisticspipes.pipes.PipeLogisticsChassiMk2;
-import logisticspipes.pipes.PipeLogisticsChassiMk3;
-import logisticspipes.pipes.PipeLogisticsChassiMk4;
-import logisticspipes.pipes.PipeLogisticsChassiMk5;
+import logisticspipes.pipes.*;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.pipes.basic.CoreUnroutedPipe;
 import logisticspipes.pipes.basic.LogisticsBlockGenericPipe;
@@ -135,6 +107,7 @@ import logisticspipes.renderer.FluidContainerRenderer;
 import logisticspipes.renderer.ItemModuleRenderer;
 import logisticspipes.renderer.LogisticsHUDRenderer;
 import logisticspipes.renderer.LogisticsPipeItemRenderer;
+import logisticspipes.renderer.PatternItemRenderer;
 import logisticspipes.routing.RouterManager;
 import logisticspipes.routing.ServerRouter;
 import logisticspipes.routing.pathfinder.PipeInformationManager;
@@ -227,6 +200,7 @@ public class LogisticsPipes {
     public static Item LogisticsProviderPipeMk1;
     public static Item LogisticsProviderPipeMk2;
     public static Item LogisticsCraftingPipeMk1;
+    public static Item LogisticsPatternCraftingPipe;
     public static Item LogisticsCraftingPipeMk2;
     public static Item LogisticsCraftingPipeMk3;
     public static Item LogisticsSatellitePipe;
@@ -275,6 +249,7 @@ public class LogisticsPipes {
     public static Item LogisticsFluidContainer;
     public static Item LogisticsBrokenItem;
     public static Item LogisticsPipeControllerItem;
+    public static Item LogisticsPattern;
 
     // Logistics Blocks
     public static Block LogisticsSolidBlock;
@@ -529,6 +504,13 @@ public class LogisticsPipes {
                 LogisticsPipes.LogisticsPipeControllerItem,
                 LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
 
+        LogisticsPipes.LogisticsPattern = new Pattern();
+        LogisticsPipes.LogisticsPattern.setUnlocalizedName("logisticsPattern");
+        GameRegistry.registerItem(LogisticsPipes.LogisticsPattern, LogisticsPipes.LogisticsPattern.getUnlocalizedName());
+        if (isClient) {
+            MinecraftForgeClient.registerItemRenderer(LogisticsPipes.LogisticsPattern, new PatternItemRenderer());
+        }
+
         // Blocks
         LogisticsPipes.LogisticsSolidBlock = new LogisticsSolidBlock();
         GameRegistry.registerBlock(
@@ -622,6 +604,10 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsCraftingPipeMk1 = createPipe(
                 PipeItemsCraftingLogistics.class,
                 "Crafting Logistics Pipe",
+                side);
+        LogisticsPipes.LogisticsPatternCraftingPipe = createPipe(
+                PipeItemsPatternCraftingLogistics.class,
+                "Pattern Crafting Logistics Pipe",
                 side);
         LogisticsPipes.LogisticsSatellitePipe = createPipe(
                 PipeItemsSatelliteLogistics.class,

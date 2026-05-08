@@ -20,6 +20,8 @@ import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.ICraft;
 import logisticspipes.interfaces.routing.IFilter;
 import logisticspipes.interfaces.routing.IProvide;
+import logisticspipes.crafting.IStagedCraftingProvider;
+import logisticspipes.crafting.PatternCraftingBranch;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
@@ -27,6 +29,7 @@ import logisticspipes.request.RequestTree.workWeightedSorter;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.ExitRoute;
 import logisticspipes.routing.IRouter;
+import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.PipeRoutingConnectionType;
 import logisticspipes.routing.ServerRouter;
 import logisticspipes.routing.order.IOrderInfoProvider;
@@ -211,6 +214,9 @@ public class RequestTreeNode {
     }
 
     protected LinkedLogisticsOrderList fullFill() {
+        if (hasStagedCraftingPromise()) {
+            return fullFillStaged();
+        }
         LinkedLogisticsOrderList list = new LinkedLogisticsOrderList();
         for (RequestTreeNode subNode : subRequests) {
             list.getSubOrders().add(subNode.fullFill());
@@ -228,6 +234,85 @@ public class RequestTreeNode {
             promise.registerExtras(requestType);
         }
         return list;
+    }
+
+    /**
+     * Returns true when this node has at least one promise that should be fulfilled by staged crafting.
+     */
+    private boolean hasStagedCraftingPromise() {
+        for (IPromise promise : promises) {
+            if (isStagedCraftingPromise(promise)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether a promise belongs to a staged pattern crafting provider.
+     */
+    private boolean isStagedCraftingPromise(IPromise promise) {
+        return promise instanceof LogisticsPromise
+                && promise.getType() == ResourceType.CRAFTING
+                && promise.getProvider() instanceof IStagedCraftingProvider;
+    }
+
+    /**
+     * Starts a staged request by handing each staged crafting promise a branch of the already-built request tree.
+     * <p>
+     * Provider promises inside that branch are reserved before the branch is handed off, then released later when the
+     * staged pipe places real provider orders for the ingredients it can currently store.
+     */
+    private LinkedLogisticsOrderList fullFillStaged() {
+        LinkedLogisticsOrderList list = new LinkedLogisticsOrderList();
+        PatternCraftingBranch branch = toPatternCraftingBranch();
+        for (IPromise promise : promises) {
+            IOrderInfoProvider result;
+            if (isStagedCraftingPromise(promise)) {
+                IPromise promiseCopy = promise.copy();
+                PatternCraftingBranch stagedBranch = branch.copyAndReserve(promise.getAmount());
+                stagedBranch.reserveProviderPromises();
+                result = ((IStagedCraftingProvider) promise.getProvider()).fullFillStagedCrafting(
+                        (LogisticsPromise) promiseCopy,
+                        requestType.copyForDisplayWith(promise.getAmount()),
+                        info,
+                        stagedBranch);
+                if (result == null) {
+                    stagedBranch.releaseProviderPromises();
+                }
+            } else {
+                result = promise.fullFill(requestType.copyForDisplayWith(promise.getAmount()), info);
+            }
+            if (result != null) {
+                list.add(result);
+            }
+        }
+        for (IExtraPromise promise : extrapromises) {
+            promise.registerExtras(requestType);
+        }
+        for (IExtraPromise promise : byproducts) {
+            promise.registerExtras(requestType);
+        }
+        return list;
+    }
+
+    /**
+     * Converts this request node and all descendants into a staged crafting branch.
+     */
+    private PatternCraftingBranch toPatternCraftingBranch() {
+        List<IPromise> promiseCopies = new ArrayList<>();
+        for (IPromise promise : promises) {
+            promiseCopies.add(promise.copy());
+        }
+        List<PatternCraftingBranch> children = new ArrayList<>();
+        for (RequestTreeNode subRequest : subRequests) {
+            children.add(subRequest.toPatternCraftingBranch());
+        }
+        return new PatternCraftingBranch(
+                requestType.copyForDisplayWith(requestType.getRequestedAmount()),
+                info,
+                promiseCopies,
+                children);
     }
 
     protected void buildMissingMap(Map<IResource, Integer> missing) {

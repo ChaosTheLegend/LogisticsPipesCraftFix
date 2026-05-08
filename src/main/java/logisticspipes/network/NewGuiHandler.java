@@ -44,6 +44,9 @@ public class NewGuiHandler {
         final List<ClassInfo> classes = new ArrayList<>(
                 ClassPath.from(NewGuiHandler.class.getClassLoader())
                         .getTopLevelClassesRecursive("logisticspipes.network.guis"));
+        classes.addAll(
+                ClassPath.from(NewGuiHandler.class.getClassLoader())
+                        .getTopLevelClassesRecursive("logisticspipes.crafting"));
         classes.sort(Comparator.comparing(ClassInfo::getSimpleName));
 
         NewGuiHandler.guilist = new ArrayList<>(classes.size());
@@ -53,6 +56,9 @@ public class NewGuiHandler {
 
         for (ClassInfo c : classes) {
             final Class<?> cls = c.load();
+            if (!GuiProvider.class.isAssignableFrom(cls)) {
+                continue;
+            }
             final GuiProvider instance = (GuiProvider) cls.getConstructors()[0].newInstance(currentid);
             NewGuiHandler.guilist.add(instance);
             NewGuiHandler.guimap.put((Class<? extends GuiProvider>) cls, instance);

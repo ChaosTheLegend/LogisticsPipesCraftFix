@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import journeymap.server.oldservercode.network.PacketManager;
 import net.minecraft.entity.player.EntityPlayer;
 
 import org.apache.logging.log4j.Level;
@@ -49,6 +50,9 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, ModernP
     @SuppressWarnings("unchecked")
     // Suppressed because this cast should never fail.
     public static <T extends ModernPacket> T getPacket(Class<T> clazz) {
+        if (!PacketHandler.packetmap.containsKey(clazz)) {
+            throw new IllegalStateException("Packet class " + clazz.getName() + " is not registered.");
+        }
         T packet = (T) PacketHandler.packetmap.get(clazz).template();
         if (LPConstants.DEBUG && MainProxy.proxy.getSide().equals("Client")) {
             StackTraceElement[] trace = Thread.currentThread().getStackTrace();
@@ -94,6 +98,9 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, ModernP
 
         for (ClassInfo c : classes) {
             final Class<?> cls = c.load();
+            if (!ModernPacket.class.isAssignableFrom(cls)) {
+                continue;
+            }
             final ModernPacket instance = (ModernPacket) cls.getConstructor(int.class).newInstance(currentid);
             PacketHandler.packetlist.add(instance);
             PacketHandler.packetmap.put((Class<? extends ModernPacket>) cls, instance);
