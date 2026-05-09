@@ -89,7 +89,7 @@ public class FluidResource implements IResource {
 
     @Override
     public IResource copyForDisplayWith(int amount) {
-        return new FluidResource(liquid, amount, null);
+        return new FluidResource(liquid, amount, target);
     }
 
     private Object ccObject;

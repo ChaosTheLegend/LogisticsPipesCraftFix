@@ -15,6 +15,7 @@ import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.client.FMLClientHandler;
 import logisticspipes.crafting.PatternGui;
+import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.orderer.GuiRequestTable;
 import logisticspipes.gui.popup.GuiRecipeImport;
@@ -54,6 +55,11 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             int y = (ps.rely - 6) / 18;
             int slot = x + y * 3;
             if (x < 0 || x > 2 || y < 0 || y > 2 || slot < 0 || slot > 8) {
+                if (patternInventorySlot >= 0 && ps.items != null && ps.items.length > 0
+                        && PatternFluidStack.fromItemStack(ps.items[0]) != null
+                        && addToFirstFreeSlot(stack, ps.items[0])) {
+                    continue;
+                }
                 FMLClientHandler.instance().getClient().thePlayer
                         .sendChatMessage("Internal Error. This button is broken.");
                 return;
@@ -104,5 +110,15 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             return null;
         }
         return result.items[0].copy();
+    }
+
+    private boolean addToFirstFreeSlot(ItemStack[] stacks, ItemStack stack) {
+        for (int i = 0; i < stacks.length; i++) {
+            if (stacks[i] == null) {
+                stacks[i] = stack.copy();
+                return true;
+            }
+        }
+        return false;
     }
 }

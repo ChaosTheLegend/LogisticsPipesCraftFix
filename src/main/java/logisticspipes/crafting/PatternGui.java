@@ -16,11 +16,11 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     public static final int ORE_DICT_BUTTON_ID = 2;
 
     public PatternGui(EntityPlayer player, IInventory inventory) {
-        super(176, 168, 0, 0);
+        super(176, 204, 0, 0);
         patternInventory = (PatternInventory) inventory;
         DummyContainer dummy = new DummyContainer(player.inventory, inventory);
         PatternGuiProvider.addPatternSlots(dummy);
-        dummy.addNormalSlotsForPlayerInventory(8, 86);
+        dummy.addNormalSlotsForPlayerInventory(8, 122);
 
         addActionButtons();
 
@@ -42,7 +42,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
-        GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 86);
+        GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 122);
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
                 GuiGraphics.drawSlotBackground(mc, guiLeft + 25 + x * 18, guiTop + 16 + y * 18);
@@ -50,6 +50,12 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         }
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
             GuiGraphics.drawSlotBackground(mc, guiLeft + 115 + i * 18, guiTop + 34);
+        }
+        for (int i = 0; i < Pattern.FLUID_INPUT_SLOTS; i++) {
+            GuiGraphics.drawSlotBackground(mc, guiLeft + 25 + i * 18, guiTop + 71);
+        }
+        for (int i = 0; i < Pattern.FLUID_RESULT_SLOTS; i++) {
+            GuiGraphics.drawSlotBackground(mc, guiLeft + 115 + i * 18, guiTop + 71);
         }
         mc.fontRenderer.drawString("Pattern", guiLeft + 8, guiTop + 6, 0x404040);
     }
@@ -63,8 +69,10 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         switch (button.id) {
             case CLEAR_BUTTON_ID:
                 Pattern.clear(patternInventory.getPattern());
-                case MULTIPLE_BUTTON_ID:
-                    Pattern.multiply(patternInventory.getPattern(), 2);
+                break;
+            case MULTIPLE_BUTTON_ID:
+                Pattern.multiply(patternInventory.getPattern(), 2);
+                break;
 
         }
     }

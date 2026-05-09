@@ -1,6 +1,8 @@
 package logisticspipes.network.packets;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
@@ -10,6 +12,7 @@ import net.minecraft.tileentity.TileEntity;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.blocks.crafting.LogisticsCraftingTableTileEntity;
 import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -67,12 +70,30 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
             return;
         }
         ItemStack[] recipeContent = content != null ? content : new ItemStack[0];
+        List<PatternFluidStack> fluidInputs = new ArrayList<>();
         for (int i = 0; i < Pattern.INGREDIENT_SLOTS; i++) {
-            Pattern.setStackInSlot(pattern, i, i < recipeContent.length ? copy(recipeContent[i]) : null);
+            ItemStack stack = i < recipeContent.length ? copy(recipeContent[i]) : null;
+            PatternFluidStack fluid = PatternFluidStack.fromItemStack(stack);
+            if (fluid != null) {
+                fluidInputs.add(fluid);
+                stack = null;
+            }
+            Pattern.setStackInSlot(pattern, i, stack);
         }
+        Pattern.setFluidIngredients(pattern, fluidInputs);
+
+        List<PatternFluidStack> fluidResults = new ArrayList<>();
+        PatternFluidStack fluidResult = PatternFluidStack.fromItemStack(result);
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
-            Pattern.setStackInSlot(pattern, Pattern.INGREDIENT_SLOTS + i, i == 0 ? copy(result) : null);
+            Pattern.setStackInSlot(
+                    pattern,
+                    Pattern.INGREDIENT_SLOTS + i,
+                    i == 0 && fluidResult == null ? copy(result) : null);
         }
+        if (fluidResult != null) {
+            fluidResults.add(fluidResult);
+        }
+        Pattern.setFluidResults(pattern, fluidResults);
         player.inventory.markDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();

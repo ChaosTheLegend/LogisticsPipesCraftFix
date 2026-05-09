@@ -8,9 +8,11 @@ import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.resources.IResource;
+import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
+import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
@@ -105,6 +107,13 @@ public class PatternCraftingBranch {
      */
     public boolean matches(ItemIdentifier item) {
         return requestType.matches(item, IResource.MatchSettings.NORMAL);
+    }
+
+    /**
+     * Checks whether this branch represents the requested fluid.
+     */
+    public boolean matches(FluidIdentifier fluid) {
+        return fluid != null && requestType.matches(fluid.getItemIdentifier(), IResource.MatchSettings.NORMAL);
     }
 
     /**
@@ -442,6 +451,9 @@ public class PatternCraftingBranch {
      * Creates a promise copy with the requested amount while keeping the source promise untouched.
      */
     private static IPromise copyPromiseForAmount(IPromise promise, int amount) {
+        if (promise instanceof FluidLogisticsPromise) {
+            return ((FluidLogisticsPromise) promise).copyWithAmount(amount);
+        }
         IPromise copy = promise.copy();
         if (copy.getAmount() > amount) {
             copy.split(copy.getAmount() - amount);

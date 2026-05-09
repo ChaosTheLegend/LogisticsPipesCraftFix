@@ -2,6 +2,7 @@ package logisticspipes.crafting;
 
 import logisticspipes.interfaces.ISlotUpgradeManager;
 import logisticspipes.interfaces.routing.*;
+import logisticspipes.config.Configs;
 import logisticspipes.logistics.LogisticsManager;
 import logisticspipes.logisticspipes.IRoutedItem;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
@@ -15,17 +16,22 @@ import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.request.FluidCraftingTemplate;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.DictResource;
+import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
+import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.IRouter;
 import logisticspipes.routing.LogisticsDictPromise;
 import logisticspipes.routing.LogisticsExtraPromise;
 import logisticspipes.routing.LogisticsPromise;
+import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
@@ -46,12 +52,14 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
 
 import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.DelayQueue;
 
-public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItems, IRequireReliableTransport, IStagedCraftingProvider {
+public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItems, ICraftFluids, IRequestFluid,
+        IRequireReliableTransport, IStagedCraftingProvider {
 
     private static final int MAX_EXTRACTED_ITEMS_PER_TICK = 64;
     private static final int MAX_EXTRACTED_STACKS_PER_TICK = 16;
@@ -60,12 +68,17 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
     private final Map<Integer, List<ItemIdentifierStack>> bufferedIngredients = new HashMap<>();
     private final Map<Integer, List<ItemIdentifierStack>> requestedIngredients = new HashMap<>();
+    private final Map<Integer, List<PatternFluidStack>> bufferedFluidIngredients = new HashMap<>();
+    private final Map<Integer, List<PatternFluidStack>> requestedFluidIngredients = new HashMap<>();
     private final List<PatternCraftingOrder> stagedCrafts = new ArrayList<>();
     private final DelayQueue<DelayedGeneric<Pair<ItemIdentifierStack, IAdditionalTargetInformation>>> lostItems = new DelayQueue<>();
+    private final DelayQueue<DelayedGeneric<Pair<PatternFluidStack, IAdditionalTargetInformation>>> lostFluids = new DelayQueue<>();
     private final PatternHandler patternHandler = new PatternHandler(patternInventory);
     private final AdjacentInventoryHandler adjacentInventory;
     private final IngredientBufferHandler ingredientBuffer = new IngredientBufferHandler(bufferedIngredients, patternHandler);
     private final IngredientRequestHandler requestedIngredient = new IngredientRequestHandler(requestedIngredients);
+    private final FluidIngredientBufferHandler fluidIngredientBuffer = new FluidIngredientBufferHandler(bufferedFluidIngredients, patternHandler);
+    private final FluidIngredientRequestHandler requestedFluidIngredient = new FluidIngredientRequestHandler(requestedFluidIngredients);
     private WeakReference<TileEntity> lastAccessedCrafter = new WeakReference<>(null);
     private SinkReply sinkReply;
     private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.OFF;
@@ -132,6 +145,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (bestPriority > sinkReply.fixedPriority.ordinal() || (bestPriority == sinkReply.fixedPriority.ordinal() && bestCustomPriority >= sinkReply.customPriority)) {
             return null;
         }
+        FluidIdentifier fluid = item != null && item.isFluidContainer() ? FluidIdentifier.get(item) : null;
+        if (fluid != null) {
+            int room = spaceForFluid(fluid, includeInTransit);
+            if (room <= 0) {
+                return null;
+            }
+            return new SinkReply(sinkReply, room, areAllOrdersBuffered() ? BufferMode.DESTINATION_BUFFERED : BufferMode.NONE);
+        }
         if (!patternHandler.isIngredient(item)) {
             return null;
         }
@@ -141,6 +162,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
         _service.getDebug().log("crafting room " + room + " for " + item);
         return new SinkReply(sinkReply, room, areAllOrdersBuffered() ? BufferMode.DESTINATION_BUFFERED : BufferMode.NONE);
+    }
+
+    public int sinkAmount(FluidStack stack) {
+        if (stack == null || stack.amount <= 0) {
+            return 0;
+        }
+        int room = spaceForFluid(FluidIdentifier.get(stack), true);
+        return room >= stack.amount ? stack.amount : 0;
     }
 
     @Override
@@ -155,6 +184,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         requestIngredientsForStagedCrafts();
         clearRunningCraftIfFinished();
         craftFromAdjacentInventory();
+        craftFluidsFromAdjacentInventory();
     }
 
     @Override
@@ -172,6 +202,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
             for (ItemIdentifierStack result : Pattern.getResults(pattern)) {
                 crafted.add(result.getItem());
+            }
+            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+                crafted.add(result.getFluid().getItemIdentifier());
             }
         }
         return crafted;
@@ -212,6 +245,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                 getBuffer(patternSlot).add(ItemIdentifierStack.getFromStack(stack));
             }
         }
+        bufferedFluidIngredients.clear();
+        NBTTagList fluidBuffer = tag.getTagList("patternFluidIngredientBuffer", tag.getId());
+        for (int i = 0; i < fluidBuffer.tagCount(); i++) {
+            NBTTagCompound fluidTag = fluidBuffer.getCompoundTagAt(i);
+            int patternSlot = fluidTag.getInteger("patternSlot");
+            PatternFluidStack fluid = PatternFluidStack.readFromNBT(fluidTag);
+            if (fluid != null) {
+                getFluidBuffer(patternSlot).add(fluid);
+            }
+        }
     }
 
     @Override
@@ -230,6 +273,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
         }
         tag.setTag("patternIngredientBuffer", buffer);
+        NBTTagList fluidBuffer = new NBTTagList();
+        for (Map.Entry<Integer, List<PatternFluidStack>> entry : bufferedFluidIngredients.entrySet()) {
+            for (PatternFluidStack stack : entry.getValue()) {
+                NBTTagCompound stackTag = stack.writeToNBT();
+                stackTag.setInteger("patternSlot", entry.getKey());
+                fluidBuffer.appendTag(stackTag);
+            }
+        }
+        tag.setTag("patternFluidIngredientBuffer", fluidBuffer);
     }
 
     @Override
@@ -295,7 +347,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                     branch,
                     order,
                     patternHandler,
-                    requestedIngredient);
+                    requestedIngredient,
+                    requestedFluidIngredient);
             stagedCrafts.add(stagedOrder);
             PatternCraftingMonitorRegistry.register(order, stagedOrder);
             requestIngredientsForStagedCrafts(patternSlot);
@@ -315,6 +368,28 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
 
     @Override
     public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {
+    }
+
+    @Override
+    public Map<FluidIdentifier, Integer> getAvailableFluids() {
+        return Collections.emptyMap();
+    }
+
+    @Override
+    public IOrderInfoProvider fullFill(
+            FluidLogisticsPromise promise,
+            IRequestFluid destination,
+            ResourceType type,
+            IAdditionalTargetInformation info) {
+        pipe.spawnParticle(Particles.WhiteParticle, 2);
+        return pipe.getPatternFluidOrderManager().addOrder(promise, destination, type, info);
+    }
+
+    @Override
+    public void sendFailed(FluidIdentifier fluid, Integer amount) {
+        if (fluid != null && amount != null && amount > 0) {
+            lostFluids.add(new DelayedGeneric<>(new Pair<>(new PatternFluidStack(fluid, amount), null), 5000));
+        }
     }
 
     @Override
@@ -364,10 +439,33 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                 for (ItemIdentifierStack ingredient : Pattern.getAggregatedIngredients(pattern)) {
                     template.addIngredient(new ItemResource(ingredient, this), new PatternTargetInformation(slot));
                 }
+                for (PatternFluidStack ingredient : Pattern.getAggregatedFluidIngredients(pattern)) {
+                    template.addIngredient(
+                            new FluidResource(ingredient.getFluid(), ingredient.getAmount(), this),
+                            new PatternTargetInformation(slot));
+                }
                 for (ItemIdentifierStack byproduct : results) {
                     if (!byproduct.getItem().equals(result.getItem())) {
                         template.addByproduct(byproduct);
                     }
+                }
+                return template;
+            }
+            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+                if (!toCraft.matches(result.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
+                    continue;
+                }
+                FluidCraftingTemplate template = new FluidCraftingTemplate(
+                        new FluidResource(result.getFluid(), result.getAmount(), this),
+                        this,
+                        0);
+                for (ItemIdentifierStack ingredient : Pattern.getAggregatedIngredients(pattern)) {
+                    template.addIngredient(new ItemResource(ingredient, this), new PatternTargetInformation(slot));
+                }
+                for (PatternFluidStack ingredient : Pattern.getAggregatedFluidIngredients(pattern)) {
+                    template.addIngredient(
+                            new FluidResource(ingredient.getFluid(), ingredient.getAmount(), this),
+                            new PatternTargetInformation(slot));
                 }
                 return template;
             }
@@ -380,6 +478,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         for (ItemIdentifier item : getCraftedItems()) {
             if (toCraft.matches(item, IResource.MatchSettings.NORMAL)) {
                 return true;
+            }
+        }
+        for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
+            for (PatternFluidStack fluid : Pattern.getFluidResults(pattern)) {
+                if (toCraft.matches(fluid.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -395,6 +500,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         List<ItemIdentifierStack> results = new ArrayList<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
             results.addAll(Pattern.getResults(pattern));
+            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+                results.add(result.makeDisplayStack());
+            }
         }
         return results;
     }
@@ -425,15 +533,27 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         appendPatternDebug(out);
         appendStackMapDebug(out, "buffered ingredients", bufferedIngredients);
         appendStackMapDebug(out, "requested ingredients", requestedIngredients);
+        appendFluidMapDebug(out, "buffered fluid ingredients", bufferedFluidIngredients);
+        appendFluidMapDebug(out, "requested fluid ingredients", requestedFluidIngredients);
         appendStagedCraftDebug(out);
         appendOrderDebug(out);
         out.append("  lostItems queued=").append(lostItems.size()).append("\n");
+        out.append("  lostFluids queued=").append(lostFluids.size()).append("\n");
     }
 
     @Override
     public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         if (info instanceof PatternTargetInformation && item != null) {
-            requestedIngredient.remove(((PatternTargetInformation) info).patternSlot(), item.getItem(), item.getStackSize());
+            FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(item);
+            int patternSlot = ((PatternTargetInformation) info).patternSlot();
+            if (fluid != null) {
+                requestedFluidIngredient.remove(patternSlot, FluidIdentifier.get(fluid), fluid.amount);
+                lostFluids.add(new DelayedGeneric<>(
+                        new Pair<>(new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount), info),
+                        5000));
+                return;
+            }
+            requestedIngredient.remove(patternSlot, item.getItem(), item.getStackSize());
         }
         lostItems.add(new DelayedGeneric<>(new Pair<>(item, info), 5000));
     }
@@ -449,14 +569,27 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     @Override
     public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         if (!(info instanceof PatternTargetInformation) || item == null || item.getStackSize() <= 0) {
+            if (item != null && item.getStackSize() > 0) {
+                FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(item);
+                int patternSlot = fluid != null ? findFluidArrivalPattern(FluidIdentifier.get(fluid)) : -1;
+                if (patternSlot >= 0) {
+                    fluidArrived(patternSlot, getPatternStack(patternSlot), item, fluid);
+                }
+            }
             return;
         }
         int patternSlot = ((PatternTargetInformation) info).patternSlot();
         ItemStack pattern = getPatternStack(patternSlot);
-        if (pattern == null || !patternContains(pattern, item.getItem())) {
-
+        FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(item);
+        if (fluid != null) {
+            fluidArrived(patternSlot, pattern, item, fluid);
             return;
         }
+        if (pattern == null || !patternContains(pattern, item.getItem())) {
+            return;
+        }
+
+        System.out.println("item " + item.getStackSize() + "x " + item.getFriendlyName() + " arrived");
 
         int original = item.getStackSize();
         int requested = requestedIngredient.amount(patternSlot, item.getItem());
@@ -475,6 +608,45 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    private void fluidArrived(int patternSlot, ItemStack pattern, ItemIdentifierStack routedStack, FluidStack fluidStack) {
+        FluidIdentifier fluid = FluidIdentifier.get(fluidStack);
+        if (pattern == null || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
+            return;
+        }
+
+        int original = fluidStack.amount;
+        int requested = requestedFluidIngredient.amount(patternSlot, fluid);
+        int space = Math.max(requested, spaceForArrivingFluidIngredient(patternSlot, pattern, fluid));
+        int accepted = space >= original ? original : 0;
+        requestedFluidIngredient.remove(patternSlot, fluid, accepted);
+        if (accepted > 0) {
+            fluidIngredientBuffer.add(patternSlot, fluid, accepted);
+            if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && runningCraft < 0) {
+                runningCraft = patternSlot;
+            }
+            pushBufferedIngredientsFor(patternSlot);
+            routedStack.setStackSize(0);
+            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
+        }
+    }
+
+    private int findFluidArrivalPattern(FluidIdentifier fluid) {
+        int fallback = -1;
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
+            if (pattern == null || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
+                continue;
+            }
+            if (requestedFluidIngredient.amount(slot, fluid) > 0) {
+                return slot;
+            }
+            if (fallback < 0 && canReceiveForPattern(slot) && spaceForPatternFluidIngredient(slot, pattern, fluid) > 0) {
+                fallback = slot;
+            }
+        }
+        return fallback;
+    }
+
     /**
      * Calculates how many arriving items can be consumed for one pattern before the transport layer treats them as
      * leftovers. This is intentionally separate from {@link #spaceFor(ItemIdentifier, boolean)} because arriving items
@@ -487,6 +659,28 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             space += patternHandler.ingredientAmount(pattern, item);
         }
         return space;
+    }
+
+    private int spaceForArrivingFluidIngredient(int patternSlot, ItemStack pattern, FluidIdentifier fluid) {
+        int space = spaceForPatternFluidIngredient(patternSlot, pattern, fluid);
+        AdjacentTile connected = adjacentInventory.getConnected();
+        if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
+                && connected != null
+                && adjacentInventory.isEmpty(connected)
+                && fluidIngredientBuffer.canCompleteOneSetAfterAdding(patternSlot, pattern, fluid, space)
+                && itemIngredientsBufferedForOneSet(patternSlot, pattern)) {
+            space += patternHandler.fluidIngredientAmount(pattern, fluid);
+        }
+        return space;
+    }
+
+    private boolean itemIngredientsBufferedForOneSet(int patternSlot, ItemStack pattern) {
+        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+            if (ingredientBuffer.amount(patternSlot, ingredient.getItem()) < ingredient.getStackSize()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected ISlotUpgradeManager getUpgradeManager() {
@@ -537,6 +731,25 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return Math.max(0, count);
     }
 
+    private int spaceForFluid(FluidIdentifier fluid, boolean includeInTransit) {
+        int count = 0;
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
+            if (pattern == null || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
+                continue;
+            }
+            int requested = requestedFluidIngredient.amount(slot, fluid);
+            if (requested > 0) {
+                count = Math.max(count, requested);
+            }
+            if (!canReceiveForPattern(slot)) {
+                continue;
+            }
+            count = Math.max(count, spaceForPatternFluidIngredient(slot, pattern, fluid) - requested);
+        }
+        return Math.max(0, count);
+    }
+
     private boolean canReceiveForPattern(int patternSlot) {
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
@@ -564,6 +777,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return Math.max(0, capacity - ingredientBuffer.amount(patternSlot, item));
     }
 
+    private int spaceForPatternFluidIngredient(int patternSlot, ItemStack pattern, FluidIdentifier fluid) {
+        int sets = 1;
+        if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
+            sets += adjacentInventory.availablePatternSets(pattern);
+        }
+        int capacity = sets * patternHandler.fluidIngredientAmount(pattern, fluid);
+        return Math.max(0, capacity - fluidIngredientBuffer.amount(patternSlot, fluid));
+    }
+
     private boolean patternContains(ItemStack pattern, ItemIdentifier item) {
         return patternHandler.containsIngredient(pattern, item);
     }
@@ -572,8 +794,17 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return bufferedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
     }
 
+    private List<PatternFluidStack> getFluidBuffer(int patternSlot) {
+        return bufferedFluidIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
+    }
+
     private boolean hasBufferedIngredients() {
         for (List<ItemIdentifierStack> buffer : bufferedIngredients.values()) {
+            if (!buffer.isEmpty()) {
+                return true;
+            }
+        }
+        for (List<PatternFluidStack> buffer : bufferedFluidIngredients.values()) {
             if (!buffer.isEmpty()) {
                 return true;
             }
@@ -589,6 +820,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             for (Integer patternSlot : new ArrayList<>(bufferedIngredients.keySet())) {
+                pushBufferedIngredientsFor(patternSlot);
+            }
+            for (Integer patternSlot : new ArrayList<>(bufferedFluidIngredients.keySet())) {
                 pushBufferedIngredientsFor(patternSlot);
             }
             return;
@@ -619,9 +853,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && !adjacentInventory.isEmpty(connected)) {
             return;
         }
-        int bufferedSets = ingredientBuffer.completeSets(patternSlot, pattern);
+        int bufferedSets = completeBufferedSets(patternSlot, pattern);
         if (bufferedSets <= 0) {
-            if (bufferedIngredients.get(patternSlot).isEmpty()) bufferedIngredients.remove(patternSlot);
+            if (bufferedIngredients.get(patternSlot) != null && bufferedIngredients.get(patternSlot).isEmpty()) {
+                bufferedIngredients.remove(patternSlot);
+            }
+            if (bufferedFluidIngredients.get(patternSlot) != null && bufferedFluidIngredients.get(patternSlot).isEmpty()) {
+                bufferedFluidIngredients.remove(patternSlot);
+            }
             return;
         }
         int insertableSets = adjacentInventory.availablePatternSets(pattern);
@@ -633,10 +872,22 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             return;
         }
         ingredientBuffer.removePatternSets(patternSlot, pattern, sets);
+        fluidIngredientBuffer.removePatternSets(patternSlot, pattern, sets);
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             runningCraft = patternSlot;
         }
         requestIngredientsForStagedCrafts();
+    }
+
+    private int completeBufferedSets(int patternSlot, ItemStack pattern) {
+        int itemSets = patternHandler.getAggregatedIngredients(pattern).isEmpty()
+                ? Integer.MAX_VALUE
+                : ingredientBuffer.completeSets(patternSlot, pattern);
+        int fluidSets = patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()
+                ? Integer.MAX_VALUE
+                : fluidIngredientBuffer.completeSets(patternSlot, pattern);
+        int sets = Math.min(itemSets, fluidSets);
+        return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
     /**
@@ -721,6 +972,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             room -= requestedIngredient.amount(patternSlot, ingredient.getItem());
             sets = Math.min(sets, Math.max(0, room) / ingredient.getStackSize());
         }
+        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+            int room = spaceForPatternFluidIngredient(patternSlot, pattern, ingredient.getFluid());
+            if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
+                    && connected != null
+                    && adjacentInventory.isEmpty(connected)) {
+                room += ingredient.getAmount();
+            }
+            room -= requestedFluidIngredient.amount(patternSlot, ingredient.getFluid());
+            sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
+        }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
@@ -730,7 +991,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             if (pattern == null) {
                 continue;
             }
-            if (ingredientBuffer.completeSets(patternSlot, pattern) > 0) {
+            if (completeBufferedSets(patternSlot, pattern) > 0) {
+                return patternSlot;
+            }
+        }
+        for (Integer patternSlot : bufferedFluidIngredients.keySet()) {
+            ItemStack pattern = getPatternStack(patternSlot);
+            if (pattern == null) {
+                continue;
+            }
+            if (completeBufferedSets(patternSlot, pattern) > 0) {
                 return patternSlot;
             }
         }
@@ -750,7 +1020,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             return;
         }
         ItemStack pattern = getPatternStack(runningCraft);
-        if (pattern == null || ingredientBuffer.completeSets(runningCraft, pattern) <= 0) {
+        if (pattern == null || completeBufferedSets(runningCraft, pattern) <= 0) {
             runningCraft = -1;
         }
     }
@@ -853,7 +1123,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             found = true;
             out.append("    slot ").append(slot).append("\n");
             appendPatternSlots(out, pattern, 0, Pattern.INGREDIENT_SLOTS, "      inputs");
-            appendPatternSlots(out, pattern, Pattern.INGREDIENT_SLOTS, Pattern.SLOT_COUNT, "      results");
+            appendPatternSlots(out, pattern, Pattern.INGREDIENT_SLOTS, Pattern.ITEM_SLOT_COUNT, "      results");
+            appendPatternFluids(out, Pattern.getFluidIngredients(pattern), "      fluid inputs");
+            appendPatternFluids(out, Pattern.getFluidResults(pattern), "      fluid results");
         }
         if (!found) {
             out.append("    <none>\n");
@@ -883,6 +1155,21 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         out.append("\n");
     }
 
+    private void appendPatternFluids(StringBuilder out, List<PatternFluidStack> fluids, String label) {
+        out.append(label).append(": ");
+        if (fluids.isEmpty()) {
+            out.append("<none>\n");
+            return;
+        }
+        for (int i = 0; i < fluids.size(); i++) {
+            if (i > 0) {
+                out.append(", ");
+            }
+            out.append(fluids.get(i));
+        }
+        out.append("\n");
+    }
+
     private void appendStackMapDebug(
             StringBuilder out,
             String label,
@@ -895,6 +1182,31 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         for (Map.Entry<Integer, List<ItemIdentifierStack>> entry : stacksByPattern.entrySet()) {
             out.append("    slot ").append(entry.getKey()).append(": ");
             appendInlineStacks(out, entry.getValue());
+            out.append("\n");
+        }
+    }
+
+    private void appendFluidMapDebug(
+            StringBuilder out,
+            String label,
+            Map<Integer, List<PatternFluidStack>> stacksByPattern) {
+        out.append("  ").append(label).append(":\n");
+        if (stacksByPattern.isEmpty()) {
+            out.append("    <none>\n");
+            return;
+        }
+        for (Map.Entry<Integer, List<PatternFluidStack>> entry : stacksByPattern.entrySet()) {
+            out.append("    slot ").append(entry.getKey()).append(": ");
+            if (entry.getValue().isEmpty()) {
+                out.append("<none>");
+            } else {
+                for (int i = 0; i < entry.getValue().size(); i++) {
+                    if (i > 0) {
+                        out.append(", ");
+                    }
+                    out.append(entry.getValue().get(i));
+                }
+            }
             out.append("\n");
         }
     }
@@ -962,6 +1274,24 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
             lost = lostItems.poll();
         }
+        DelayedGeneric<Pair<PatternFluidStack, IAdditionalTargetInformation>> lostFluid = lostFluids.poll();
+        while (lostFluid != null && rerequested < 100) {
+            Pair<PatternFluidStack, IAdditionalTargetInformation> pair = lostFluid.get();
+            PatternFluidStack fluid = pair.getValue1();
+            int received = RequestTree.requestFluidPartial(
+                    fluid.getFluid(),
+                    fluid.getAmount(),
+                    this,
+                    null,
+                    pair.getValue2());
+            rerequested++;
+            if (received < fluid.getAmount()) {
+                lostFluids.add(new DelayedGeneric<>(
+                        new Pair<>(new PatternFluidStack(fluid.getFluid(), fluid.getAmount() - received), pair.getValue2()),
+                        4500 + (int) (Math.random() * 1000)));
+            }
+            lostFluid = lostFluids.poll();
+        }
     }
 
     /**
@@ -1027,6 +1357,44 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             pipe.sendStack(extracted, -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
             pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, null);
         }
+    }
+
+    /**
+     * Drains completed fluid craft results from the connected fluid handler and routes them to the fluid requester.
+     */
+    private void craftFluidsFromAdjacentInventory() {
+        if (!pipe.isNthTick(6) || !pipe.getPatternFluidOrderManager().hasOrders(ResourceType.CRAFTING)) {
+            return;
+        }
+        List<AdjacentTile> handlers = adjacentInventory.locateFluidHandlers();
+        if (handlers.isEmpty()) {
+            pipe.getPatternFluidOrderManager().sendFailed();
+            return;
+        }
+        LogisticsFluidOrder order = pipe.getPatternFluidOrderManager().peekAtTopRequest(ResourceType.CRAFTING);
+        if (order == null) {
+            return;
+        }
+
+        int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
+        PatternFluidStack wanted = new PatternFluidStack(order.getFluid(), amountToDrain);
+        for (AdjacentTile tile : handlers) {
+            FluidStack drained = adjacentInventory.extractFluid(tile, wanted, amountToDrain);
+            if (drained == null || drained.amount <= 0) {
+                continue;
+            }
+            IRoutedItem item = SimpleServiceLocator.routedItemHelper
+                    .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
+            item.setDestination(order.getRouter().getSimpleID());
+            item.setTransportMode(TransportMode.Active);
+            item.setAdditionalTargetInformation(order.getInformation());
+            pipe.queueRoutedItem(item, tile.orientation);
+            pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, item);
+            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
+            requestIngredientsForStagedCrafts();
+            return;
+        }
+        pipe.getPatternFluidOrderManager().deferSend();
     }
 
     public void onAllowedRemoval() {

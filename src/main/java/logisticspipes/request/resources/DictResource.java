@@ -154,7 +154,7 @@ public class DictResource implements IResource {
     public IResource copyForDisplayWith(int amount) {
         ItemIdentifierStack stack = this.stack.clone();
         stack.setStackSize(amount);
-        DictResource clone = new DictResource(stack, null);
+        DictResource clone = new DictResource(stack, requester);
         clone.use_od = use_od;
         clone.ignore_dmg = ignore_dmg;
         clone.ignore_nbt = ignore_nbt;

@@ -241,17 +241,26 @@ public class RequestTree extends RequestTreeNode {
     }
 
     public static int requestFluidPartial(FluidIdentifier liquid, int amount, IRequestFluid pipe, RequestLog log) {
-        return RequestTree.requestFluid(liquid, amount, pipe, log, true);
+        return RequestTree.requestFluid(liquid, amount, pipe, log, true, null);
+    }
+
+    public static int requestFluidPartial(
+            FluidIdentifier liquid,
+            int amount,
+            IRequestFluid pipe,
+            RequestLog log,
+            IAdditionalTargetInformation info) {
+        return RequestTree.requestFluid(liquid, amount, pipe, log, true, info);
     }
 
     public static boolean requestFluid(FluidIdentifier liquid, int amount, IRequestFluid pipe, RequestLog log) {
-        return RequestTree.requestFluid(liquid, amount, pipe, log, false) == amount;
+        return RequestTree.requestFluid(liquid, amount, pipe, log, false, null) == amount;
     }
 
     private static int requestFluid(FluidIdentifier liquid, int amount, IRequestFluid pipe, RequestLog log,
-            boolean acceptPartial) {
+            boolean acceptPartial, IAdditionalTargetInformation info) {
         FluidResource req = new FluidResource(liquid, amount, pipe);
-        RequestTree request = new RequestTree(req, null, RequestTree.defaultRequestFlags, null);
+        RequestTree request = new RequestTree(req, null, RequestTree.defaultRequestFlags, info);
         if (request.isDone() || acceptPartial) {
             LinkedLogisticsOrderList list = request.fullFill();
             CraftingRequestDebugManager.record(

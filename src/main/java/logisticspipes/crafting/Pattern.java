@@ -5,6 +5,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.proxy.MainProxy;
+import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.ChatColor;
@@ -18,14 +19,22 @@ import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class Pattern extends LogisticsItem {
 
     public static final int INGREDIENT_SLOTS = 9;
     public static final int RESULT_SLOTS = 3;
-    public static final int SLOT_COUNT = INGREDIENT_SLOTS + RESULT_SLOTS;
+    public static final int ITEM_SLOT_COUNT = INGREDIENT_SLOTS + RESULT_SLOTS;
+    public static final int FLUID_INPUT_SLOTS = 3;
+    public static final int FLUID_RESULT_SLOTS = 3;
+    public static final int FLUID_INPUT_START = ITEM_SLOT_COUNT;
+    public static final int FLUID_RESULT_START = FLUID_INPUT_START + FLUID_INPUT_SLOTS;
+    public static final int SLOT_COUNT = FLUID_RESULT_START + FLUID_RESULT_SLOTS;
     private static final String ITEMS_TAG = "patternItems";
+    private static final String FLUID_INPUTS_TAG = "patternFluidInputs";
+    private static final String FLUID_RESULTS_TAG = "patternFluidResults";
 
     public Pattern() {
         setMaxStackSize(1);
@@ -48,14 +57,30 @@ public class Pattern extends LogisticsItem {
         return result;
     }
 
+    public static List<PatternFluidStack> getAggregatedFluidIngredients(ItemStack pattern) {
+        var fluidCounts = new LinkedHashMap<FluidIdentifier, Integer>();
+        for (PatternFluidStack ingredient : getFluidIngredients(pattern)) {
+            fluidCounts.putIfAbsent(ingredient.getFluid(), 0);
+            fluidCounts.compute(ingredient.getFluid(), (key, value) -> value + ingredient.getAmount());
+        }
+
+        var result = new ArrayList<PatternFluidStack>();
+        for (var entry : fluidCounts.entrySet()) {
+            result.add(new PatternFluidStack(entry.getKey(), entry.getValue()));
+        }
+        return result;
+    }
+
     /**
      * Clears a given pattern
      * @param pattern the pattern
      */
     public static void clear(ItemStack pattern) {
-        for (int i = 0; i < SLOT_COUNT; i++) {
+        for (int i = 0; i < ITEM_SLOT_COUNT; i++) {
             setStackInSlot(pattern, i, null);
         }
+        setFluidIngredients(pattern, new ArrayList<>());
+        setFluidResults(pattern, new ArrayList<>());
     }
 
     /**
@@ -64,9 +89,15 @@ public class Pattern extends LogisticsItem {
      * @param factor the factor
      */
     public static void multiply(ItemStack pattern, int factor) {
-        for (int i = 0; i < SLOT_COUNT; i++) {
-            getStackInSlot(pattern, i).stackSize *= factor;
+        for (int i = 0; i < ITEM_SLOT_COUNT; i++) {
+            ItemStack stack = getStackInSlot(pattern, i);
+            if (stack != null) {
+                stack.stackSize *= factor;
+                setStackInSlot(pattern, i, stack);
+            }
         }
+        multiplyFluids(pattern, factor, true);
+        multiplyFluids(pattern, factor, false);
     }
 
     /**
@@ -77,7 +108,7 @@ public class Pattern extends LogisticsItem {
      * @return the ItemStack or null if not present
      */
     public static ItemStack getStackInSlot(ItemStack pattern, int slot) {
-        if (pattern == null || slot < 0 || slot >= SLOT_COUNT || !pattern.hasTagCompound()) {
+        if (pattern == null || slot < 0 || slot >= ITEM_SLOT_COUNT || !pattern.hasTagCompound()) {
             return null;
         }
         NBTTagList list = pattern.getTagCompound().getTagList(ITEMS_TAG, 10);
@@ -99,7 +130,7 @@ public class Pattern extends LogisticsItem {
      * @param stack the new ItemStack the slot will be set to
      */
     public static void setStackInSlot(ItemStack pattern, int slot, ItemStack stack) {
-        if (pattern == null || slot < 0 || slot >= SLOT_COUNT) {
+        if (pattern == null || slot < 0 || slot >= ITEM_SLOT_COUNT) {
             return;
         }
         NBTTagCompound root = getOrCreateTag(pattern);
@@ -135,25 +166,72 @@ public class Pattern extends LogisticsItem {
      * @return the results of a pattern, not aggregated.
      */
     public static List<ItemIdentifierStack> getResults(ItemStack pattern) {
-        return readRange(pattern, INGREDIENT_SLOTS, SLOT_COUNT);
+        return readRange(pattern, INGREDIENT_SLOTS, ITEM_SLOT_COUNT);
+    }
+
+    public static PatternFluidStack getFluidInSlot(ItemStack pattern, int slot) {
+        if (slot >= FLUID_INPUT_START && slot < FLUID_INPUT_START + FLUID_INPUT_SLOTS) {
+            return readFluidSlot(pattern, FLUID_INPUTS_TAG, slot - FLUID_INPUT_START);
+        }
+        if (slot >= FLUID_RESULT_START && slot < FLUID_RESULT_START + FLUID_RESULT_SLOTS) {
+            return readFluidSlot(pattern, FLUID_RESULTS_TAG, slot - FLUID_RESULT_START);
+        }
+        return null;
+    }
+
+    public static void setFluidInSlot(ItemStack pattern, int slot, PatternFluidStack stack) {
+        if (slot >= FLUID_INPUT_START && slot < FLUID_INPUT_START + FLUID_INPUT_SLOTS) {
+            setFluidSlot(pattern, FLUID_INPUTS_TAG, slot - FLUID_INPUT_START, stack);
+        } else if (slot >= FLUID_RESULT_START && slot < FLUID_RESULT_START + FLUID_RESULT_SLOTS) {
+            setFluidSlot(pattern, FLUID_RESULTS_TAG, slot - FLUID_RESULT_START, stack);
+        }
+    }
+
+    public static List<PatternFluidStack> getFluidIngredients(ItemStack pattern) {
+        return readFluidList(pattern, FLUID_INPUTS_TAG, FLUID_INPUT_SLOTS);
+    }
+
+    public static List<PatternFluidStack> getFluidResults(ItemStack pattern) {
+        return readFluidList(pattern, FLUID_RESULTS_TAG, FLUID_RESULT_SLOTS);
+    }
+
+    public static void setFluidIngredients(ItemStack pattern, List<PatternFluidStack> fluids) {
+        setFluidList(pattern, FLUID_INPUTS_TAG, fluids, FLUID_INPUT_SLOTS);
+    }
+
+    public static void setFluidResults(ItemStack pattern, List<PatternFluidStack> fluids) {
+        setFluidList(pattern, FLUID_RESULTS_TAG, fluids, FLUID_RESULT_SLOTS);
     }
 
     public static ItemStack getPrimaryResultStack(ItemStack pattern) {
         List<ItemIdentifierStack> results = getResults(pattern);
-        if (results.isEmpty()) {
-            return null;
+        if (!results.isEmpty()) {
+            return results.get(0).makeNormalStack();
         }
-        return results.get(0).makeNormalStack();
+        List<PatternFluidStack> fluidResults = getFluidResults(pattern);
+        if (!fluidResults.isEmpty()) {
+            return fluidResults.get(0).makeDisplayStack().makeNormalStack();
+        }
+        return null;
     }
 
     public static boolean isConfigured(ItemStack pattern) {
-        return !getIngredients(pattern).isEmpty() && !getResults(pattern).isEmpty();
+        boolean hasInputs = !getIngredients(pattern).isEmpty() || !getFluidIngredients(pattern).isEmpty();
+        boolean hasResults = !getResults(pattern).isEmpty() || !getFluidResults(pattern).isEmpty();
+        return hasInputs && hasResults;
     }
 
     private static void addStacksToTooltip(List<String> tooltip, List<ItemIdentifierStack> stacks, ChatColor color) {
         for (ItemIdentifierStack stack : stacks) {
             ItemStack normalStack = stack.makeNormalStack();
             tooltip.add("  " + ChatColor.WHITE + normalStack.stackSize + " " + color + normalStack.getDisplayName());
+        }
+    }
+
+    private static void addFluidsToTooltip(List<String> tooltip, List<PatternFluidStack> stacks, ChatColor color) {
+        for (PatternFluidStack stack : stacks) {
+            tooltip.add("  " + ChatColor.WHITE + stack.getAmount() + "mB " + color
+                    + stack.makeFluidStack().getLocalizedName());
         }
     }
 
@@ -166,6 +244,77 @@ public class Pattern extends LogisticsItem {
             }
         }
         return stacks;
+    }
+
+    private static PatternFluidStack readFluidSlot(ItemStack pattern, String key, int slot) {
+        if (pattern == null || slot < 0 || !pattern.hasTagCompound()) {
+            return null;
+        }
+        NBTTagList list = pattern.getTagCompound().getTagList(key, 10);
+        if (slot >= list.tagCount()) {
+            return null;
+        }
+        return PatternFluidStack.readFromNBT(list.getCompoundTagAt(slot));
+    }
+
+    private static void setFluidSlot(ItemStack pattern, String key, int slot, PatternFluidStack stack) {
+        if (pattern == null || slot < 0) {
+            return;
+        }
+        List<PatternFluidStack> fluids = readFluidList(pattern, key, key.equals(FLUID_INPUTS_TAG)
+                ? FLUID_INPUT_SLOTS
+                : FLUID_RESULT_SLOTS);
+        while (fluids.size() <= slot) {
+            fluids.add(null);
+        }
+        fluids.set(slot, stack);
+        setFluidList(pattern, key, fluids, key.equals(FLUID_INPUTS_TAG) ? FLUID_INPUT_SLOTS : FLUID_RESULT_SLOTS);
+    }
+
+    private static List<PatternFluidStack> readFluidList(ItemStack pattern, String key, int maxSlots) {
+        List<PatternFluidStack> fluids = new ArrayList<>();
+        if (pattern == null || !pattern.hasTagCompound()) {
+            return fluids;
+        }
+        NBTTagList list = pattern.getTagCompound().getTagList(key, 10);
+        for (int i = 0; i < list.tagCount() && i < maxSlots; i++) {
+            PatternFluidStack stack = PatternFluidStack.readFromNBT(list.getCompoundTagAt(i));
+            if (stack != null && stack.getAmount() > 0) {
+                fluids.add(stack);
+            }
+        }
+        return fluids;
+    }
+
+    private static void setFluidList(ItemStack pattern, String key, List<PatternFluidStack> fluids, int maxSlots) {
+        if (pattern == null) {
+            return;
+        }
+        NBTTagCompound root = getOrCreateTag(pattern);
+        NBTTagList list = new NBTTagList();
+        for (PatternFluidStack stack : fluids) {
+            if (stack == null || stack.getAmount() <= 0) {
+                continue;
+            }
+            list.appendTag(stack.writeToNBT());
+            if (list.tagCount() >= maxSlots) {
+                break;
+            }
+        }
+        root.setTag(key, list);
+    }
+
+    private static void multiplyFluids(ItemStack pattern, int factor, boolean inputs) {
+        List<PatternFluidStack> fluids = inputs ? getFluidIngredients(pattern) : getFluidResults(pattern);
+        List<PatternFluidStack> multiplied = new ArrayList<>();
+        for (PatternFluidStack fluid : fluids) {
+            multiplied.add(new PatternFluidStack(fluid.getFluid(), fluid.getAmount() * factor));
+        }
+        if (inputs) {
+            setFluidIngredients(pattern, multiplied);
+        } else {
+            setFluidResults(pattern, multiplied);
+        }
     }
 
     private static NBTTagCompound getOrCreateTag(ItemStack stack) {
@@ -198,15 +347,18 @@ public class Pattern extends LogisticsItem {
     public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced) {
         super.addInformation(stack, player, tooltip, advanced);
         List<ItemIdentifierStack> results = getResults(stack);
-        if (results.isEmpty()) {
+        List<PatternFluidStack> fluidResults = getFluidResults(stack);
+        if (results.isEmpty() && fluidResults.isEmpty()) {
             return;
         }
         tooltip.add(ChatColor.AQUA + "Results:");
         addStacksToTooltip(tooltip, results, ChatColor.DARK_BLUE);
-        if (!getIngredients(stack).isEmpty()) {
+        addFluidsToTooltip(tooltip, fluidResults, ChatColor.DARK_BLUE);
+        if (!getIngredients(stack).isEmpty() || !getFluidIngredients(stack).isEmpty()) {
             StringUtils.addShiftAction(tooltip, () -> {
                 tooltip.add(ChatColor.DARK_GREEN + "Ingredients:");
                 addStacksToTooltip(tooltip, getAggregatedIngredients(stack), ChatColor.GREEN);
+                addFluidsToTooltip(tooltip, getAggregatedFluidIngredients(stack), ChatColor.GREEN);
             });
         }
     }

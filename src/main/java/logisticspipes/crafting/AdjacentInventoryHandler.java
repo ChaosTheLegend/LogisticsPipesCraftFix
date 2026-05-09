@@ -13,6 +13,9 @@ import logisticspipes.utils.transactor.ITransactor;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTankInfo;
+import net.minecraftforge.fluids.IFluidHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,15 @@ class AdjacentInventoryHandler {
         return inventories;
     }
 
+    List<AdjacentTile> locateFluidHandlers() {
+        List<AdjacentTile> handlers = new ArrayList<>();
+        AdjacentTile connected = getConnected();
+        if (connected != null && connected.tile instanceof IFluidHandler) {
+            handlers.add(connected);
+        }
+        return handlers;
+    }
+
     int roomFor(ItemStack pattern, ItemIdentifier item) {
         AdjacentTile connected = getConnected();
         if (connected == null) return 0;
@@ -70,10 +82,30 @@ class AdjacentInventoryHandler {
         if (connected == null || pattern == null) {
             return 0;
         }
-        if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
-            return availablePatternSetsForPatternTable(pattern, (PatternLogisticsCraftingTableTileEntity) connected.tile);
+        int sets = Integer.MAX_VALUE;
+        boolean hasIngredient = false;
+        if (!patternHandler.getAggregatedIngredients(pattern).isEmpty()) {
+            hasIngredient = true;
+            if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
+                sets = Math.min(
+                        sets,
+                        availablePatternSetsForPatternTable(
+                                pattern,
+                                (PatternLogisticsCraftingTableTileEntity) connected.tile));
+            } else if (connected.tile instanceof IInventory) {
+                sets = Math.min(sets, availablePatternSetsDisregardingSlots(pattern, connected));
+            } else {
+                return 0;
+            }
         }
-        return availablePatternSetsDisregardingSlots(pattern, connected);
+        if (!patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()) {
+            hasIngredient = true;
+            if (!(connected.tile instanceof IFluidHandler)) {
+                return 0;
+            }
+            sets = Math.min(sets, availablePatternSetsForFluids(pattern, connected));
+        }
+        return hasIngredient && sets != Integer.MAX_VALUE ? Math.max(0, sets) : 0;
     }
 
     boolean insertPatternSets(ItemStack pattern, int sets) {
@@ -81,7 +113,9 @@ class AdjacentInventoryHandler {
             return false;
         }
         AdjacentTile connected = getConnected();
-        if (connected != null && connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
+        if (connected != null
+                && connected.tile instanceof PatternLogisticsCraftingTableTileEntity
+                && patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()) {
             return ((PatternLogisticsCraftingTableTileEntity) connected.tile).insertPatternFromPatternPipe(pattern, sets);
         }
         for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
@@ -90,7 +124,35 @@ class AdjacentInventoryHandler {
                 return false;
             }
         }
+        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+            PatternFluidStack stack = new PatternFluidStack(ingredient.getFluid(), ingredient.getAmount() * sets);
+            if (insertFluid(stack) != stack.getAmount()) {
+                return false;
+            }
+        }
         return true;
+    }
+
+    private int availablePatternSetsForFluids(ItemStack pattern, AdjacentTile connected) {
+        IFluidHandler handler = (IFluidHandler) connected.tile;
+        ForgeDirection side = getFluidInsertionOrientation(connected);
+        int sets = Integer.MAX_VALUE;
+        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+            int upperBound = ingredient.getFluid().getFreeSpaceInsideTank(handler, side) / ingredient.getAmount();
+            int low = 0;
+            int high = upperBound;
+            while (low < high) {
+                int mid = low + (high - low + 1) / 2;
+                FluidStack stack = ingredient.getFluid().makeFluidStack(ingredient.getAmount() * mid);
+                if (handler.fill(side, stack, false) == stack.amount) {
+                    low = mid;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            sets = Math.min(sets, low);
+        }
+        return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
     private int availablePatternSetsDisregardingSlots(ItemStack pattern, AdjacentTile connected) {
@@ -212,6 +274,22 @@ class AdjacentInventoryHandler {
         return added != null ? added.stackSize : 0;
     }
 
+    private int insertFluid(PatternFluidStack fluid) {
+        AdjacentTile connected = getConnected();
+        if (connected == null || !(connected.tile instanceof IFluidHandler) || fluid.getAmount() <= 0) {
+            return 0;
+        }
+        IFluidHandler handler = (IFluidHandler) connected.tile;
+        return handler.fill(getFluidInsertionOrientation(connected), fluid.makeFluidStack(), true);
+    }
+
+    private ForgeDirection getFluidInsertionOrientation(AdjacentTile connected) {
+        if (module.getUpgradeManager().hasSneakyUpgrade()) {
+            return module.getUpgradeManager().getSneakyOrientation();
+        }
+        return connected.orientation.getOpposite();
+    }
+
     private int amountOf(ItemIdentifier item) {
         AdjacentTile connected = getConnected();
         if (connected == null) {
@@ -233,17 +311,29 @@ class AdjacentInventoryHandler {
     }
 
     boolean isEmpty(AdjacentTile connected) {
-        if (connected == null || !(connected.tile instanceof IInventory)) {
+        if (connected == null || (!(connected.tile instanceof IInventory) && !(connected.tile instanceof IFluidHandler))) {
             return true;
         }
         if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
             return ((PatternLogisticsCraftingTableTileEntity) connected.tile).isIdle();
         }
-        IInventory inventory = (IInventory) connected.tile;
-        for (int i = 0; i < inventory.getSizeInventory(); i++) {
-            ItemStack stack = inventory.getStackInSlot(i);
-            if (stack != null && stack.stackSize > 0) {
-                return false;
+        if (connected.tile instanceof IInventory) {
+            IInventory inventory = (IInventory) connected.tile;
+            for (int i = 0; i < inventory.getSizeInventory(); i++) {
+                ItemStack stack = inventory.getStackInSlot(i);
+                if (stack != null && stack.stackSize > 0) {
+                    return false;
+                }
+            }
+        }
+        if (connected.tile instanceof IFluidHandler) {
+            FluidTankInfo[] tanks = ((IFluidHandler) connected.tile).getTankInfo(getFluidInsertionOrientation(connected));
+            if (tanks != null) {
+                for (FluidTankInfo tank : tanks) {
+                    if (tank != null && tank.fluid != null && tank.fluid.amount > 0) {
+                        return false;
+                    }
+                }
             }
         }
         return true;
@@ -267,5 +357,21 @@ class AdjacentInventoryHandler {
             return null;
         }
         return util.getMultipleItems(item, Math.min(count, available));
+    }
+
+    FluidStack extractFluid(AdjacentTile tile, PatternFluidStack wanted, int amount) {
+        if (!(tile.tile instanceof IFluidHandler) || wanted == null || amount <= 0) {
+            return null;
+        }
+        IFluidHandler handler = (IFluidHandler) tile.tile;
+        ForgeDirection side = tile.orientation.getOpposite();
+        FluidStack simulated = handler.drain(side, amount, false);
+        if (simulated == null || simulated.amount <= 0 || !wanted.getFluid().equals(logisticspipes.utils.FluidIdentifier.get(simulated))) {
+            return null;
+        }
+        if (!pipe.useEnergy(Math.min(amount, simulated.amount))) {
+            return null;
+        }
+        return handler.drain(side, Math.min(amount, simulated.amount), true);
     }
 }

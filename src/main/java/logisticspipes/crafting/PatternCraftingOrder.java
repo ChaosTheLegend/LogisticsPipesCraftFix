@@ -7,6 +7,7 @@ import java.util.Set;
 import net.minecraft.item.ItemStack;
 
 import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
@@ -20,6 +21,7 @@ class PatternCraftingOrder {
     private final IOrderInfoProvider outputOrder;
     private final PatternHandler patternHandler;
     private final IngredientRequestHandler requestedIngredient;
+    private final FluidIngredientRequestHandler requestedFluidIngredient;
 
     PatternCraftingOrder(
             int patternSlot,
@@ -27,7 +29,8 @@ class PatternCraftingOrder {
             PatternCraftingBranch branch,
             IOrderInfoProvider outputOrder,
             PatternHandler patternHandler,
-            IngredientRequestHandler requestedIngredient) {
+            IngredientRequestHandler requestedIngredient,
+            FluidIngredientRequestHandler requestedFluidIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
         this.remainingSets = (branch.getRequestType().getRequestedAmount() + this.resultAmountPerSet - 1)
@@ -36,6 +39,7 @@ class PatternCraftingOrder {
         this.outputOrder = outputOrder;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
+        this.requestedFluidIngredient = requestedFluidIngredient;
     }
 
     /**
@@ -56,6 +60,9 @@ class PatternCraftingOrder {
         for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
             sets = Math.min(sets, availableFromBranches(ingredient.getItem()) / ingredient.getStackSize());
         }
+        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+            sets = Math.min(sets, availableFromBranches(ingredient.getFluid()) / ingredient.getAmount());
+        }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
@@ -66,9 +73,14 @@ class PatternCraftingOrder {
     int requestIngredients(ItemStack pattern, int sets) {
         int requestedSets = sets;
         for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
-            int requested = requestFromBranches(ingredient.getItem(), ingredient.getStackSize() * sets);
+            int requested = requestFromBranches(ingredient.getItem(), ingredient.getStackSize() * requestedSets);
             requestedIngredient.add(patternSlot, ingredient.getItem(), requested);
             requestedSets = Math.min(requestedSets, requested / ingredient.getStackSize());
+        }
+        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+            int requested = requestFromBranches(ingredient.getFluid(), ingredient.getAmount() * requestedSets);
+            requestedFluidIngredient.add(patternSlot, ingredient.getFluid(), requested);
+            requestedSets = Math.min(requestedSets, requested / ingredient.getAmount());
         }
         remainingSets -= requestedSets;
         return requestedSets;
@@ -136,6 +148,19 @@ class PatternCraftingOrder {
     }
 
     /**
+     * Returns the amount still available for one fluid ingredient across matching branches.
+     */
+    private int availableFromBranches(FluidIdentifier fluid) {
+        int available = 0;
+        for (PatternCraftingBranch branch : ingredientBranches) {
+            if (branch.matches(fluid)) {
+                available += branch.getRemainingAmount();
+            }
+        }
+        return available;
+    }
+
+    /**
      * Places provider or staged crafting orders for an ingredient, consuming the matching branch state as it goes.
      */
     private int requestFromBranches(ItemIdentifier item, int amount) {
@@ -145,6 +170,23 @@ class PatternCraftingOrder {
                 break;
             }
             if (!branch.matches(item)) {
+                continue;
+            }
+            requested += branch.request(amount - requested);
+        }
+        return requested;
+    }
+
+    /**
+     * Places provider orders for a fluid ingredient, consuming the matching branch state as it goes.
+     */
+    private int requestFromBranches(FluidIdentifier fluid, int amount) {
+        int requested = 0;
+        for (PatternCraftingBranch branch : ingredientBranches) {
+            if (requested >= amount) {
+                break;
+            }
+            if (!branch.matches(fluid)) {
                 continue;
             }
             requested += branch.request(amount - requested);

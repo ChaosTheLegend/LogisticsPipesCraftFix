@@ -1,6 +1,7 @@
 package logisticspipes.crafting;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.SimpleStackInventory;
@@ -51,16 +52,36 @@ class PatternHandler {
             for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
                 items.add(ingredient.getItem());
             }
+            for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+                items.add(ingredient.getFluid().getItemIdentifier());
+            }
         }
         return items;
     }
 
     boolean isIngredient(ItemIdentifier item) {
+        FluidIdentifier fluid = item != null && item.isFluidContainer() ? FluidIdentifier.get(item) : null;
+        if (fluid != null) {
+            return isFluidIngredient(fluid);
+        }
         return getIngredientItems().contains(item);
     }
 
     boolean containsIngredient(ItemStack pattern, ItemIdentifier item) {
+        FluidIdentifier fluid = item != null && item.isFluidContainer() ? FluidIdentifier.get(item) : null;
+        if (fluid != null) {
+            return fluidIngredientAmount(pattern, fluid) > 0;
+        }
         return ingredientAmount(pattern, item) > 0;
+    }
+
+    boolean isFluidIngredient(FluidIdentifier fluid) {
+        for (ItemStack pattern : getConfiguredPatterns()) {
+            if (fluidIngredientAmount(pattern, fluid) > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     int findPatternSlotForResult(ItemIdentifier item) {
@@ -85,6 +106,19 @@ class PatternHandler {
         for (ItemIdentifierStack result : Pattern.getResults(pattern)) {
             if (result.getItem().equalsForCrafting(item)) {
                 amount += result.getStackSize();
+            }
+        }
+        return amount;
+    }
+
+    int fluidIngredientAmount(ItemStack pattern, FluidIdentifier fluid) {
+        int amount = 0;
+        if (pattern == null || fluid == null) {
+            return amount;
+        }
+        for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+            if (ingredient.getFluid().equals(fluid)) {
+                amount += ingredient.getAmount();
             }
         }
         return amount;
@@ -119,6 +153,27 @@ class PatternHandler {
             }
             if (!merged) {
                 result.add(ingredient.clone());
+            }
+        }
+        return result;
+    }
+
+    List<PatternFluidStack> getAggregatedFluidIngredients(ItemStack pattern) {
+        List<PatternFluidStack> result = new ArrayList<>();
+        if (pattern == null) {
+            return result;
+        }
+        for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+            boolean merged = false;
+            for (PatternFluidStack existing : result) {
+                if (existing.getFluid().equals(ingredient.getFluid())) {
+                    existing.addAmount(ingredient.getAmount());
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                result.add(ingredient.copy());
             }
         }
         return result;

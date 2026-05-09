@@ -21,6 +21,8 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidHandler;
 
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IHeadUpDisplayRenderer;
@@ -28,6 +30,7 @@ import logisticspipes.interfaces.IHeadUpDisplayRendererProvider;
 import logisticspipes.interfaces.IOrderManagerContentReceiver;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.ICraftItems;
+import logisticspipes.interfaces.routing.IFluidSink;
 import logisticspipes.interfaces.routing.IFilter;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.interfaces.routing.IRequireReliableTransport;
@@ -47,6 +50,7 @@ import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.LogisticsOrder;
+import logisticspipes.routing.order.LogisticsFluidOrderManager;
 import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
@@ -58,7 +62,7 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements ICraftItems, IRequireReliableTransport,
-        IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver {
+        IFluidSink, IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver {
 
     public enum BlockingMode {
         OFF,
@@ -69,6 +73,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private static final String CONNECTED_INVENTORY_DIRECTION_TAG = "patternConnectedInventoryDirection";
 
     private final ModuleItemCrafting module;
+    private final LogisticsFluidOrderManager fluidOrderManager;
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
     private final LinkedList<ItemIdentifierStack> oldResultList = new LinkedList<>();
@@ -80,9 +85,27 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private boolean doContentUpdate = true;
 
     public PipeItemsPatternCraftingLogistics(Item item) {
-        super(new PipeTransportLogistics(true), item);
+        super(new PipeTransportLogistics(true) {
+
+            @Override
+            public boolean canPipeConnect(TileEntity tile, ForgeDirection dir) {
+                if (super.canPipeConnect(tile, dir)) {
+                    return true;
+                }
+                if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
+                    return false;
+                }
+                if (tile instanceof IFluidHandler) {
+                    IFluidHandler handler = (IFluidHandler) tile;
+                    return handler.getTankInfo(dir.getOpposite()) != null
+                            && handler.getTankInfo(dir.getOpposite()).length > 0;
+                }
+                return false;
+            }
+        }, item);
         module = new ModuleItemCrafting(this);
         _orderItemManager = new logisticspipes.routing.order.LogisticsItemOrderManager(this, this);
+        fluidOrderManager = new LogisticsFluidOrderManager(this, this);
         throttleTime = 40;
     }
 
@@ -102,7 +125,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
         if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
             return false;
         }
-        if (tile instanceof IInventory) {
+        if (tile instanceof IInventory || tile instanceof IFluidHandler) {
             return !isSelectedInventory(tile, dir);
         }
         return true;
@@ -237,9 +260,12 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     }
 
     private boolean isSelectableInventory(TileEntity tile, ForgeDirection direction) {
-        return tile instanceof IInventory
+        boolean hasInventory = tile instanceof IInventory && ((IInventory) tile).getSizeInventory() > 0;
+        boolean hasTank = tile instanceof IFluidHandler
+                && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
+                && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
+        return (hasInventory || hasTank)
                 && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
-                && ((IInventory) tile).getSizeInventory() > 0
                 && !isSideBlocked(direction, false)
                 && transport.canPipeConnect(tile, direction);
     }
@@ -305,7 +331,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
 
     @Override
     public int getTodo() {
-        return module.getTodo();
+        return module.getTodo() + fluidOrderManager.totalAmountCountInAllOrders();
     }
 
     @Override
@@ -324,7 +350,12 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
 
     @Override
     public double getLoadFactor() {
-        return (_orderItemManager.totalAmountCountInAllOrders() + 63.0) / 64.0;
+        return (_orderItemManager.totalAmountCountInAllOrders() + fluidOrderManager.totalAmountCountInAllOrders() + 63.0) / 64.0;
+    }
+
+    @Override
+    public int sinkAmount(FluidStack stack) {
+        return module.sinkAmount(stack);
     }
 
     @Override
@@ -345,6 +376,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private void checkContentUpdate() {
         doContentUpdate = false;
         LinkedList<ItemIdentifierStack> all = _orderItemManager.getContentList(getWorld());
+        all.addAll(fluidOrderManager.getContentList(getWorld()));
         if (!oldList.equals(all)) {
             oldList.clear();
             oldList.addAll(all);
@@ -412,6 +444,10 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     public void setHudResultContent(Collection<ItemIdentifierStack> list) {
         displayResultList.clear();
         displayResultList.addAll(list);
+    }
+
+    public LogisticsFluidOrderManager getPatternFluidOrderManager() {
+        return fluidOrderManager;
     }
 
     @Override
