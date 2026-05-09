@@ -1,11 +1,14 @@
 package logisticspipes.crafting;
 
-import logisticspipes.utils.item.ItemIdentifier;
-import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import net.minecraft.item.ItemStack;
+
+import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
 
 class PatternCraftingOrder {
 
@@ -14,6 +17,7 @@ class PatternCraftingOrder {
     final List<PatternCraftingBranch> ingredientBranches;
     int remainingSets;
 
+    private final IOrderInfoProvider outputOrder;
     private final PatternHandler patternHandler;
     private final IngredientRequestHandler requestedIngredient;
 
@@ -21,6 +25,7 @@ class PatternCraftingOrder {
             int patternSlot,
             int resultAmountPerSet,
             PatternCraftingBranch branch,
+            IOrderInfoProvider outputOrder,
             PatternHandler patternHandler,
             IngredientRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
@@ -28,6 +33,7 @@ class PatternCraftingOrder {
         this.remainingSets = (branch.getRequestType().getRequestedAmount() + this.resultAmountPerSet - 1)
                 / this.resultAmountPerSet;
         this.ingredientBranches = new ArrayList<>(branch.getSubRequests());
+        this.outputOrder = outputOrder;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
     }
@@ -88,12 +94,32 @@ class PatternCraftingOrder {
                 .append(remainingSets)
                 .append(" resultAmountPerSet=")
                 .append(resultAmountPerSet)
+                .append(" outputOrder=")
+                .append(outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem())
                 .append(" branches=")
                 .append(ingredientBranches.size())
                 .append("\n");
         for (PatternCraftingBranch branch : ingredientBranches) {
             branch.appendDebugState(out, prefix + "  ");
         }
+    }
+
+    /**
+     * Builds a renderer node whose count follows the live output order amount.
+     */
+    PatternCraftingMonitorNode toMonitorNode(Set<PatternCraftingOrder> visitedOrders) {
+        visitedOrders.add(this);
+        ItemIdentifierStack display = outputOrder.getAsDisplayItem().clone();
+        display.setStackSize(Math.max(0, display.getStackSize()));
+        PatternCraftingMonitorNode node = new PatternCraftingMonitorNode(
+                display,
+                0,
+                display.getStackSize(),
+                outputOrder != null && (outputOrder.isInProgress() || !outputOrder.getProgresses().isEmpty()));
+        for (PatternCraftingBranch branch : ingredientBranches) {
+            node.addChild(branch.toMonitorNode(visitedOrders));
+        }
+        return node;
     }
 
     /**

@@ -288,8 +288,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         int resultAmountPerSet = promise instanceof PatternCraftingPromise
                 ? ((PatternCraftingPromise) promise).getResultAmountPerSet()
                 : Math.max(1, patternHandler.resultAmount(patternSlot, promise.item));
-        if (patternSlot >= 0 && branch != null) {
-            stagedCrafts.add(new PatternCraftingOrder(patternSlot, resultAmountPerSet, branch, patternHandler, requestedIngredient));
+        if (patternSlot >= 0 && branch != null && order != null) {
+            PatternCraftingOrder stagedOrder = new PatternCraftingOrder(
+                    patternSlot,
+                    resultAmountPerSet,
+                    branch,
+                    order,
+                    patternHandler,
+                    requestedIngredient);
+            stagedCrafts.add(stagedOrder);
+            PatternCraftingMonitorRegistry.register(order, stagedOrder);
             requestIngredientsForStagedCrafts(patternSlot);
         }
         return order;

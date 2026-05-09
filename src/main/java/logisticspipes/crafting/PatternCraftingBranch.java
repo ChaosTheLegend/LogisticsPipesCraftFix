@@ -12,6 +12,7 @@ import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PatternCraftingBranch {
 
@@ -25,6 +26,7 @@ public class PatternCraftingBranch {
     private final List<ExtraState> extraPromises;
     private final List<ExtraState> byproducts;
     private final List<PatternCraftingBranch> subRequests;
+    private final List<IOrderInfoProvider> liveOrders = new ArrayList<>();
 
     public PatternCraftingBranch(
             IResource requestType,
@@ -87,6 +89,7 @@ public class PatternCraftingBranch {
                 .append(originalCraftingAmount)
                 .append("\n");
         appendPromises(out, prefix + "  ");
+        appendLiveOrders(out, prefix + "  ");
         appendExtraStates(out, prefix + "  ", "extras", extraPromises);
         appendExtraStates(out, prefix + "  ", "byproducts", byproducts);
         if (!subRequests.isEmpty()) {
@@ -102,6 +105,38 @@ public class PatternCraftingBranch {
      */
     public boolean matches(ItemIdentifier item) {
         return requestType.matches(item, IResource.MatchSettings.NORMAL);
+    }
+
+    /**
+     * Builds a live renderer node from this branch and all order references that were created from it.
+     */
+    PatternCraftingMonitorNode toMonitorNode(java.util.Set<PatternCraftingOrder> visitedOrders) {
+        int orderedAmount = getLiveOrderAmount();
+        int totalAmount = Math.max(0, remainingAmount + orderedAmount);
+        ItemIdentifierStack display = requestType.getDisplayItem().clone();
+        display.setStackSize(totalAmount);
+        PatternCraftingMonitorNode node = new PatternCraftingMonitorNode(
+                display,
+                remainingAmount,
+                orderedAmount,
+                hasInProgressOrders());
+        for (PatternCraftingBranch subRequest : subRequests) {
+            node.addChild(subRequest.toMonitorNode(visitedOrders));
+        }
+        for (IOrderInfoProvider order : liveOrders) {
+            PatternCraftingOrder stagedOrder = PatternCraftingMonitorRegistry.find(order);
+            if (stagedOrder == null || !visitedOrders.add(stagedOrder)) {
+                continue;
+            }
+            PatternCraftingMonitorNode stagedNode = stagedOrder.toMonitorNode(visitedOrders);
+            if (stagedNode.getStack() != null
+                    && stagedNode.getStack().getItem().equalsForCrafting(display.getItem())) {
+                node.addChildren(stagedNode.getChildren());
+            } else {
+                node.addChild(stagedNode);
+            }
+        }
+        return node;
     }
 
     /**
@@ -123,12 +158,13 @@ public class PatternCraftingBranch {
             }
             IPromise promise = copyPromiseForAmount(promiseState.promise, toRequest);
             IResource request = requestType.copyForDisplayWith(toRequest);
+            IOrderInfoProvider result;
             if (promise.getType() == ResourceType.CRAFTING
                     && promise instanceof LogisticsPromise
                     && promise.getProvider() instanceof IStagedCraftingProvider) {
                 PatternCraftingBranch stagedBranch = copyForAmount(toRequest);
                 reserveSubRequestsFor(toRequest);
-                IOrderInfoProvider result = ((IStagedCraftingProvider) promise.getProvider())
+                result = ((IStagedCraftingProvider) promise.getProvider())
                         .fullFillStagedCrafting((LogisticsPromise) promise, request, info, stagedBranch);
                 if (result == null) {
                     stagedBranch.releaseProviderPromises();
@@ -137,7 +173,10 @@ public class PatternCraftingBranch {
                 if (promise.getType() == ResourceType.CRAFTING) {
                     requestSubRequestsFor(toRequest);
                 }
-                promise.fullFill(request, info);
+                result = promise.fullFill(request, info);
+            }
+            if (result != null) {
+                liveOrders.add(result);
             }
             if (promise.getType() == ResourceType.CRAFTING) {
                 registerExtrasFor(toRequest);
@@ -444,6 +483,45 @@ public class PatternCraftingBranch {
                     .append(promise.providerReserved ? " reserved" : "")
                     .append("\n");
         }
+    }
+
+    private void appendLiveOrders(StringBuilder out, String prefix) {
+        if (liveOrders.isEmpty()) {
+            return;
+        }
+        out.append(prefix).append("live orders:\n");
+        for (IOrderInfoProvider order : liveOrders) {
+            out.append(prefix)
+                    .append("  - ")
+                    .append(order.getType())
+                    .append(" ")
+                    .append(order.getAsDisplayItem())
+                    .append(" router=")
+                    .append(order.getRouterId())
+                    .append(order.isInProgress() ? " in-progress" : "")
+                    .append(order.isFinished() ? " finished" : "")
+                    .append("\n");
+        }
+    }
+
+    private int getLiveOrderAmount() {
+        int amount = 0;
+        for (IOrderInfoProvider order : liveOrders) {
+            if (order.isFinished() || order.getAsDisplayItem() == null) {
+                continue;
+            }
+            amount += Math.max(0, order.getAsDisplayItem().getStackSize());
+        }
+        return amount;
+    }
+
+    private boolean hasInProgressOrders() {
+        for (IOrderInfoProvider order : liveOrders) {
+            if (order.isInProgress() || !order.getProgresses().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void appendExtraStates(StringBuilder out, String prefix, String label, List<ExtraState> states) {
