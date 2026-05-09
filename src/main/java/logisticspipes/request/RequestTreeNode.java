@@ -861,8 +861,26 @@ public class RequestTreeNode {
     ) {
         out.append(prefix)
             .append(isLast ? "└── " : "├── ")
-            .append("RequestTreeNode@")
-            .append(Integer.toHexString(System.identityHashCode(this)));
+            .append(parentNode == null ? "RequestTree@" : "RequestTreeNode@")
+            .append(Integer.toHexString(System.identityHashCode(this)))
+            .append(" ")
+            .append(requestType)
+            .append(" promised=")
+            .append(promiseAmount)
+            .append("/")
+            .append(requestType.getRequestedAmount());
+
+        if (getMissingAmount() > 0) {
+            out.append(" missing=").append(getMissingAmount());
+        }
+
+        if (info != null) {
+            out.append(" info=").append(info);
+        }
+
+        if (lastCrafterTried != null) {
+            out.append(" lastCrafterTried=").append(lastCrafterTried);
+        }
 
         if (!visited.add(this)) {
             out.append(" (already shown)\n");
@@ -885,6 +903,10 @@ public class RequestTreeNode {
 
         if (!byproducts.isEmpty()) {
             details.add("Byproducts: " + formatPromises(byproducts, false));
+        }
+
+        if (!usedCrafters.isEmpty()) {
+            details.add("Used crafters: " + usedCrafters);
         }
 
         for (int i = 0; i < details.size(); i++) {

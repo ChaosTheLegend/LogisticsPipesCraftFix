@@ -78,6 +78,25 @@ class PatternCraftingOrder {
     }
 
     /**
+     * Appends this staged order and its ingredient branches to the crafting request debug dump.
+     */
+    void appendDebugState(StringBuilder out, String prefix) {
+        out.append(prefix)
+                .append("- Pattern slot ")
+                .append(patternSlot)
+                .append(" remainingSets=")
+                .append(remainingSets)
+                .append(" resultAmountPerSet=")
+                .append(resultAmountPerSet)
+                .append(" branches=")
+                .append(ingredientBranches.size())
+                .append("\n");
+        for (PatternCraftingBranch branch : ingredientBranches) {
+            branch.appendDebugState(out, prefix + "  ");
+        }
+    }
+
+    /**
      * Returns the amount still available for one ingredient across matching branches.
      */
     private int availableFromBranches(ItemIdentifier item) {

@@ -71,6 +71,33 @@ public class PatternCraftingBranch {
     }
 
     /**
+     * Appends the remaining staged branch state to the crafting request debug dump.
+     */
+    public void appendDebugState(StringBuilder out, String prefix) {
+        out.append(prefix)
+                .append("- Branch ")
+                .append(requestType)
+                .append(" remaining=")
+                .append(remainingAmount)
+                .append("/")
+                .append(originalAmount)
+                .append(" craftingRemaining=")
+                .append(remainingCraftingAmount)
+                .append("/")
+                .append(originalCraftingAmount)
+                .append("\n");
+        appendPromises(out, prefix + "  ");
+        appendExtraStates(out, prefix + "  ", "extras", extraPromises);
+        appendExtraStates(out, prefix + "  ", "byproducts", byproducts);
+        if (!subRequests.isEmpty()) {
+            out.append(prefix).append("  subrequests:\n");
+            for (PatternCraftingBranch subRequest : subRequests) {
+                subRequest.appendDebugState(out, prefix + "    ");
+            }
+        }
+    }
+
+    /**
      * Checks whether this branch represents the requested item.
      */
     public boolean matches(ItemIdentifier item) {
@@ -396,6 +423,44 @@ public class PatternCraftingBranch {
             result++;
         }
         return Math.min(amount, result);
+    }
+
+    private void appendPromises(StringBuilder out, String prefix) {
+        if (promises.isEmpty()) {
+            out.append(prefix).append("promises: <none>\n");
+            return;
+        }
+        out.append(prefix).append("promises:\n");
+        for (PromiseState promise : promises) {
+            out.append(prefix)
+                    .append("  - ")
+                    .append(promise.promise.getType())
+                    .append(" ")
+                    .append(promise.remainingAmount)
+                    .append("x ")
+                    .append(promise.promise.getItemType())
+                    .append(" from ")
+                    .append(promise.promise.getProvider())
+                    .append(promise.providerReserved ? " reserved" : "")
+                    .append("\n");
+        }
+    }
+
+    private void appendExtraStates(StringBuilder out, String prefix, String label, List<ExtraState> states) {
+        if (states.isEmpty()) {
+            return;
+        }
+        out.append(prefix).append(label).append(":\n");
+        for (ExtraState state : states) {
+            out.append(prefix)
+                    .append("  - ")
+                    .append(state.promise.getAmount())
+                    .append("x ")
+                    .append(state.promise.getItemType())
+                    .append(" original=")
+                    .append(state.originalAmount)
+                    .append("\n");
+        }
     }
 
     private static class BranchAllocation {

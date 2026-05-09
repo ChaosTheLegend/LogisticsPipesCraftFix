@@ -50,6 +50,7 @@ public class PatternItemRenderer implements IItemRenderer {
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_LIGHTING_BIT);
         RenderHelper.enableGUIStandardItemLighting();
         renderItem.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.getTextureManager(), result, 0, 0);
+        renderItem.renderItemOverlayIntoGUI(mc.fontRenderer, mc.getTextureManager(), result, 0, 0);
         RenderHelper.disableStandardItemLighting();
         GL11.glPopAttrib();
     }

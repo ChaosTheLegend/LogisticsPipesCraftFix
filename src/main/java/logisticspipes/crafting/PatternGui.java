@@ -1,5 +1,6 @@
 package logisticspipes.crafting;
 
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 
@@ -10,6 +11,9 @@ import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 public class PatternGui extends LogisticsBaseGuiScreen {
 
     private final PatternInventory patternInventory;
+    public static final int CLEAR_BUTTON_ID = 0;
+    public static final int MULTIPLE_BUTTON_ID = 1;
+    public static final int ORE_DICT_BUTTON_ID = 2;
 
     public PatternGui(EntityPlayer player, IInventory inventory) {
         super(176, 168, 0, 0);
@@ -17,7 +21,22 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         DummyContainer dummy = new DummyContainer(player.inventory, inventory);
         PatternGuiProvider.addPatternSlots(dummy);
         dummy.addNormalSlotsForPlayerInventory(8, 86);
+
+        addActionButtons();
+
         inventorySlots = dummy;
+    }
+
+    private void addActionButtons() {
+        var clearButton = new GuiButton(CLEAR_BUTTON_ID, guiLeft + 50, guiTop + 50, 5, 5, "X");
+        addButton(clearButton);
+
+        var multiplierButton = new GuiButton(MULTIPLE_BUTTON_ID,guiLeft + 55, guiTop + 20,5,5, "2x");
+        addButton(multiplierButton);
+
+        var oreDictButton = new GuiButton(ORE_DICT_BUTTON_ID,guiLeft + 55, guiTop + 60,5,5, "d");
+        addButton(oreDictButton);
+
     }
 
     @Override
@@ -37,5 +56,16 @@ public class PatternGui extends LogisticsBaseGuiScreen {
 
     public int getInventorySlot() {
         return patternInventory.getInventorySlot();
+    }
+
+    @Override
+    protected void actionPerformed(GuiButton button) {
+        switch (button.id) {
+            case CLEAR_BUTTON_ID:
+                Pattern.clear(patternInventory.getPattern());
+                case MULTIPLE_BUTTON_ID:
+                    Pattern.multiply(patternInventory.getPattern(), 2);
+
+        }
     }
 }

@@ -391,6 +391,37 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return results;
     }
 
+    /**
+     * Appends the current module-side staged crafting state to the crafting request debug dump.
+     */
+    public void appendDebugState(StringBuilder out) {
+        out.append("Pattern crafting pipe at ")
+                .append(pipe.getX())
+                .append(", ")
+                .append(pipe.getY())
+                .append(", ")
+                .append(pipe.getZ())
+                .append(" router=")
+                .append(pipe.getRouter().getSimpleID())
+                .append("\n");
+        out.append("  mode stored=")
+                .append(blockingMode)
+                .append(" effective=")
+                .append(getEffectiveBlockingMode())
+                .append(" fixed=")
+                .append(isBlockingModeFixed())
+                .append(" runningCraft=")
+                .append(runningCraft)
+                .append("\n");
+        appendConnectedInventoryDebug(out);
+        appendPatternDebug(out);
+        appendStackMapDebug(out, "buffered ingredients", bufferedIngredients);
+        appendStackMapDebug(out, "requested ingredients", requestedIngredients);
+        appendStagedCraftDebug(out);
+        appendOrderDebug(out);
+        out.append("  lostItems queued=").append(lostItems.size()).append("\n");
+    }
+
     @Override
     public void itemLost(ItemIdentifierStack item, IAdditionalTargetInformation info) {
         if (info instanceof PatternTargetInformation && item != null) {
@@ -780,6 +811,134 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private boolean isOrderDestinationThisModule(LogisticsItemOrder order) {
         IRequest destination = order.getDestination();
         return destination == this || (destination != null && destination.getRouter() == getRouter());
+    }
+
+    private void appendConnectedInventoryDebug(StringBuilder out) {
+        AdjacentTile connected = adjacentInventory.getConnected();
+        if (connected == null) {
+            out.append("  connected inventory: <none>\n");
+            return;
+        }
+        if (connected.tile == null) {
+            out.append("  connected inventory: <null tile> side=").append(connected.orientation).append("\n");
+            return;
+        }
+        out.append("  connected inventory: ")
+                .append(connected.tile.getClass().getName())
+                .append(" side=")
+                .append(connected.orientation)
+                .append(" empty=")
+                .append(adjacentInventory.isEmpty(connected))
+                .append(" patternTable=")
+                .append(adjacentInventory.isConnectedToPatternCraftingTable())
+                .append("\n");
+    }
+
+    private void appendPatternDebug(StringBuilder out) {
+        out.append("  patterns:\n");
+        boolean found = false;
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = getPatternStack(slot);
+            if (pattern == null) {
+                continue;
+            }
+            found = true;
+            out.append("    slot ").append(slot).append("\n");
+            appendPatternSlots(out, pattern, 0, Pattern.INGREDIENT_SLOTS, "      inputs");
+            appendPatternSlots(out, pattern, Pattern.INGREDIENT_SLOTS, Pattern.SLOT_COUNT, "      results");
+        }
+        if (!found) {
+            out.append("    <none>\n");
+        }
+    }
+
+    private void appendPatternSlots(StringBuilder out, ItemStack pattern, int start, int end, String label) {
+        out.append(label).append(": ");
+        boolean found = false;
+        for (int slot = start; slot < end; slot++) {
+            ItemStack stack = Pattern.getStackInSlot(pattern, slot);
+            if (stack == null || stack.stackSize <= 0) {
+                continue;
+            }
+            if (found) {
+                out.append(", ");
+            }
+            out.append("slot ")
+                    .append(slot)
+                    .append("=")
+                    .append(ItemIdentifierStack.getFromStack(stack));
+            found = true;
+        }
+        if (!found) {
+            out.append("<none>");
+        }
+        out.append("\n");
+    }
+
+    private void appendStackMapDebug(
+            StringBuilder out,
+            String label,
+            Map<Integer, List<ItemIdentifierStack>> stacksByPattern) {
+        out.append("  ").append(label).append(":\n");
+        if (stacksByPattern.isEmpty()) {
+            out.append("    <none>\n");
+            return;
+        }
+        for (Map.Entry<Integer, List<ItemIdentifierStack>> entry : stacksByPattern.entrySet()) {
+            out.append("    slot ").append(entry.getKey()).append(": ");
+            appendInlineStacks(out, entry.getValue());
+            out.append("\n");
+        }
+    }
+
+    private void appendStagedCraftDebug(StringBuilder out) {
+        out.append("  staged crafts:\n");
+        if (stagedCrafts.isEmpty()) {
+            out.append("    <none>\n");
+            return;
+        }
+        for (PatternCraftingOrder order : stagedCrafts) {
+            order.appendDebugState(out, "    ");
+        }
+    }
+
+    private void appendOrderDebug(StringBuilder out) {
+        out.append("  output orders:\n");
+        boolean found = false;
+        for (LogisticsItemOrder order : pipe.getItemOrderManager()) {
+            found = true;
+            out.append("    - ")
+                    .append(order.getType())
+                    .append(" ")
+                    .append(order.getAmount())
+                    .append("x ")
+                    .append(order.getResource().getItem())
+                    .append(" -> router ")
+                    .append(order.getRouterId())
+                    .append(order.isInProgress() ? " in-progress" : "")
+                    .append(order.isFinished() ? " finished" : "");
+            if (order.getInformation() != null) {
+                out.append(" info=").append(order.getInformation());
+            }
+            out.append("\n");
+        }
+        if (!found) {
+            out.append("    <none>\n");
+        }
+    }
+
+    private void appendInlineStacks(StringBuilder out, List<ItemIdentifierStack> stacks) {
+        if (stacks == null || stacks.isEmpty()) {
+            out.append("<none>");
+            return;
+        }
+        for (int i = 0; i < stacks.size(); i++) {
+            if (i > 0) {
+                out.append(", ");
+            }
+            ItemIdentifierStack stack = stacks.get(i);
+            out.append(stack == null ? "<null>" : stack.toString());
+        }
     }
 
     private void retryLostItems() {
