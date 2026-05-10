@@ -2,9 +2,11 @@ package logisticspipes.crafting;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.items.LogisticsFluidContainer;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
@@ -16,6 +18,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
+import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,6 +65,19 @@ public class Pattern extends LogisticsItem {
         for (PatternFluidStack ingredient : getFluidIngredients(pattern)) {
             fluidCounts.putIfAbsent(ingredient.getFluid(), 0);
             fluidCounts.compute(ingredient.getFluid(), (key, value) -> value + ingredient.getAmount());
+        }
+
+        // Also check item slots for fluid containers
+        for (int slot = 0; slot < INGREDIENT_SLOTS; slot++) {
+            ItemStack stack = getStackInSlot(pattern, slot);
+            if (stack != null && stack.getItem() instanceof LogisticsFluidContainer) {
+                FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+                if (fluid != null && fluid.amount > 0) {
+                    FluidIdentifier fluidId = FluidIdentifier.get(fluid);
+                    fluidCounts.putIfAbsent(fluidId, 0);
+                    fluidCounts.compute(fluidId, (key, value) -> value + fluid.amount);
+                }
+            }
         }
 
         var result = new ArrayList<PatternFluidStack>();

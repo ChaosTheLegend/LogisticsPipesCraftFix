@@ -1,5 +1,7 @@
 package logisticspipes.nei;
 
+import com.glodblock.github.nei.AE2FC_NEIGuiHandler;
+import com.glodblock.github.nei.recipes.FluidRecipe;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
@@ -46,10 +48,19 @@ public class NEILogisticsPipesConfig implements IConfigureNEI {
         API.registerGuiOverlay(GuiSolderingStation.class, "solderingstation");
         API.registerGuiOverlayHandler(
                 GuiLogisticsCraftingTable.class,
-                new LogisticsCraftingOverlayHandler(),
+                LogisticsCraftingOverlayHandler.INSTANCE,
                 "crafting");
-        API.registerGuiOverlayHandler(PatternGui.class, new LogisticsCraftingOverlayHandler(), "crafting");
-        API.registerGuiOverlayHandler(GuiRequestTable.class, new LogisticsCraftingOverlayHandler(), "crafting");
+        API.registerGuiOverlayHandler(GuiRequestTable.class, LogisticsCraftingOverlayHandler.INSTANCE, "crafting");
+
+        //register pattern handling
+        API.registerNEIGuiHandler(new LogisticsPattern_NEIGuiHandler());
+        API.registerGuiOverlayHandler(PatternGui.class,LogisticsCraftingOverlayHandler.INSTANCE,"crafting");
+        for (String identifier : FluidRecipe.getSupportRecipes()) {
+            if (!API.hasGuiOverlayHandler(PatternGui.class, identifier)) {
+                API.registerGuiOverlayHandler(PatternGui.class, LogisticsCraftingOverlayHandler.INSTANCE, identifier);
+            }
+        }
+
 
         if (LogisticsPipes.isGTNH) {
             // unused stuff

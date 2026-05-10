@@ -43,7 +43,7 @@ public class PatternGuiProvider extends GuiProvider {
         if (!inventory.isUseableByPlayer(player)) {
             return null;
         }
-        DummyContainer dummy = new DummyContainer(player.inventory, inventory);
+        PatternContainer dummy = new PatternContainer(player.inventory, inventory);
         addPatternSlots(dummy);
         dummy.addNormalSlotsForPlayerInventory(8, 122);
         return dummy;

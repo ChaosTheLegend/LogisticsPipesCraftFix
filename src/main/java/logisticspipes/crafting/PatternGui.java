@@ -4,7 +4,6 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 
-import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 
@@ -18,7 +17,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     public PatternGui(EntityPlayer player, IInventory inventory) {
         super(176, 204, 0, 0);
         patternInventory = (PatternInventory) inventory;
-        DummyContainer dummy = new DummyContainer(player.inventory, inventory);
+        PatternContainer dummy = new PatternContainer(player.inventory, inventory);
         PatternGuiProvider.addPatternSlots(dummy);
         dummy.addNormalSlotsForPlayerInventory(8, 122);
 
@@ -75,5 +74,13 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 break;
 
         }
+    }
+
+    public int getInputSize() {
+        return 9;
+    }
+
+    public int getOutputSize() {
+        return 3;
     }
 }
