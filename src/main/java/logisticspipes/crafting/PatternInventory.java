@@ -23,15 +23,11 @@ public class PatternInventory implements IInventory {
 
     @Override
     public int getSizeInventory() {
-        return Pattern.SLOT_COUNT;
+        return Pattern.ITEM_SLOT_COUNT;
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        if (slot >= Pattern.FLUID_INPUT_START && slot < Pattern.SLOT_COUNT) {
-            PatternFluidStack fluid = Pattern.getFluidInSlot(pattern, slot);
-            return fluid == null ? null : fluid.makeGuiStack();
-        }
         return Pattern.getStackInSlot(pattern, slot);
     }
 
@@ -40,10 +36,6 @@ public class PatternInventory implements IInventory {
         ItemStack stack = getStackInSlot(slot);
         if (stack == null) {
             return null;
-        }
-        if (slot >= Pattern.FLUID_INPUT_START && slot < Pattern.SLOT_COUNT) {
-            Pattern.setFluidInSlot(pattern, slot, null);
-            return stack;
         }
         Pattern.setStackInSlot(pattern, slot, null);
         return stack;
@@ -56,15 +48,8 @@ public class PatternInventory implements IInventory {
 
     @Override
     public void setInventorySlotContents(int slot, ItemStack stack) {
-        if (slot >= Pattern.FLUID_INPUT_START && slot < Pattern.SLOT_COUNT) {
-            PatternFluidStack fluid = PatternFluidStack.fromItemStack(stack);
-            if (fluid != null && fluid.getAmount() <= 0) {
-                fluid = new PatternFluidStack(fluid.getFluid(), 1000);
-            }
-            Pattern.setFluidInSlot(pattern, slot, fluid);
-            return;
-        }
         Pattern.setStackInSlot(pattern, slot, stack);
+        markDirty();
     }
 
     @Override
@@ -83,7 +68,12 @@ public class PatternInventory implements IInventory {
     }
 
     @Override
-    public void markDirty() {}
+    public void markDirty() {
+        player.inventory.markDirty();
+        if (player.openContainer != null) {
+            player.openContainer.detectAndSendChanges();
+        }
+    }
 
     @Override
     public boolean isUseableByPlayer(EntityPlayer entityPlayer) {

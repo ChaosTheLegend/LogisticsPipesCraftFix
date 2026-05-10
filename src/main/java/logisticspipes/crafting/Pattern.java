@@ -2,11 +2,9 @@ package logisticspipes.crafting;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import logisticspipes.items.LogisticsFluidContainer;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.proxy.MainProxy;
-import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
@@ -18,33 +16,27 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
-import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Pattern extends LogisticsItem {
 
     public static final int INGREDIENT_SLOTS = 9;
     public static final int RESULT_SLOTS = 3;
     public static final int ITEM_SLOT_COUNT = INGREDIENT_SLOTS + RESULT_SLOTS;
-    public static final int FLUID_INPUT_SLOTS = 3;
-    public static final int FLUID_RESULT_SLOTS = 3;
-    public static final int FLUID_INPUT_START = ITEM_SLOT_COUNT;
-    public static final int FLUID_RESULT_START = FLUID_INPUT_START + FLUID_INPUT_SLOTS;
-    public static final int SLOT_COUNT = FLUID_RESULT_START + FLUID_RESULT_SLOTS;
+    public static final int SLOT_COUNT = ITEM_SLOT_COUNT;
     private static final String ITEMS_TAG = "patternItems";
-    private static final String FLUID_INPUTS_TAG = "patternFluidInputs";
-    private static final String FLUID_RESULTS_TAG = "patternFluidResults";
 
     public Pattern() {
         setMaxStackSize(1);
     }
 
     public static List<ItemIdentifierStack> getAggregatedIngredients(ItemStack pattern) {
-        var ingredientCounts = new HashMap<ItemIdentifier, Integer>();
+        HashMap<ItemIdentifier, Integer> ingredientCounts = new HashMap<>();
 
         for (ItemIdentifierStack ingredient : getIngredients(pattern)) {
             ItemIdentifier item = ingredient.getItem();
@@ -52,8 +44,8 @@ public class Pattern extends LogisticsItem {
             ingredientCounts.compute(item, (key, value) -> value + ingredient.getStackSize());
         }
 
-        var result = new ArrayList<ItemIdentifierStack>();
-        for (var entry : ingredientCounts.entrySet()) {
+        ArrayList<ItemIdentifierStack> result = new ArrayList<>();
+        for (Map.Entry<ItemIdentifier, Integer> entry : ingredientCounts.entrySet()) {
             result.add(new ItemIdentifierStack(entry.getKey(), entry.getValue()));
         }
 
@@ -61,27 +53,14 @@ public class Pattern extends LogisticsItem {
     }
 
     public static List<PatternFluidStack> getAggregatedFluidIngredients(ItemStack pattern) {
-        var fluidCounts = new LinkedHashMap<FluidIdentifier, Integer>();
+        LinkedHashMap<FluidIdentifier, Integer> fluidCounts = new LinkedHashMap<>();
         for (PatternFluidStack ingredient : getFluidIngredients(pattern)) {
             fluidCounts.putIfAbsent(ingredient.getFluid(), 0);
             fluidCounts.compute(ingredient.getFluid(), (key, value) -> value + ingredient.getAmount());
         }
 
-        // Also check item slots for fluid containers
-        for (int slot = 0; slot < INGREDIENT_SLOTS; slot++) {
-            ItemStack stack = getStackInSlot(pattern, slot);
-            if (stack != null && stack.getItem() instanceof LogisticsFluidContainer) {
-                FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
-                if (fluid != null && fluid.amount > 0) {
-                    FluidIdentifier fluidId = FluidIdentifier.get(fluid);
-                    fluidCounts.putIfAbsent(fluidId, 0);
-                    fluidCounts.compute(fluidId, (key, value) -> value + fluid.amount);
-                }
-            }
-        }
-
-        var result = new ArrayList<PatternFluidStack>();
-        for (var entry : fluidCounts.entrySet()) {
+        ArrayList<PatternFluidStack> result = new ArrayList<>();
+        for (Map.Entry<FluidIdentifier, Integer> entry : fluidCounts.entrySet()) {
             result.add(new PatternFluidStack(entry.getKey(), entry.getValue()));
         }
         return result;
@@ -95,8 +74,6 @@ public class Pattern extends LogisticsItem {
         for (int i = 0; i < ITEM_SLOT_COUNT; i++) {
             setStackInSlot(pattern, i, null);
         }
-        setFluidIngredients(pattern, new ArrayList<>());
-        setFluidResults(pattern, new ArrayList<>());
     }
 
     /**
@@ -108,12 +85,18 @@ public class Pattern extends LogisticsItem {
         for (int i = 0; i < ITEM_SLOT_COUNT; i++) {
             ItemStack stack = getStackInSlot(pattern, i);
             if (stack != null) {
-                stack.stackSize *= factor;
-                setStackInSlot(pattern, i, stack);
+                PatternFluidStack fluid = PatternFluidStack.fromItemStack(stack);
+                if (fluid != null) {
+                    setStackInSlot(
+                            pattern,
+                            i,
+                            new PatternFluidStack(fluid.getFluid(), fluid.getAmount() * factor).makePatternStack());
+                } else {
+                    stack.stackSize *= factor;
+                    setStackInSlot(pattern, i, stack);
+                }
             }
         }
-        multiplyFluids(pattern, factor, true);
-        multiplyFluids(pattern, factor, false);
     }
 
     /**
@@ -174,7 +157,7 @@ public class Pattern extends LogisticsItem {
      * @return the ingredients of a pattern, not aggregated.
      */
     public static List<ItemIdentifierStack> getIngredients(ItemStack pattern) {
-        return readRange(pattern, 0, INGREDIENT_SLOTS);
+        return readRange(pattern, 0, INGREDIENT_SLOTS, false);
     }
 
     /**
@@ -182,41 +165,23 @@ public class Pattern extends LogisticsItem {
      * @return the results of a pattern, not aggregated.
      */
     public static List<ItemIdentifierStack> getResults(ItemStack pattern) {
-        return readRange(pattern, INGREDIENT_SLOTS, ITEM_SLOT_COUNT);
-    }
-
-    public static PatternFluidStack getFluidInSlot(ItemStack pattern, int slot) {
-        if (slot >= FLUID_INPUT_START && slot < FLUID_INPUT_START + FLUID_INPUT_SLOTS) {
-            return readFluidSlot(pattern, FLUID_INPUTS_TAG, slot - FLUID_INPUT_START);
-        }
-        if (slot >= FLUID_RESULT_START && slot < FLUID_RESULT_START + FLUID_RESULT_SLOTS) {
-            return readFluidSlot(pattern, FLUID_RESULTS_TAG, slot - FLUID_RESULT_START);
-        }
-        return null;
-    }
-
-    public static void setFluidInSlot(ItemStack pattern, int slot, PatternFluidStack stack) {
-        if (slot >= FLUID_INPUT_START && slot < FLUID_INPUT_START + FLUID_INPUT_SLOTS) {
-            setFluidSlot(pattern, FLUID_INPUTS_TAG, slot - FLUID_INPUT_START, stack);
-        } else if (slot >= FLUID_RESULT_START && slot < FLUID_RESULT_START + FLUID_RESULT_SLOTS) {
-            setFluidSlot(pattern, FLUID_RESULTS_TAG, slot - FLUID_RESULT_START, stack);
-        }
+        return readRange(pattern, INGREDIENT_SLOTS, ITEM_SLOT_COUNT, false);
     }
 
     public static List<PatternFluidStack> getFluidIngredients(ItemStack pattern) {
-        return readFluidList(pattern, FLUID_INPUTS_TAG, FLUID_INPUT_SLOTS);
+        return readFluidRange(pattern, 0, INGREDIENT_SLOTS);
     }
 
     public static List<PatternFluidStack> getFluidResults(ItemStack pattern) {
-        return readFluidList(pattern, FLUID_RESULTS_TAG, FLUID_RESULT_SLOTS);
+        return readFluidRange(pattern, INGREDIENT_SLOTS, ITEM_SLOT_COUNT);
     }
 
     public static void setFluidIngredients(ItemStack pattern, List<PatternFluidStack> fluids) {
-        setFluidList(pattern, FLUID_INPUTS_TAG, fluids, FLUID_INPUT_SLOTS);
+        setFluidStacksInRange(pattern, 0, INGREDIENT_SLOTS, fluids);
     }
 
     public static void setFluidResults(ItemStack pattern, List<PatternFluidStack> fluids) {
-        setFluidList(pattern, FLUID_RESULTS_TAG, fluids, FLUID_RESULT_SLOTS);
+        setFluidStacksInRange(pattern, INGREDIENT_SLOTS, ITEM_SLOT_COUNT, fluids);
     }
 
     public static ItemStack getPrimaryResultStack(ItemStack pattern) {
@@ -251,85 +216,37 @@ public class Pattern extends LogisticsItem {
         }
     }
 
-    private static List<ItemIdentifierStack> readRange(ItemStack pattern, int start, int end) {
+    private static List<ItemIdentifierStack> readRange(ItemStack pattern, int start, int end, boolean includeFluids) {
         List<ItemIdentifierStack> stacks = new ArrayList<>();
         for (int slot = start; slot < end; slot++) {
             ItemStack stack = getStackInSlot(pattern, slot);
-            if (stack != null && stack.stackSize > 0) {
+            if (stack != null && stack.stackSize > 0 && (includeFluids || PatternFluidStack.fromItemStack(stack) == null)) {
                 stacks.add(ItemIdentifierStack.getFromStack(stack));
             }
         }
         return stacks;
     }
 
-    private static PatternFluidStack readFluidSlot(ItemStack pattern, String key, int slot) {
-        if (pattern == null || slot < 0 || !pattern.hasTagCompound()) {
-            return null;
-        }
-        NBTTagList list = pattern.getTagCompound().getTagList(key, 10);
-        if (slot >= list.tagCount()) {
-            return null;
-        }
-        return PatternFluidStack.readFromNBT(list.getCompoundTagAt(slot));
-    }
-
-    private static void setFluidSlot(ItemStack pattern, String key, int slot, PatternFluidStack stack) {
-        if (pattern == null || slot < 0) {
-            return;
-        }
-        List<PatternFluidStack> fluids = readFluidList(pattern, key, key.equals(FLUID_INPUTS_TAG)
-                ? FLUID_INPUT_SLOTS
-                : FLUID_RESULT_SLOTS);
-        while (fluids.size() <= slot) {
-            fluids.add(null);
-        }
-        fluids.set(slot, stack);
-        setFluidList(pattern, key, fluids, key.equals(FLUID_INPUTS_TAG) ? FLUID_INPUT_SLOTS : FLUID_RESULT_SLOTS);
-    }
-
-    private static List<PatternFluidStack> readFluidList(ItemStack pattern, String key, int maxSlots) {
+    private static List<PatternFluidStack> readFluidRange(ItemStack pattern, int start, int end) {
         List<PatternFluidStack> fluids = new ArrayList<>();
-        if (pattern == null || !pattern.hasTagCompound()) {
-            return fluids;
-        }
-        NBTTagList list = pattern.getTagCompound().getTagList(key, 10);
-        for (int i = 0; i < list.tagCount() && i < maxSlots; i++) {
-            PatternFluidStack stack = PatternFluidStack.readFromNBT(list.getCompoundTagAt(i));
-            if (stack != null && stack.getAmount() > 0) {
-                fluids.add(stack);
+        for (int slot = start; slot < end; slot++) {
+            PatternFluidStack fluid = PatternFluidStack.fromItemStack(getStackInSlot(pattern, slot));
+            if (fluid != null && fluid.getAmount() > 0) {
+                fluids.add(fluid);
             }
         }
         return fluids;
     }
 
-    private static void setFluidList(ItemStack pattern, String key, List<PatternFluidStack> fluids, int maxSlots) {
-        if (pattern == null) {
-            return;
-        }
-        NBTTagCompound root = getOrCreateTag(pattern);
-        NBTTagList list = new NBTTagList();
-        for (PatternFluidStack stack : fluids) {
-            if (stack == null || stack.getAmount() <= 0) {
+    private static void setFluidStacksInRange(ItemStack pattern, int start, int end, List<PatternFluidStack> fluids) {
+        int fluidIndex = 0;
+        for (int slot = start; slot < end; slot++) {
+            ItemStack existing = getStackInSlot(pattern, slot);
+            if (existing != null && PatternFluidStack.fromItemStack(existing) == null) {
                 continue;
             }
-            list.appendTag(stack.writeToNBT());
-            if (list.tagCount() >= maxSlots) {
-                break;
-            }
-        }
-        root.setTag(key, list);
-    }
-
-    private static void multiplyFluids(ItemStack pattern, int factor, boolean inputs) {
-        List<PatternFluidStack> fluids = inputs ? getFluidIngredients(pattern) : getFluidResults(pattern);
-        List<PatternFluidStack> multiplied = new ArrayList<>();
-        for (PatternFluidStack fluid : fluids) {
-            multiplied.add(new PatternFluidStack(fluid.getFluid(), fluid.getAmount() * factor));
-        }
-        if (inputs) {
-            setFluidIngredients(pattern, multiplied);
-        } else {
-            setFluidResults(pattern, multiplied);
+            PatternFluidStack fluid = fluidIndex < fluids.size() ? fluids.get(fluidIndex++) : null;
+            setStackInSlot(pattern, slot, fluid == null ? null : fluid.makePatternStack());
         }
     }
 

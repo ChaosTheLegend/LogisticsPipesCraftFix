@@ -70,6 +70,10 @@ public class PatternFluidStack {
         return fluid.getItemIdentifier().unsafeMakeNormalStack(1);
     }
 
+    public ItemStack makePatternStack() {
+        return SimpleServiceLocator.logisticsFluidManager.getFluidContainer(makeFluidStack()).makeNormalStack();
+    }
+
     public NBTTagCompound writeToNBT() {
         NBTTagCompound tag = new NBTTagCompound();
         makeFluidStack().writeToNBT(tag);

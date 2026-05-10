@@ -1,6 +1,7 @@
 package logisticspipes.crafting;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
@@ -8,6 +9,7 @@ import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
 
+import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.item.ItemIdentifierStack;
@@ -28,19 +30,22 @@ public class PatternContainer extends DummyContainer {
                 switch (mouseButton) {
                     case 0: // Left click
                         slot.putStack(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
+                        syncSlot(slot, slotId, entityplayer);
                         return;
                     case 1: // Right click
                         // Maybe split or something, but for now, same as left
                         slot.putStack(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
+                        syncSlot(slot, slotId, entityplayer);
                         return;
                 }
             }
         }
         super.handleDummyClick(slot, slotId, currentlyEquippedStack, mouseButton, isShift, entityplayer);
+        syncSlot(slot, slotId, entityplayer);
     }
 
     private boolean isPatternSlot(int slotId) {
-        return slotId >= 0 && slotId < 9;
+        return slotId >= 0 && slotId < Pattern.ITEM_SLOT_COUNT;
     }
 
     private FluidStack getFluidFromItem(ItemStack stack) {
@@ -65,5 +70,12 @@ public class PatternContainer extends DummyContainer {
             return fluid0;
         }
         return null;
+    }
+
+    private void syncSlot(Slot slot, int slotId, EntityPlayer entityplayer) {
+        if (entityplayer instanceof EntityPlayerMP && MainProxy.isServer(entityplayer.worldObj)) {
+            ((EntityPlayerMP) entityplayer).sendSlotContents(this, slotId, slot.getStack());
+            detectAndSendChanges();
+        }
     }
 }

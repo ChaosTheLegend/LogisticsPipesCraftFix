@@ -45,7 +45,7 @@ public class PatternGuiProvider extends GuiProvider {
         }
         PatternContainer dummy = new PatternContainer(player.inventory, inventory);
         addPatternSlots(dummy);
-        dummy.addNormalSlotsForPlayerInventory(8, 122);
+        dummy.addNormalSlotsForPlayerInventory(8, 86);
         return dummy;
     }
 
@@ -57,12 +57,6 @@ public class PatternGuiProvider extends GuiProvider {
         }
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
             dummy.addDummySlot(Pattern.INGREDIENT_SLOTS + i, 116 + i * 18, 35);
-        }
-        for (int i = 0; i < Pattern.FLUID_INPUT_SLOTS; i++) {
-            dummy.addFluidSlot(Pattern.FLUID_INPUT_START + i, 26 + i * 18, 72);
-        }
-        for (int i = 0; i < Pattern.FLUID_RESULT_SLOTS; i++) {
-            dummy.addFluidSlot(Pattern.FLUID_RESULT_START + i, 116 + i * 18, 72);
         }
     }
 
