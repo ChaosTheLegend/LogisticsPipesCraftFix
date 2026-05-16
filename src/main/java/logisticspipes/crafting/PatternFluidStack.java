@@ -88,7 +88,7 @@ public class PatternFluidStack implements IPatternStack {
     }
 
     @Override
-    public void writeToPatternNBT(NBTTagCompound tag) {
+    public void writeToNBT(NBTTagCompound tag) {
         tag.setString(TYPE_TAG, TYPE_FLUID);
         tag.setTag(FLUID_TAG, writeToNBT());
     }

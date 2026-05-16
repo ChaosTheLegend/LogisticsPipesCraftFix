@@ -22,7 +22,7 @@ public class PatternContainer extends DummyContainer {
 
     @Override
     public void handleDummyClick(Slot slot, int slotId, ItemStack currentlyEquippedStack, int mouseButton, int isShift,
-            EntityPlayer entityplayer) {
+                                 EntityPlayer entityplayer) {
         if (isPatternSlot(slotId)) {
             FluidStack fluid = getFluidFromItem(currentlyEquippedStack);
             if (fluid != null && fluid.amount > 0) {
@@ -77,5 +77,22 @@ public class PatternContainer extends DummyContainer {
             ((EntityPlayerMP) entityplayer).sendSlotContents(this, slotId, slot.getStack());
             detectAndSendChanges();
         }
+    }
+
+    public void reloadFromPattern(AbstractPattern pattern) {
+        boolean change = false;
+
+        for (int i = 0; i < _dummyInventory.getSizeInventory(); ++i) {
+            var oldSlot = _dummyInventory.getStackInSlot(i);
+            var newSlot = pattern.getStackInSlot(i);
+
+            if (newSlot != oldSlot) {
+                _dummyInventory.setInventorySlotContents(i, newSlot);
+                change = true;
+            }
+        }
+
+        if (change) detectAndSendChanges();
+
     }
 }

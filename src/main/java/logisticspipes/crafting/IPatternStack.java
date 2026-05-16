@@ -43,5 +43,5 @@ public interface IPatternStack {
 
     ItemStack makeDisplayItemStack();
 
-    void writeToPatternNBT(NBTTagCompound tag);
+    void writeToNBT(NBTTagCompound tag);
 }

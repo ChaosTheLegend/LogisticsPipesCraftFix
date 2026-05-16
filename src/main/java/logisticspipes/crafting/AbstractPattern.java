@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.NonNull;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -15,11 +16,13 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.ChatColor;
 import logisticspipes.utils.string.StringUtils;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class AbstractPattern {
 
     private static final String ITEMS_TAG = "patternItems";
     private static final String SATELLITE_TARGETS_TAG = "patternSatelliteTargets";
+    private static final String CRAFTING_PATTERN_TAG = "patternCraftingType";
 
     private final ItemStack patternStack;
 
@@ -138,7 +141,7 @@ public abstract class AbstractPattern {
         }
         if (stack != null && stack.getAmount() > 0) {
             NBTTagCompound tag = new NBTTagCompound();
-            stack.writeToPatternNBT(tag);
+            stack.writeToNBT(tag);
             tag.setInteger("slot", slot);
             newList.appendTag(tag);
         }
@@ -163,6 +166,21 @@ public abstract class AbstractPattern {
         System.arraycopy(existing, 0, targets, 0, Math.min(existing.length, targets.length));
         targets[slot] = Math.max(0, satelliteId);
         root.setIntArray(SATELLITE_TARGETS_TAG, targets);
+    }
+
+    public boolean isCraftingPattern() {
+        if (patternStack == null) {
+            return false;
+        }
+        return patternStack.getTagCompound().getBoolean(CRAFTING_PATTERN_TAG);
+    }
+
+    public void setCraftingPattern(boolean isCrafting) {
+        if (patternStack == null) {
+            return;
+        }
+        NBTTagCompound root = getOrCreateTag(patternStack);
+        root.setBoolean(CRAFTING_PATTERN_TAG, isCrafting);
     }
 
     public List<IPatternStack> getInputs() {
@@ -233,11 +251,11 @@ public abstract class AbstractPattern {
         for (IPatternStack stack : stacks) {
             if (stack instanceof PatternFluidStack) {
                 tooltip.add("  " + ChatColor.WHITE + stack.getAmount() + "mB " + color
-                        + ((PatternFluidStack) stack).makeFluidStack().getLocalizedName());
+                    + ((PatternFluidStack) stack).makeFluidStack().getLocalizedName());
             } else {
                 ItemStack normalStack = stack.makeDisplayItemStack();
                 tooltip.add("  " + ChatColor.WHITE + normalStack.stackSize + " " + color
-                        + normalStack.getDisplayName());
+                    + normalStack.getDisplayName());
             }
         }
     }
@@ -319,5 +337,36 @@ public abstract class AbstractPattern {
             stack.setTagCompound(new NBTTagCompound());
         }
         return stack.getTagCompound();
+    }
+
+    /**
+     * Clears the pattern, and sets the given in and outputs.
+     * If this is a processing pattern, null items in the inputs will be ignored.
+     * If this is a crafting pattern, null items in the inputs will be respected, and the slot will be kept empty.
+     * @param inputs the new inputs
+     * @param outputs the new outputs
+     */
+    public void setInputsAndOutputs(@NonNull List<@Nullable IPatternStack> inputs, @NonNull List<@NonNull IPatternStack> outputs) {
+        clear();
+
+        boolean isCraftingPattern = isCraftingPattern();
+
+        int patternSlotId = 0;
+        for (int i = 0; i < inputs.size() && patternSlotId < getIngredientSlotCount(); i++) {
+            IPatternStack input = inputs.get(i);
+
+            // in processing patterns we ignore empty stacks
+            if (!isCraftingPattern && input == null) continue;
+
+            setPatternStackInSlot(patternSlotId, input);
+            patternSlotId++;
+        }
+
+        patternSlotId = getIngredientSlotCount();
+        for (int i = 0; i < outputs.size() && patternSlotId < getItemSlotCount(); i++) {
+            IPatternStack output = outputs.get(i);
+            setPatternStackInSlot(patternSlotId, output);
+            patternSlotId++;
+        }
     }
 }

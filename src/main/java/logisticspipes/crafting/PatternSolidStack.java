@@ -61,7 +61,7 @@ public class PatternSolidStack implements IPatternStack {
     }
 
     @Override
-    public void writeToPatternNBT(NBTTagCompound tag) {
+    public void writeToNBT(NBTTagCompound tag) {
         makePatternStack().writeToNBT(tag);
         tag.setString(TYPE_TAG, TYPE_SOLID);
     }

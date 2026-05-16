@@ -1,146 +1,97 @@
 package logisticspipes.nei;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
-
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
-import cpw.mods.fml.client.FMLClientHandler;
+import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.IPatternStack;
-import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.crafting.PatternGui;
-import logisticspipes.crafting.PatternNEIImportHandler;
-import logisticspipes.gui.popup.GuiRecipeImport;
 import logisticspipes.network.PacketHandler;
-import logisticspipes.network.packets.NEISetCraftingRecipe;
+import logisticspipes.network.packets.crafting.NEISetPatternCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
+import net.minecraft.client.gui.inventory.GuiContainer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class LogisticPatternHandler implements IOverlayHandler {
 
-    private LogisticPatternHandler() {}
+    private LogisticPatternHandler() {
+    }
 
     public static final LogisticPatternHandler INSTANCE = new LogisticPatternHandler();
 
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
-        if (!(firstGui instanceof PatternGui)) {
-            return;
+        if (!(firstGui instanceof PatternGui gui)) return;
+
+        try {
+            List<IPatternStack> inputs = getInputs(recipe, recipeIndex);
+
+            List<IPatternStack> outputs = getAggregatedOutputs(recipe, recipeIndex);
+
+            MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
+                .setPatternInventorySlot(gui.getInventorySlot())
+                .setInputs(inputs)
+                .setOutputs(outputs));
+        } catch (Exception e) {
+            LogisticsPipes.log.error(e.getMessage(), e);
         }
 
-        PatternGui gui = (PatternGui) firstGui;
-        ItemStack[] inputs = new ItemStack[9];
-        ItemStack[][] candidates = new ItemStack[9][];
-        boolean hasCandidates = false;
+    }
 
-        for (PositionedStack stack : recipe.getIngredientStacks(recipeIndex)) {
-            int x = (stack.relx - 25) / 18;
-            int y = (stack.rely - 6) / 18;
-            int slot = x + y * 3;
-            if (x < 0 || x > 2 || y < 0 || y > 2 || slot < 0 || slot > 8) {
-                if (isFluid(stack) && addToFirstFreeSlot(inputs, firstStack(stack))) {
-                    continue;
-                }
-                FMLClientHandler.instance().getClient().thePlayer
-                        .sendChatMessage("Internal Error. This button is broken.");
+    /**
+     * Collects the inputs of a given recipe, transformed into IPatternStacks.
+     * @param recipe the recipe
+     * @param recipeIndex the recipe index
+     * @return the inputs of the given recipe
+     */
+    private List<IPatternStack> getInputs(IRecipeHandler recipe, int recipeIndex) {
+        return recipe.getIngredientStacks(recipeIndex).stream().map(stack -> IPatternStack.fromItemStack(stack.item.copy())).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    /**
+     * Collects the aggregated outputs of a given recipe, transformed into IPatternStacks.
+     * @param recipe the recipe
+     * @param recipeIndex the recipe index
+     * @return the aggregated outputs of the given recipe
+     */
+    private List<IPatternStack> getAggregatedOutputs(IRecipeHandler recipe, int recipeIndex) {
+        List<IPatternStack> outputs = new ArrayList<>();
+
+        var resultStack = recipe.getResultStack(recipeIndex);
+        if (resultStack != null)
+            addAggregated(outputs, IPatternStack.fromItemStack(resultStack.item.copy()));
+
+        List<PositionedStack> otherStacks = recipe.getOtherStacks(recipeIndex);
+        if (otherStacks == null) return outputs;
+
+        for (PositionedStack stack : otherStacks) {
+            if (stack == null || stack.item == null) continue;
+            var patternStack = IPatternStack.fromItemStack(stack.item.copy());
+            if (patternStack == null) continue;
+            addAggregated(outputs, patternStack);
+        }
+
+        return outputs;
+    }
+
+    /**
+     * Adds a patternStack to a list of patternStacks, aggregating if possible.
+     * @param stacks the list of stacks
+     * @param stack the stack to add
+     */
+    public static void addAggregated(List<IPatternStack> stacks, IPatternStack stack) {
+        if (stack == null || stack.getAmount() <= 0) return;
+
+        for (IPatternStack existing : stacks) {
+            if (existing.canMerge(stack)) {
+                existing.addAmount(stack.getAmount());
                 return;
             }
-
-            List<ItemStack> expandedCandidates = expandCandidates(stack);
-            candidates[slot] = expandedCandidates.toArray(new ItemStack[0]);
-            if (candidates[slot].length > 1) {
-                hasCandidates = true;
-            } else if (candidates[slot].length == 1) {
-                inputs[slot] = candidates[slot][0];
-            }
         }
-
-        ItemStack[] outputs = getAggregatedOutputs(recipe, recipeIndex);
-        if (hasCandidates) {
-            gui.setSubGui(new GuiRecipeImport(gui.getInventorySlot(), candidates, outputs));
-            return;
-        }
-
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetCraftingRecipe.class)
-                .setPatternInventorySlot(gui.getInventorySlot())
-                .setContent(inputs)
-                .setResult(outputs.length > 0 ? outputs[0] : null)
-                .setOutputs(outputs));
-    }
-
-    private List<ItemStack> expandCandidates(PositionedStack stack) {
-        if (stack == null || stack.items == null || stack.items.length == 0) {
-            return new ArrayList<>();
-        }
-        List<ItemStack> list = new ArrayList<>(Arrays.asList(stack.items));
-        Iterator<ItemStack> iter = list.iterator();
-        while (iter.hasNext()) {
-            ItemStack wildCardCheckStack = iter.next();
-            if (wildCardCheckStack == null) {
-                iter.remove();
-                continue;
-            }
-            if (wildCardCheckStack.getItemDamage() == OreDictionary.WILDCARD_VALUE) {
-                iter.remove();
-                wildCardCheckStack.getItem().getSubItems(
-                        wildCardCheckStack.getItem(),
-                        wildCardCheckStack.getItem().getCreativeTab(),
-                        list);
-                iter = list.iterator();
-            }
-        }
-        return list;
-    }
-
-    private ItemStack[] getAggregatedOutputs(IRecipeHandler recipe, int recipeIndex) {
-        List<IPatternStack> outputs = new ArrayList<>();
-        addPositionedStack(outputs, recipe.getResultStack(recipeIndex));
-        List<PositionedStack> otherStacks = recipe.getOtherStacks(recipeIndex);
-        if (otherStacks != null) {
-            for (PositionedStack stack : otherStacks) {
-                addPositionedStack(outputs, stack);
-            }
-        }
-        return PatternNEIImportHandler.toPatternItemStacks(outputs);
-    }
-
-    private void addPositionedStack(List<IPatternStack> outputs, PositionedStack stack) {
-        PatternNEIImportHandler.addAggregated(outputs, IPatternStack.fromItemStack(firstStack(stack)));
-    }
-
-    private boolean isFluid(PositionedStack stack) {
-        return PatternFluidStack.fromItemStack(firstStack(stack)) != null;
-    }
-
-    private ItemStack firstStack(PositionedStack stack) {
-        if (stack == null) {
-            return null;
-        }
-        if (stack.item != null) {
-            return stack.item.copy();
-        }
-        if (stack.items != null && stack.items.length > 0 && stack.items[0] != null) {
-            return stack.items[0].copy();
-        }
-        return null;
-    }
-
-    private boolean addToFirstFreeSlot(ItemStack[] stacks, ItemStack stack) {
-        if (stack == null) {
-            return false;
-        }
-        for (int i = 0; i < stacks.length; i++) {
-            if (stacks[i] == null) {
-                stacks[i] = stack.copy();
-                return true;
-            }
-        }
-        return false;
+        stacks.add(stack.copy());
     }
 }

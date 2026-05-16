@@ -25,20 +25,23 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         PatternContainer dummy = new PatternContainer(player.inventory, inventory);
         PatternGuiProvider.addPatternSlots(dummy);
         dummy.addNormalSlotsForPlayerInventory(8, 86);
-
-        addActionButtons();
-
         inventorySlots = dummy;
     }
 
+    @Override
+    public void initGui() {
+        super.initGui();
+        addActionButtons();
+    }
+
     private void addActionButtons() {
-        GuiButton clearButton = new GuiButton(CLEAR_BUTTON_ID, guiLeft + 50, guiTop + 50, 5, 5, "X");
+        GuiButton clearButton = new GuiButton(CLEAR_BUTTON_ID, guiLeft + 100, guiTop + 20, 50, 5, "X");
         addButton(clearButton);
 
-        GuiButton multiplierButton = new GuiButton(MULTIPLE_BUTTON_ID, guiLeft + 55, guiTop + 20, 5, 5, "2x");
+        GuiButton multiplierButton = new GuiButton(MULTIPLE_BUTTON_ID, guiLeft + 100, guiTop + 30, 50, 5, "2x");
         addButton(multiplierButton);
 
-        GuiButton oreDictButton = new GuiButton(ORE_DICT_BUTTON_ID, guiLeft + 55, guiTop + 60, 5, 5, "d");
+        GuiButton oreDictButton = new GuiButton(ORE_DICT_BUTTON_ID, guiLeft + 100, guiTop + 40, 50, 5, "d");
         addButton(oreDictButton);
 
         for (int slot = 0; slot < getInputSize(); slot++) {

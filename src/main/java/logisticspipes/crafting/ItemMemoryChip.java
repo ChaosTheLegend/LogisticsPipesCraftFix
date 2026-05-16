@@ -12,6 +12,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.utils.string.ChatColor;
+import net.minecraft.world.World;
 
 public class ItemMemoryChip extends LogisticsItem {
 
@@ -22,6 +23,11 @@ public class ItemMemoryChip extends LogisticsItem {
             return new int[0];
         }
         return stack.getTagCompound().getIntArray(PATTERN_SATELLITE_IDS_TAG);
+    }
+
+    @Override
+    public boolean doesSneakBypassUse(World world, int x, int y, int z, EntityPlayer player) {
+        return true;
     }
 
     public static boolean addPatternSatelliteId(ItemStack stack, int satelliteId) {

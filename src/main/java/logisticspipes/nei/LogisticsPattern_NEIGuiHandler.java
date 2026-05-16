@@ -3,8 +3,6 @@ package logisticspipes.nei;
 import codechicken.nei.VisiblityData;
 import codechicken.nei.api.INEIGuiHandler;
 import codechicken.nei.api.TaggedInventoryArea;
-import com.glodblock.github.client.gui.GuiFluidMonitor;
-import com.glodblock.github.client.gui.GuiItemMonitor;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.item.ItemStack;
 

@@ -8,7 +8,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 
 import logisticspipes.blocks.crafting.LogisticsCraftingTableTileEntity;
-import logisticspipes.crafting.PatternNEIImportHandler;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -25,15 +24,6 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
     @Getter
     @Setter
     private ItemStack[] content = new ItemStack[9];
-    @Getter
-    @Setter
-    private int patternInventorySlot = -1;
-    @Getter
-    @Setter
-    private ItemStack result;
-    @Getter
-    @Setter
-    private ItemStack[] outputs = new ItemStack[0];
 
     public NEISetCraftingRecipe(int id) {
         super(id);
@@ -41,10 +31,6 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
 
     @Override
     public void processPacket(EntityPlayer player) {
-        if (patternInventorySlot >= 0) {
-            handlePatternRecipePacket(player);
-            return;
-        }
         TileEntity tile = getTile(player.worldObj, TileEntity.class);
         if (tile instanceof LogisticsCraftingTableTileEntity) {
             ((LogisticsCraftingTableTileEntity) tile).handleNEIRecipePacket(getContent());
@@ -60,23 +46,14 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
         return new NEISetCraftingRecipe(getId());
     }
 
-    private void handlePatternRecipePacket(EntityPlayer player) {
-        ItemStack[] recipeOutputs = outputs != null && outputs.length > 0 ? outputs : new ItemStack[] { result };
-        PatternNEIImportHandler.importRecipe(player, patternInventorySlot, content, recipeOutputs);
-    }
-
     @Override
     public void writeData(LPDataOutputStream data) throws IOException {
         super.writeData(data);
 
-        data.writeInt(patternInventorySlot);
-        writeItemStack(data, result);
-        writeItemStackArray(data, outputs);
-        ItemStack[] recipeContent = content != null ? content : new ItemStack[0];
-        data.writeInt(recipeContent.length);
+        data.writeInt(content.length);
 
-        for (int i = 0; i < recipeContent.length; i++) {
-            final ItemStack itemstack = recipeContent[i];
+        for (int i = 0; i < content.length; i++) {
+            final ItemStack itemstack = content[i];
 
             if (itemstack != null) {
                 data.writeByte(i);
@@ -93,9 +70,6 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
     public void readData(LPDataInputStream data) throws IOException {
         super.readData(data);
 
-        patternInventorySlot = data.readInt();
-        result = readItemStack(data);
-        outputs = readItemStackArray(data);
         content = new ItemStack[data.readInt()];
 
         byte index = data.readByte();
@@ -109,47 +83,5 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
             content[index] = stack;
             index = data.readByte(); // read the next slot
         }
-    }
-
-    private static void writeItemStack(LPDataOutputStream data, ItemStack stack) throws IOException {
-        data.writeBoolean(stack != null);
-        if (stack == null) {
-            return;
-        }
-        data.writeInt(Item.getIdFromItem(stack.getItem()));
-        data.writeInt(stack.stackSize);
-        data.writeInt(stack.getItemDamage());
-        data.writeNBTTagCompound(stack.getTagCompound());
-    }
-
-    private static ItemStack readItemStack(LPDataInputStream data) throws IOException {
-        if (!data.readBoolean()) {
-            return null;
-        }
-        Item item = Item.getItemById(data.readInt());
-        int stackSize = data.readInt();
-        int damage = data.readInt();
-        if (item == null || stackSize <= 0) {
-            return null;
-        }
-        ItemStack stack = new ItemStack(item, stackSize, damage);
-        stack.setTagCompound(data.readNBTTagCompound());
-        return stack;
-    }
-
-    private static void writeItemStackArray(LPDataOutputStream data, ItemStack[] stacks) throws IOException {
-        ItemStack[] safeStacks = stacks != null ? stacks : new ItemStack[0];
-        data.writeInt(safeStacks.length);
-        for (ItemStack stack : safeStacks) {
-            writeItemStack(data, stack);
-        }
-    }
-
-    private static ItemStack[] readItemStackArray(LPDataInputStream data) throws IOException {
-        ItemStack[] stacks = new ItemStack[data.readInt()];
-        for (int i = 0; i < stacks.length; i++) {
-            stacks[i] = readItemStack(data);
-        }
-        return stacks;
     }
 }
