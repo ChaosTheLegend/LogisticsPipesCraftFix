@@ -43,6 +43,8 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
 import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.ItemMemoryChip;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.asm.LogisticsPipesClassInjector;
 import logisticspipes.asm.wrapper.LogisticsWrapperHandler;
 import logisticspipes.blocks.LogisticsSolidBlock;
@@ -201,6 +203,7 @@ public class LogisticsPipes {
     public static Item LogisticsProviderPipeMk2;
     public static Item LogisticsCraftingPipeMk1;
     public static Item LogisticsPatternCraftingPipe;
+    public static Item LogisticsPatternSatellitePipe;
     public static Item LogisticsCraftingPipeMk2;
     public static Item LogisticsCraftingPipeMk3;
     public static Item LogisticsSatellitePipe;
@@ -250,6 +253,7 @@ public class LogisticsPipes {
     public static Item LogisticsBrokenItem;
     public static Item LogisticsPipeControllerItem;
     public static Item LogisticsPattern;
+    public static Item LogisticsMemoryChip;
 
     // Logistics Blocks
     public static Block LogisticsSolidBlock;
@@ -511,6 +515,12 @@ public class LogisticsPipes {
             MinecraftForgeClient.registerItemRenderer(LogisticsPipes.LogisticsPattern, new PatternItemRenderer());
         }
 
+        LogisticsPipes.LogisticsMemoryChip = new ItemMemoryChip();
+        LogisticsPipes.LogisticsMemoryChip.setUnlocalizedName("logisticsMemoryChip");
+        GameRegistry.registerItem(
+                LogisticsPipes.LogisticsMemoryChip,
+                LogisticsPipes.LogisticsMemoryChip.getUnlocalizedName());
+
         // Blocks
         LogisticsPipes.LogisticsSolidBlock = new LogisticsSolidBlock();
         GameRegistry.registerBlock(
@@ -569,6 +579,7 @@ public class LogisticsPipes {
         QueuedTasks.clearAllTasks();
         HudUpdateTick.clearUpdateFlags();
         PipeItemsSatelliteLogistics.cleanup();
+        PipeItemsPatternSatelliteLogistics.cleanup();
         PipeFluidSatellite.cleanup();
         ServerRouter.cleanup();
         if (event.getSide().equals(Side.CLIENT)) {
@@ -608,6 +619,10 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsPatternCraftingPipe = createPipe(
                 PipeItemsPatternCraftingLogistics.class,
                 "Pattern Crafting Logistics Pipe",
+                side);
+        LogisticsPipes.LogisticsPatternSatellitePipe = createPipe(
+                PipeItemsPatternSatelliteLogistics.class,
+                "Pattern Satellite Logistics Pipe",
                 side);
         LogisticsPipes.LogisticsSatellitePipe = createPipe(
                 PipeItemsSatelliteLogistics.class,

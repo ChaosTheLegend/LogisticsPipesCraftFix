@@ -32,7 +32,7 @@ public class PatternItemRenderer implements IItemRenderer {
         if (!isForceResultRender() && !isShiftPressed()) {
             return false;
         }
-        return Pattern.getPrimaryResultStack(itemStack) != null;
+        return Pattern.fromStack(itemStack).getPrimaryResultStack() != null;
     }
 
     @Override
@@ -42,7 +42,7 @@ public class PatternItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType renderType, ItemStack itemStack, Object... data) {
-        ItemStack result = Pattern.getPrimaryResultStack(itemStack);
+        ItemStack result = Pattern.fromStack(itemStack).getPrimaryResultStack();
         if (result == null) {
             return;
         }

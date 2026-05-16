@@ -39,7 +39,7 @@ public class GuiRecipeImport extends SubGuiScreen {
     private final RenderItem itemRenderer = new RenderItem();
     private final TileEntity tile;
     private final int patternInventorySlot;
-    private final ItemStack result;
+    private final ItemStack[] outputs;
     private final Canidates[] grid = new Canidates[9];
     private final List<Canidates> list;
     private Object[] tooltip = null;
@@ -48,15 +48,15 @@ public class GuiRecipeImport extends SubGuiScreen {
         this(tile, -1, stacks, null);
     }
 
-    public GuiRecipeImport(int patternInventorySlot, ItemStack[][] stacks, ItemStack result) {
-        this(null, patternInventorySlot, stacks, result);
+    public GuiRecipeImport(int patternInventorySlot, ItemStack[][] stacks, ItemStack[] outputs) {
+        this(null, patternInventorySlot, stacks, outputs);
     }
 
-    private GuiRecipeImport(TileEntity tile, int patternInventorySlot, ItemStack[][] stacks, ItemStack result) {
+    private GuiRecipeImport(TileEntity tile, int patternInventorySlot, ItemStack[][] stacks, ItemStack[] outputs) {
         super(150, 200, 0, 0);
         this.tile = tile;
         this.patternInventorySlot = patternInventorySlot;
-        this.result = result;
+        this.outputs = outputs != null ? outputs : new ItemStack[0];
         list = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             if (stacks[i] == null) {
@@ -256,7 +256,8 @@ public class GuiRecipeImport extends SubGuiScreen {
                 MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetCraftingRecipe.class)
                         .setPatternInventorySlot(patternInventorySlot)
                         .setContent(stack)
-                        .setResult(result));
+                        .setResult(outputs.length > 0 ? outputs[0] : null)
+                        .setOutputs(outputs));
             }
             exitGui();
         } else if (id == 1 && tile != null) {

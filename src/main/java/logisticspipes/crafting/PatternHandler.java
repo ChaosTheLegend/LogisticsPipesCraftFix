@@ -29,7 +29,7 @@ class PatternHandler {
             return null;
         }
         ItemStack stack = patternInventory.getStackInSlot(slot);
-        if (stack == null || stack.getItem() != LogisticsPipes.LogisticsPattern || !Pattern.isConfigured(stack)) {
+        if (stack == null || stack.getItem() != LogisticsPipes.LogisticsPattern || !Pattern.fromStack(stack).isConfigured()) {
             return null;
         }
         return stack;
@@ -49,10 +49,11 @@ class PatternHandler {
     Set<ItemIdentifier> getIngredientItems() {
         Set<ItemIdentifier> items = new TreeSet<>();
         for (ItemStack pattern : getConfiguredPatterns()) {
-            for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            for (ItemIdentifierStack ingredient : configuredPattern.getIngredients()) {
                 items.add(ingredient.getItem());
             }
-            for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+            for (PatternFluidStack ingredient : configuredPattern.getFluidIngredients()) {
                 items.add(ingredient.getFluid().getItemIdentifier());
             }
         }
@@ -103,7 +104,7 @@ class PatternHandler {
             return 0;
         }
         int amount = 0;
-        for (ItemIdentifierStack result : Pattern.getResults(pattern)) {
+        for (ItemIdentifierStack result : Pattern.fromStack(pattern).getResults()) {
             if (result.getItem().equalsForCrafting(item)) {
                 amount += result.getStackSize();
             }
@@ -116,7 +117,7 @@ class PatternHandler {
         if (pattern == null || fluid == null) {
             return amount;
         }
-        for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+        for (PatternFluidStack ingredient : Pattern.fromStack(pattern).getFluidIngredients()) {
             if (ingredient.getFluid().equals(fluid)) {
                 amount += ingredient.getAmount();
             }
@@ -129,7 +130,7 @@ class PatternHandler {
         if (pattern == null || item == null) {
             return amount;
         }
-        for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
             if (ingredient.getItem().equalsForCrafting(item)) {
                 amount += ingredient.getStackSize();
             }
@@ -142,7 +143,7 @@ class PatternHandler {
         if (pattern == null) {
             return result;
         }
-        for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
             boolean merged = false;
             for (ItemIdentifierStack existing : result) {
                 if (existing.getItem().equalsForCrafting(ingredient.getItem())) {
@@ -163,7 +164,7 @@ class PatternHandler {
         if (pattern == null) {
             return result;
         }
-        for (PatternFluidStack ingredient : Pattern.getFluidIngredients(pattern)) {
+        for (PatternFluidStack ingredient : Pattern.fromStack(pattern).getFluidIngredients()) {
             boolean merged = false;
             for (PatternFluidStack existing : result) {
                 if (existing.getFluid().equals(ingredient.getFluid())) {

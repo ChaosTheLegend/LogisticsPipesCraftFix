@@ -54,10 +54,10 @@ public class NEILogisticsPipesConfig implements IConfigureNEI {
 
         //register pattern handling
         API.registerNEIGuiHandler(new LogisticsPattern_NEIGuiHandler());
-        API.registerGuiOverlayHandler(PatternGui.class,LogisticsCraftingOverlayHandler.INSTANCE,"crafting");
+        API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, "crafting");
         for (String identifier : FluidRecipe.getSupportRecipes()) {
             if (!API.hasGuiOverlayHandler(PatternGui.class, identifier)) {
-                API.registerGuiOverlayHandler(PatternGui.class, LogisticsCraftingOverlayHandler.INSTANCE, identifier);
+                API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, identifier);
             }
         }
 

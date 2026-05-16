@@ -316,8 +316,9 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
         if (pattern == null || sets <= 0) {
             return false;
         }
-        for (int slot = 0; slot < Pattern.INGREDIENT_SLOTS; slot++) {
-            ItemStack ingredient = Pattern.getStackInSlot(pattern, slot);
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            ItemStack ingredient = configuredPattern.getStackInSlot(slot);
             if (ingredient == null) {
                 continue;
             }
@@ -328,8 +329,8 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
 
         suppressRecipeCheck = true;
         boolean insertedAll = true;
-        for (int slot = 0; slot < Pattern.INGREDIENT_SLOTS; slot++) {
-            ItemStack ingredient = Pattern.getStackInSlot(pattern, slot);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            ItemStack ingredient = configuredPattern.getStackInSlot(slot);
             if (ingredient != null) {
                 ItemStack stack = ingredient.copy();
                 stack.stackSize = ingredient.stackSize * sets;
@@ -554,7 +555,7 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
 
     private List<ItemIdentifierStack> getAggregatedIngredients(ItemStack pattern) {
         List<ItemIdentifierStack> result = new java.util.ArrayList<>();
-        for (ItemIdentifierStack ingredient : Pattern.getIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
             boolean merged = false;
             for (ItemIdentifierStack existing : result) {
                 if (existing.getItem().equalsForCrafting(ingredient.getItem())) {

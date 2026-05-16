@@ -5,9 +5,12 @@ import java.util.Collections;
 import java.util.List;
 
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.IPromise;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
+import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
@@ -155,6 +158,16 @@ public class PatternCraftingBranch {
      * directly, releasing any reservation that was made for this staged craft.
      */
     public int request(int amount) {
+        return request(amount, null, info);
+    }
+
+    /**
+     * Fulfils up to {@code amount} items from this branch while optionally routing the order to another requester.
+     * <p>
+     * Pattern satellites use this to receive their assigned ingredients directly, without making those ingredients pass
+     * through the crafting pipe's local buffer.
+     */
+    public int request(int amount, IRequestItems targetOverride, IAdditionalTargetInformation infoOverride) {
         int wanted = Math.min(amount, remainingAmount);
         int requested = 0;
         for (PromiseState promiseState : promises) {
@@ -166,7 +179,8 @@ public class PatternCraftingBranch {
                 continue;
             }
             IPromise promise = copyPromiseForAmount(promiseState.promise, toRequest);
-            IResource request = requestType.copyForDisplayWith(toRequest);
+            IResource request = copyRequestForTarget(toRequest, targetOverride);
+            IAdditionalTargetInformation targetInfo = infoOverride;
             IOrderInfoProvider result;
             if (promise.getType() == ResourceType.CRAFTING
                     && promise instanceof LogisticsPromise
@@ -174,7 +188,7 @@ public class PatternCraftingBranch {
                 PatternCraftingBranch stagedBranch = copyForAmount(toRequest);
                 reserveSubRequestsFor(toRequest);
                 result = ((IStagedCraftingProvider) promise.getProvider())
-                        .fullFillStagedCrafting((LogisticsPromise) promise, request, info, stagedBranch);
+                        .fullFillStagedCrafting((LogisticsPromise) promise, request, targetInfo, stagedBranch);
                 if (result == null) {
                     stagedBranch.releaseProviderPromises();
                 }
@@ -182,7 +196,7 @@ public class PatternCraftingBranch {
                 if (promise.getType() == ResourceType.CRAFTING) {
                     requestSubRequestsFor(toRequest);
                 }
-                result = promise.fullFill(request, info);
+                result = promise.fullFill(request, targetInfo);
             }
             if (result != null) {
                 liveOrders.add(result);
@@ -196,6 +210,25 @@ public class PatternCraftingBranch {
             requested += toRequest;
         }
         return requested;
+    }
+
+    private IResource copyRequestForTarget(int amount, IRequestItems targetOverride) {
+        if (targetOverride == null) {
+            return requestType.copyForDisplayWith(amount);
+        }
+        if (requestType instanceof ItemResource) {
+            return new ItemResource(new ItemIdentifierStack(((ItemResource) requestType).getItem(), amount), targetOverride);
+        }
+        if (requestType instanceof DictResource) {
+            DictResource source = (DictResource) requestType;
+            DictResource copy = new DictResource(new ItemIdentifierStack(source.getItem(), amount), targetOverride);
+            copy.use_od = source.use_od;
+            copy.ignore_dmg = source.ignore_dmg;
+            copy.ignore_nbt = source.ignore_nbt;
+            copy.use_category = source.use_category;
+            return copy;
+        }
+        return requestType.copyForDisplayWith(amount);
     }
 
     /**

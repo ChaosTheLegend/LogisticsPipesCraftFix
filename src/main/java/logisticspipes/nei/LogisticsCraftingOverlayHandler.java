@@ -14,8 +14,6 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.client.FMLClientHandler;
-import logisticspipes.crafting.PatternGui;
-import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.orderer.GuiRequestTable;
 import logisticspipes.gui.popup.GuiRecipeImport;
@@ -36,23 +34,18 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
 
         TileEntity tile = null;
         LogisticsBaseGuiScreen gui;
-        int patternInventorySlot = -1;
         if (firstGui instanceof GuiLogisticsCraftingTable) {
             tile = ((GuiLogisticsCraftingTable) firstGui)._crafter;
             gui = (GuiLogisticsCraftingTable) firstGui;
         } else if (firstGui instanceof GuiRequestTable) {
             tile = ((GuiRequestTable) firstGui)._table.container;
             gui = (GuiRequestTable) firstGui;
-        } else if (firstGui instanceof PatternGui) {
-            patternInventorySlot = ((PatternGui) firstGui).getInventorySlot();
-            gui = (PatternGui) firstGui;
         } else {
             return;
         }
 
         ItemStack[] stack = new ItemStack[9];
         ItemStack[][] stacks = new ItemStack[9][];
-        ItemStack result = getRecipeResult(recipe, recipeIndex);
         boolean hasCanidates = false;
         NEISetCraftingRecipe packet = PacketHandler.getPacket(NEISetCraftingRecipe.class);
         for (PositionedStack ps : recipe.getIngredientStacks(recipeIndex)) {
@@ -60,11 +53,6 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             int y = (ps.rely - 6) / 18;
             int slot = x + y * 3;
             if (x < 0 || x > 2 || y < 0 || y > 2 || slot < 0 || slot > 8) {
-                if (patternInventorySlot >= 0 && ps.items != null && ps.items.length > 0
-                    && PatternFluidStack.fromItemStack(ps.items[0]) != null
-                    && addToFirstFreeSlot(stack, ps.items[0])) {
-                    continue;
-                }
                 FMLClientHandler.instance().getClient().thePlayer
                     .sendChatMessage("Internal Error. This button is broken.");
                 return;
@@ -93,37 +81,10 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             }
         }
         if (hasCanidates) {
-            if (patternInventorySlot >= 0) {
-                gui.setSubGui(new GuiRecipeImport(patternInventorySlot, stacks, result));
-            } else {
-                gui.setSubGui(new GuiRecipeImport(tile, stacks));
-            }
-        } else if (patternInventorySlot >= 0) {
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetCraftingRecipe.class)
-                .setPatternInventorySlot(patternInventorySlot)
-                .setContent(stack)
-                .setResult(result));
+            gui.setSubGui(new GuiRecipeImport(tile, stacks));
         } else {
             MainProxy.sendPacketToServer(
                 packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
         }
-    }
-
-    private ItemStack getRecipeResult(IRecipeHandler recipe, int recipeIndex) {
-        PositionedStack result = recipe.getResultStack(recipeIndex);
-        if (result == null || result.items == null || result.items.length == 0 || result.items[0] == null) {
-            return null;
-        }
-        return result.items[0].copy();
-    }
-
-    private boolean addToFirstFreeSlot(ItemStack[] stacks, ItemStack stack) {
-        for (int i = 0; i < stacks.length; i++) {
-            if (stacks[i] == null) {
-                stacks[i] = stack.copy();
-                return true;
-            }
-        }
-        return false;
     }
 }

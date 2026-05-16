@@ -43,8 +43,12 @@ class IngredientBufferHandler {
     }
 
     int completeSets(int patternSlot, ItemStack pattern) {
+        return completeSets(patternSlot, patternHandler.getAggregatedIngredients(pattern));
+    }
+
+    int completeSets(int patternSlot, List<ItemIdentifierStack> ingredients) {
         int sets = Integer.MAX_VALUE;
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : ingredients) {
             if (ingredient.getStackSize() <= 0) {
                 continue;
             }
@@ -54,10 +58,22 @@ class IngredientBufferHandler {
     }
 
     boolean canCompleteOneSetAfterAdding(int patternSlot, ItemStack pattern, ItemIdentifier arrivingItem, int arrivingAmount) {
+        return canCompleteOneSetAfterAdding(
+                patternSlot,
+                patternHandler.getAggregatedIngredients(pattern),
+                arrivingItem,
+                arrivingAmount);
+    }
+
+    boolean canCompleteOneSetAfterAdding(
+            int patternSlot,
+            List<ItemIdentifierStack> ingredients,
+            ItemIdentifier arrivingItem,
+            int arrivingAmount) {
         if (arrivingAmount <= 0) {
-            return completeSets(patternSlot, pattern) > 0;
+            return completeSets(patternSlot, ingredients) > 0;
         }
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : ingredients) {
             int available = amount(patternSlot, ingredient.getItem());
             if (ingredient.getItem().equalsForCrafting(arrivingItem)) {
                 available += arrivingAmount;
@@ -70,10 +86,14 @@ class IngredientBufferHandler {
     }
 
     void removePatternSets(int patternSlot, ItemStack pattern, int sets) {
+        removePatternSets(patternSlot, patternHandler.getAggregatedIngredients(pattern), sets);
+    }
+
+    void removePatternSets(int patternSlot, List<ItemIdentifierStack> ingredients, int sets) {
         if (sets <= 0) {
             return;
         }
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : ingredients) {
             remove(patternSlot, ingredient.getItem(), ingredient.getStackSize() * sets);
         }
     }

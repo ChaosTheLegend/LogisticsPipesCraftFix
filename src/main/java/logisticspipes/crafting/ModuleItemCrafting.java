@@ -200,10 +200,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     public Set<ItemIdentifier> getCraftedItems() {
         Set<ItemIdentifier> crafted = new TreeSet<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
-            for (ItemIdentifierStack result : Pattern.getResults(pattern)) {
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            for (ItemIdentifierStack result : configuredPattern.getResults()) {
                 crafted.add(result.getItem());
             }
-            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+            for (PatternFluidStack result : configuredPattern.getFluidResults()) {
                 crafted.add(result.getFluid().getItemIdentifier());
             }
         }
@@ -346,6 +347,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                     resultAmountPerSet,
                     branch,
                     order,
+                    this,
                     patternHandler,
                     requestedIngredient,
                     requestedFluidIngredient);
@@ -430,16 +432,17 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             if (pattern == null) {
                 continue;
             }
-            List<ItemIdentifierStack> results = Pattern.getResults(pattern);
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            List<ItemIdentifierStack> results = configuredPattern.getResults();
             for (ItemIdentifierStack result : results) {
                 if (!toCraft.matches(result.getItem(), IResource.MatchSettings.NORMAL)) {
                     continue;
                 }
                 PatternCraftingTemplate template = new PatternCraftingTemplate(result, this, 0, slot);
-                for (ItemIdentifierStack ingredient : Pattern.getAggregatedIngredients(pattern)) {
+                for (ItemIdentifierStack ingredient : configuredPattern.getAggregatedIngredients()) {
                     template.addIngredient(new ItemResource(ingredient, this), new PatternTargetInformation(slot));
                 }
-                for (PatternFluidStack ingredient : Pattern.getAggregatedFluidIngredients(pattern)) {
+                for (PatternFluidStack ingredient : configuredPattern.getAggregatedFluidIngredients()) {
                     template.addIngredient(
                             new FluidResource(ingredient.getFluid(), ingredient.getAmount(), this),
                             new PatternTargetInformation(slot));
@@ -451,7 +454,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                 }
                 return template;
             }
-            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+            for (PatternFluidStack result : configuredPattern.getFluidResults()) {
                 if (!toCraft.matches(result.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
                     continue;
                 }
@@ -459,10 +462,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                         new FluidResource(result.getFluid(), result.getAmount(), this),
                         this,
                         0);
-                for (ItemIdentifierStack ingredient : Pattern.getAggregatedIngredients(pattern)) {
+                for (ItemIdentifierStack ingredient : configuredPattern.getAggregatedIngredients()) {
                     template.addIngredient(new ItemResource(ingredient, this), new PatternTargetInformation(slot));
                 }
-                for (PatternFluidStack ingredient : Pattern.getAggregatedFluidIngredients(pattern)) {
+                for (PatternFluidStack ingredient : configuredPattern.getAggregatedFluidIngredients()) {
                     template.addIngredient(
                             new FluidResource(ingredient.getFluid(), ingredient.getAmount(), this),
                             new PatternTargetInformation(slot));
@@ -481,7 +484,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
         }
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
-            for (PatternFluidStack fluid : Pattern.getFluidResults(pattern)) {
+            for (PatternFluidStack fluid : Pattern.fromStack(pattern).getFluidResults()) {
                 if (toCraft.matches(fluid.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
                     return true;
                 }
@@ -499,8 +502,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     public List<ItemIdentifierStack> getConfiguredCraftResults() {
         List<ItemIdentifierStack> results = new ArrayList<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
-            results.addAll(Pattern.getResults(pattern));
-            for (PatternFluidStack result : Pattern.getFluidResults(pattern)) {
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            results.addAll(configuredPattern.getResults());
+            for (PatternFluidStack result : configuredPattern.getFluidResults()) {
                 results.add(result.makeDisplayStack());
             }
         }
@@ -655,8 +659,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private int spaceForArrivingIngredient(int patternSlot, ItemStack pattern, ItemIdentifier item) {
         int space = spaceForPatternIngredient(patternSlot, pattern, item);
         AdjacentTile connected = adjacentInventory.getConnected();
-        if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && connected != null && adjacentInventory.isEmpty(connected) && ingredientBuffer.canCompleteOneSetAfterAdding(patternSlot, pattern, item, space)) {
-            space += patternHandler.ingredientAmount(pattern, item);
+        if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
+                && connected != null
+                && adjacentInventory.isEmpty(connected)
+                && ingredientBuffer.canCompleteOneSetAfterAdding(
+                        patternSlot,
+                        getLocalAggregatedIngredients(pattern),
+                        item,
+                        space)) {
+            space += localIngredientAmount(pattern, item);
         }
         return space;
     }
@@ -675,7 +686,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     }
 
     private boolean itemIngredientsBufferedForOneSet(int patternSlot, ItemStack pattern) {
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : getLocalAggregatedIngredients(pattern)) {
             if (ingredientBuffer.amount(patternSlot, ingredient.getItem()) < ingredient.getStackSize()) {
                 return false;
             }
@@ -713,7 +724,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null || !patternHandler.containsIngredient(pattern, item)) {
+            if (pattern == null || localIngredientAmount(pattern, item) <= 0) {
                 continue;
             }
             int requested = requestedIngredient.amount(slot, item);
@@ -773,7 +784,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
             sets += adjacentInventory.availablePatternSets(pattern);
         }
-        int capacity = sets * patternHandler.ingredientAmount(pattern, item);
+        int capacity = sets * localIngredientAmount(pattern, item);
         return Math.max(0, capacity - ingredientBuffer.amount(patternSlot, item));
     }
 
@@ -787,7 +798,160 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     }
 
     private boolean patternContains(ItemStack pattern, ItemIdentifier item) {
-        return patternHandler.containsIngredient(pattern, item);
+        return localIngredientAmount(pattern, item) > 0;
+    }
+
+    /**
+     * Returns the non-satellite item ingredients that have to be buffered and inserted by this crafting pipe.
+     * <p>
+     * Ingredients assigned to a linked pattern satellite are requested directly for that satellite and therefore must
+     * not be counted as local buffer requirements.
+     */
+    List<ItemIdentifierStack> getLocalAggregatedIngredients(ItemStack pattern) {
+        List<ItemIdentifierStack> result = new ArrayList<>();
+        if (pattern == null) {
+            return result;
+        }
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            if (getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
+                continue;
+            }
+            IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
+            if (!(stack instanceof PatternSolidStack) || stack.getAmount() <= 0) {
+                continue;
+            }
+            ItemIdentifierStack ingredient = ((PatternSolidStack) stack).getItem().clone();
+            boolean merged = false;
+            for (ItemIdentifierStack existing : result) {
+                if (existing.getItem().equalsForCrafting(ingredient.getItem())) {
+                    existing.setStackSize(existing.getStackSize() + ingredient.getStackSize());
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                result.add(ingredient);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Resolves the satellite destination for an item ingredient in a pattern.
+     * <p>
+     * If duplicate input slots contain the same item and only some are assigned to satellites, the assigned satellite is
+     * used for staged routing of that item. Keep pattern assignments uniform for duplicate ingredients when splitting
+     * the same item between local and satellite machines matters.
+     */
+    IRequestItems getSatelliteTargetForIngredient(ItemStack pattern, ItemIdentifier item) {
+        if (pattern == null || item == null) {
+            return null;
+        }
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
+            if (!(stack instanceof PatternSolidStack)
+                    || !((PatternSolidStack) stack).getItem().getItem().equalsForCrafting(item)) {
+                continue;
+            }
+            IRequestItems target = getSatelliteTargetForInputSlot(configuredPattern, slot);
+            if (target != null) {
+                return target;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Builds item ingredient request groups, keeping local and satellite-routed copies of the same item separate.
+     */
+    List<PatternIngredientTarget> getIngredientTargets(ItemStack pattern) {
+        List<PatternIngredientTarget> result = new ArrayList<>();
+        if (pattern == null) {
+            return result;
+        }
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
+            if (!(stack instanceof PatternSolidStack) || stack.getAmount() <= 0) {
+                continue;
+            }
+            ItemIdentifierStack ingredient = ((PatternSolidStack) stack).getItem().clone();
+            IRequestItems target = getSatelliteTargetForInputSlot(configuredPattern, slot);
+            boolean merged = false;
+            for (PatternIngredientTarget existing : result) {
+                if (existing.target == target && existing.item.equalsForCrafting(ingredient.getItem())) {
+                    existing.amount += ingredient.getStackSize();
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                result.add(new PatternIngredientTarget(ingredient.getItem(), ingredient.getStackSize(), target));
+            }
+        }
+        return result;
+    }
+
+    static class PatternIngredientTarget {
+
+        final ItemIdentifier item;
+        int amount;
+        final IRequestItems target;
+
+        PatternIngredientTarget(ItemIdentifier item, int amount, IRequestItems target) {
+            this.item = item;
+            this.amount = amount;
+            this.target = target;
+        }
+    }
+
+    /**
+     * Counts how much of an item ingredient still belongs to the local connected inventory after satellite assignments.
+     */
+    int localIngredientAmount(ItemStack pattern, ItemIdentifier item) {
+        int amount = 0;
+        for (ItemIdentifierStack ingredient : getLocalAggregatedIngredients(pattern)) {
+            if (ingredient.getItem().equalsForCrafting(item)) {
+                amount += ingredient.getStackSize();
+            }
+        }
+        return amount;
+    }
+
+    /**
+     * Checks whether one input slot is assigned to a linked and currently known pattern satellite pipe.
+     */
+    boolean hasLinkedSatelliteAssignment(ItemStack pattern, int inputSlot) {
+        return pattern != null && getSatelliteTargetForInputSlot(Pattern.fromStack(pattern), inputSlot) != null;
+    }
+
+    /**
+     * Returns true when at least one input slot of this pattern is routed to a linked pattern satellite.
+     */
+    boolean hasLinkedSatelliteAssignments(ItemStack pattern) {
+        if (pattern == null) {
+            return false;
+        }
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            if (getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private IRequestItems getSatelliteTargetForInputSlot(AbstractPattern pattern, int inputSlot) {
+        if (adjacentInventory.isConnectedToPatternCraftingTable()) {
+            return null;
+        }
+        int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
+        if (satelliteId <= 0 || !pipe.isPatternSatelliteLinked(satelliteId)) {
+            return null;
+        }
+        return pipe.getLinkedPatternSatellite(satelliteId);
     }
 
     private List<ItemIdentifierStack> getBuffer(int patternSlot) {
@@ -871,7 +1035,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         if (sets <= 0 || !adjacentInventory.insertPatternSets(pattern, sets)) {
             return;
         }
-        ingredientBuffer.removePatternSets(patternSlot, pattern, sets);
+        ingredientBuffer.removePatternSets(patternSlot, getLocalAggregatedIngredients(pattern), sets);
         fluidIngredientBuffer.removePatternSets(patternSlot, pattern, sets);
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             runningCraft = patternSlot;
@@ -880,9 +1044,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     }
 
     private int completeBufferedSets(int patternSlot, ItemStack pattern) {
-        int itemSets = patternHandler.getAggregatedIngredients(pattern).isEmpty()
+        List<ItemIdentifierStack> localIngredients = getLocalAggregatedIngredients(pattern);
+        int itemSets = localIngredients.isEmpty()
                 ? Integer.MAX_VALUE
-                : ingredientBuffer.completeSets(patternSlot, pattern);
+                : ingredientBuffer.completeSets(patternSlot, localIngredients);
         int fluidSets = patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()
                 ? Integer.MAX_VALUE
                 : fluidIngredientBuffer.completeSets(patternSlot, pattern);
@@ -962,7 +1127,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         AdjacentTile connected = adjacentInventory.getConnected();
         int sets = Integer.MAX_VALUE;
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : getLocalAggregatedIngredients(pattern)) {
             int room = spaceForPatternIngredient(patternSlot, pattern, ingredient.getItem());
             if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
                     && connected != null
@@ -1122,21 +1287,27 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
             found = true;
             out.append("    slot ").append(slot).append("\n");
-            appendPatternSlots(out, pattern, 0, Pattern.INGREDIENT_SLOTS, "      inputs");
-            appendPatternSlots(out, pattern, Pattern.INGREDIENT_SLOTS, Pattern.ITEM_SLOT_COUNT, "      results");
-            appendPatternFluids(out, Pattern.getFluidIngredients(pattern), "      fluid inputs");
-            appendPatternFluids(out, Pattern.getFluidResults(pattern), "      fluid results");
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            appendPatternSlots(out, configuredPattern, 0, configuredPattern.getIngredientSlotCount(), "      inputs");
+            appendPatternSlots(
+                    out,
+                    configuredPattern,
+                    configuredPattern.getResultSlotStart(),
+                    configuredPattern.getItemSlotCount(),
+                    "      results");
+            appendPatternFluids(out, configuredPattern.getFluidIngredients(), "      fluid inputs");
+            appendPatternFluids(out, configuredPattern.getFluidResults(), "      fluid results");
         }
         if (!found) {
             out.append("    <none>\n");
         }
     }
 
-    private void appendPatternSlots(StringBuilder out, ItemStack pattern, int start, int end, String label) {
+    private void appendPatternSlots(StringBuilder out, AbstractPattern pattern, int start, int end, String label) {
         out.append(label).append(": ");
         boolean found = false;
         for (int slot = start; slot < end; slot++) {
-            ItemStack stack = Pattern.getStackInSlot(pattern, slot);
+            ItemStack stack = pattern.getStackInSlot(slot);
             if (stack == null || stack.stackSize <= 0) {
                 continue;
             }

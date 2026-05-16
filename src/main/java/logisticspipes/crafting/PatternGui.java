@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 
 import logisticspipes.network.PacketHandler;
+import logisticspipes.network.packets.crafting.PatternSatelliteAssignmentPacket;
 import logisticspipes.network.packets.gui.PatternSlotActionPacket;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.gui.GuiGraphics;
@@ -16,6 +17,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     public static final int CLEAR_BUTTON_ID = 0;
     public static final int MULTIPLE_BUTTON_ID = 1;
     public static final int ORE_DICT_BUTTON_ID = 2;
+    private static final int SATELLITE_BUTTON_OFFSET = 100;
 
     public PatternGui(EntityPlayer player, IInventory inventory) {
         super(176, 168, 0, 0);
@@ -39,6 +41,18 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         GuiButton oreDictButton = new GuiButton(ORE_DICT_BUTTON_ID, guiLeft + 55, guiTop + 60, 5, 5, "d");
         addButton(oreDictButton);
 
+        for (int slot = 0; slot < getInputSize(); slot++) {
+            int x = slot % 3;
+            int y = slot / 3;
+            GuiButton satelliteButton = new GuiButton(
+                    SATELLITE_BUTTON_OFFSET + slot,
+                    guiLeft + 25 + x * 18,
+                    guiTop + 70 + y * 6,
+                    16,
+                    6,
+                    satelliteButtonLabel(slot));
+            addButton(satelliteButton);
+        }
     }
 
     @Override
@@ -64,19 +78,47 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     protected void actionPerformed(GuiButton button) {
         switch (button.id) {
             case CLEAR_BUTTON_ID:
-                Pattern.clear(patternInventory.getPattern());
+                Pattern.fromStack(patternInventory.getPatternStack()).clear();
                 MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSlotActionPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot())
                         .setAction(PatternSlotActionPacket.Action.CLEAR.ordinal()));
                 break;
             case MULTIPLE_BUTTON_ID:
-                Pattern.multiply(patternInventory.getPattern(), 2);
+                Pattern.fromStack(patternInventory.getPatternStack()).multiply(2);
                 MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSlotActionPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot())
                         .setAction(PatternSlotActionPacket.Action.MULTIPLY_TWO.ordinal()));
                 break;
 
         }
+        if (button.id >= SATELLITE_BUTTON_OFFSET && button.id < SATELLITE_BUTTON_OFFSET + getInputSize()) {
+            int inputSlot = button.id - SATELLITE_BUTTON_OFFSET;
+            int nextSatelliteId = nextSatelliteId(Pattern.fromStack(patternInventory.getPatternStack())
+                    .getSatelliteIdForInputSlot(inputSlot));
+            Pattern.fromStack(patternInventory.getPatternStack()).setSatelliteIdForInputSlot(inputSlot, nextSatelliteId);
+            button.displayString = satelliteButtonLabel(inputSlot);
+            MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
+                    .setInventorySlot(patternInventory.getInventorySlot())
+                    .setInputSlot(inputSlot)
+                    .setSatelliteId(nextSatelliteId));
+        }
+    }
+
+    private int nextSatelliteId(int currentSatelliteId) {
+        java.util.List<Integer> knownIds = PipeItemsPatternSatelliteLogistics.getKnownSatelliteIds();
+        if (knownIds.isEmpty()) {
+            return currentSatelliteId >= 64 ? 0 : currentSatelliteId + 1;
+        }
+        if (currentSatelliteId == 0) {
+            return knownIds.get(0);
+        }
+        int index = knownIds.indexOf(currentSatelliteId);
+        return index < 0 || index + 1 >= knownIds.size() ? 0 : knownIds.get(index + 1);
+    }
+
+    private String satelliteButtonLabel(int inputSlot) {
+        int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
+        return satelliteId > 0 ? "S" + satelliteId : "-";
     }
 
     public int getInputSize() {

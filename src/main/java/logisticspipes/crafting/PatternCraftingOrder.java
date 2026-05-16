@@ -6,6 +6,7 @@ import java.util.Set;
 
 import net.minecraft.item.ItemStack;
 
+import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
@@ -19,6 +20,7 @@ class PatternCraftingOrder {
     int remainingSets;
 
     private final IOrderInfoProvider outputOrder;
+    private final ModuleItemCrafting module;
     private final PatternHandler patternHandler;
     private final IngredientRequestHandler requestedIngredient;
     private final FluidIngredientRequestHandler requestedFluidIngredient;
@@ -28,6 +30,7 @@ class PatternCraftingOrder {
             int resultAmountPerSet,
             PatternCraftingBranch branch,
             IOrderInfoProvider outputOrder,
+            ModuleItemCrafting module,
             PatternHandler patternHandler,
             IngredientRequestHandler requestedIngredient,
             FluidIngredientRequestHandler requestedFluidIngredient) {
@@ -37,6 +40,7 @@ class PatternCraftingOrder {
                 / this.resultAmountPerSet;
         this.ingredientBranches = new ArrayList<>(branch.getSubRequests());
         this.outputOrder = outputOrder;
+        this.module = module;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.requestedFluidIngredient = requestedFluidIngredient;
@@ -72,10 +76,15 @@ class PatternCraftingOrder {
      */
     int requestIngredients(ItemStack pattern, int sets) {
         int requestedSets = sets;
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
-            int requested = requestFromBranches(ingredient.getItem(), ingredient.getStackSize() * requestedSets);
-            requestedIngredient.add(patternSlot, ingredient.getItem(), requested);
-            requestedSets = Math.min(requestedSets, requested / ingredient.getStackSize());
+        for (ModuleItemCrafting.PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
+            int requested = requestFromBranches(
+                    ingredient.item,
+                    ingredient.amount * requestedSets,
+                    ingredient.target);
+            if (ingredient.target == null) {
+                requestedIngredient.add(patternSlot, ingredient.item, requested);
+            }
+            requestedSets = Math.min(requestedSets, requested / ingredient.amount);
         }
         for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
             int requested = requestFromBranches(ingredient.getFluid(), ingredient.getAmount() * requestedSets);
@@ -163,7 +172,7 @@ class PatternCraftingOrder {
     /**
      * Places provider or staged crafting orders for an ingredient, consuming the matching branch state as it goes.
      */
-    private int requestFromBranches(ItemIdentifier item, int amount) {
+    private int requestFromBranches(ItemIdentifier item, int amount, IRequestItems targetOverride) {
         int requested = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
             if (requested >= amount) {
@@ -172,7 +181,9 @@ class PatternCraftingOrder {
             if (!branch.matches(item)) {
                 continue;
             }
-            requested += branch.request(amount - requested);
+            requested += branch.request(amount - requested, targetOverride, targetOverride == null
+                    ? new PatternTargetInformation(patternSlot)
+                    : null);
         }
         return requested;
     }

@@ -8,8 +8,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModuleItemCrafting;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.gui.hud.HUDPatternCrafting;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
@@ -71,6 +75,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     }
 
     private static final String CONNECTED_INVENTORY_DIRECTION_TAG = "patternConnectedInventoryDirection";
+    private static final String LINKED_PATTERN_SATELLITES_TAG = "linkedPatternSatelliteIds";
 
     private final ModuleItemCrafting module;
     private final LogisticsFluidOrderManager fluidOrderManager;
@@ -83,6 +88,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private ForgeDirection connectedInventoryDirection = ForgeDirection.UNKNOWN;
     private AdjacentTile cachedConnectedInventory;
     private boolean doContentUpdate = true;
+    private final Set<Integer> linkedPatternSatelliteIds = new TreeSet<>();
 
     public PipeItemsPatternCraftingLogistics(Item item) {
         super(new PipeTransportLogistics(true) {
@@ -133,6 +139,23 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
 
     @Override
     protected boolean handleClick(EntityPlayer entityplayer, SecuritySettings settings) {
+        if (entityplayer.isSneaking()
+                && entityplayer.getCurrentEquippedItem() != null
+                && entityplayer.getCurrentEquippedItem().getItem() == LogisticsPipes.LogisticsMemoryChip) {
+            if (MainProxy.isServer(entityplayer.worldObj)) {
+                if (settings == null || settings.openGui) {
+                    int added = addLinkedPatternSatelliteIds(
+                            ItemMemoryChip.getPatternSatelliteIds(entityplayer.getCurrentEquippedItem()));
+                    entityplayer.addChatComponentMessage(new ChatComponentText(
+                            added == 0
+                                    ? "No new pattern satellites linked"
+                                    : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
+                } else {
+                    entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
+                }
+            }
+            return true;
+        }
         if (!entityplayer.isSneaking()
                 || !SimpleServiceLocator.toolWrenchHandler.isWrenchEquipped(entityplayer)
                 || !SimpleServiceLocator.toolWrenchHandler.canWrench(entityplayer, getX(), getY(), getZ())) {
@@ -155,6 +178,37 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
         }
         cachedConnectedInventory = resolveConnectedInventoryTile();
         return cachedConnectedInventory;
+    }
+
+    public boolean isPatternSatelliteLinked(int satelliteId) {
+        return linkedPatternSatelliteIds.contains(satelliteId);
+    }
+
+    public PipeItemsPatternSatelliteLogistics getLinkedPatternSatellite(int satelliteId) {
+        if (!isPatternSatelliteLinked(satelliteId)) {
+            return null;
+        }
+        return PipeItemsPatternSatelliteLogistics.findById(satelliteId);
+    }
+
+    public Collection<Integer> getLinkedPatternSatelliteIds() {
+        return new ArrayList<>(linkedPatternSatelliteIds);
+    }
+
+    private int addLinkedPatternSatelliteIds(int[] satelliteIds) {
+        int added = 0;
+        if (satelliteIds == null) {
+            return added;
+        }
+        for (int satelliteId : satelliteIds) {
+            if (satelliteId > 0 && linkedPatternSatelliteIds.add(satelliteId)) {
+                added++;
+            }
+        }
+        if (added > 0) {
+            refreshRender(false);
+        }
+        return added;
     }
 
     private boolean isCachedConnectedInventoryValid() {
@@ -403,6 +457,12 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     public void writeToNBT(NBTTagCompound nbttagcompound) {
         super.writeToNBT(nbttagcompound);
         nbttagcompound.setInteger(CONNECTED_INVENTORY_DIRECTION_TAG, connectedInventoryDirection.ordinal());
+        int[] satelliteIds = new int[linkedPatternSatelliteIds.size()];
+        int index = 0;
+        for (Integer satelliteId : linkedPatternSatelliteIds) {
+            satelliteIds[index++] = satelliteId;
+        }
+        nbttagcompound.setIntArray(LINKED_PATTERN_SATELLITES_TAG, satelliteIds);
     }
 
     @Override
@@ -411,6 +471,12 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
         connectedInventoryDirection = nbttagcompound.hasKey(CONNECTED_INVENTORY_DIRECTION_TAG)
                 ? directionFromOrdinal(nbttagcompound.getInteger(CONNECTED_INVENTORY_DIRECTION_TAG))
                 : ForgeDirection.UNKNOWN;
+        linkedPatternSatelliteIds.clear();
+        for (int satelliteId : nbttagcompound.getIntArray(LINKED_PATTERN_SATELLITES_TAG)) {
+            if (satelliteId > 0) {
+                linkedPatternSatelliteIds.add(satelliteId);
+            }
+        }
         cachedConnectedInventory = null;
     }
 

@@ -11,8 +11,8 @@ public class FluidPatternRecipeTransferHandler implements IOverlayHandler {
 
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
-        if (firstGui instanceof PatternGui gui) {
-
+        if (firstGui instanceof PatternGui) {
+            LogisticPatternHandler.INSTANCE.overlayRecipe(firstGui, recipe, recipeIndex, maxTransfer);
         }
     }
 }

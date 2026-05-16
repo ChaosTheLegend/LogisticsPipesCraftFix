@@ -9,7 +9,7 @@ import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
 
-public class PatternFluidStack {
+public class PatternFluidStack implements IPatternStack {
 
     private final FluidIdentifier fluid;
     private int amount;
@@ -54,6 +54,7 @@ public class PatternFluidStack {
         return amount;
     }
 
+    @Override
     public void addAmount(int amount) {
         this.amount += amount;
     }
@@ -66,10 +67,16 @@ public class PatternFluidStack {
         return fluid.getItemIdentifier().makeStack(amount);
     }
 
+    @Override
+    public ItemStack makeDisplayItemStack() {
+        return makeDisplayStack().makeNormalStack();
+    }
+
     public ItemStack makeGuiStack() {
         return fluid.getItemIdentifier().unsafeMakeNormalStack(1);
     }
 
+    @Override
     public ItemStack makePatternStack() {
         return SimpleServiceLocator.logisticsFluidManager.getFluidContainer(makeFluidStack()).makeNormalStack();
     }
@@ -80,6 +87,18 @@ public class PatternFluidStack {
         return tag;
     }
 
+    @Override
+    public void writeToPatternNBT(NBTTagCompound tag) {
+        tag.setString(TYPE_TAG, TYPE_FLUID);
+        tag.setTag(FLUID_TAG, writeToNBT());
+    }
+
+    @Override
+    public boolean canMerge(IPatternStack other) {
+        return other instanceof PatternFluidStack && fluid.equals(((PatternFluidStack) other).fluid);
+    }
+
+    @Override
     public PatternFluidStack copy() {
         return new PatternFluidStack(fluid, amount);
     }

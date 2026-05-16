@@ -84,7 +84,8 @@ class AdjacentInventoryHandler {
         }
         int sets = Integer.MAX_VALUE;
         boolean hasIngredient = false;
-        if (!patternHandler.getAggregatedIngredients(pattern).isEmpty()) {
+        List<ItemIdentifierStack> localIngredients = module.getLocalAggregatedIngredients(pattern);
+        if (!localIngredients.isEmpty()) {
             hasIngredient = true;
             if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
                 sets = Math.min(
@@ -93,7 +94,7 @@ class AdjacentInventoryHandler {
                                 pattern,
                                 (PatternLogisticsCraftingTableTileEntity) connected.tile));
             } else if (connected.tile instanceof IInventory) {
-                sets = Math.min(sets, availablePatternSetsDisregardingSlots(pattern, connected));
+                sets = Math.min(sets, availablePatternSetsDisregardingSlots(localIngredients, connected));
             } else {
                 return 0;
             }
@@ -115,10 +116,11 @@ class AdjacentInventoryHandler {
         AdjacentTile connected = getConnected();
         if (connected != null
                 && connected.tile instanceof PatternLogisticsCraftingTableTileEntity
+                && !module.hasLinkedSatelliteAssignments(pattern)
                 && patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()) {
             return ((PatternLogisticsCraftingTableTileEntity) connected.tile).insertPatternFromPatternPipe(pattern, sets);
         }
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
+        for (ItemIdentifierStack ingredient : module.getLocalAggregatedIngredients(pattern)) {
             ItemIdentifierStack stack = new ItemIdentifierStack(ingredient.getItem(), ingredient.getStackSize() * sets);
             if (insert(pattern, stack) != stack.getStackSize()) {
                 return false;
@@ -155,8 +157,7 @@ class AdjacentInventoryHandler {
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
-    private int availablePatternSetsDisregardingSlots(ItemStack pattern, AdjacentTile connected) {
-        List<ItemIdentifierStack> ingredients = patternHandler.getAggregatedIngredients(pattern);
+    private int availablePatternSetsDisregardingSlots(List<ItemIdentifierStack> ingredients, AdjacentTile connected) {
         if (ingredients.isEmpty()) {
             return 0;
         }
@@ -236,11 +237,16 @@ class AdjacentInventoryHandler {
     private int availablePatternSetsForPatternTable(ItemStack pattern, PatternLogisticsCraftingTableTileEntity table) {
         int sets = Integer.MAX_VALUE;
         boolean hasIngredient = false;
-        for (int slot = 0; slot < Pattern.INGREDIENT_SLOTS; slot++) {
-            ItemStack ingredient = Pattern.getStackInSlot(pattern, slot);
-            if (ingredient == null) {
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
+            IPatternStack patternStack = configuredPattern.getPatternStackInSlot(slot);
+            if (!(patternStack instanceof PatternSolidStack)) {
                 continue;
             }
+            if (module.hasLinkedSatelliteAssignment(pattern, slot)) {
+                continue;
+            }
+            ItemStack ingredient = patternStack.makePatternStack();
             hasIngredient = true;
             int room = table.roomForPatternPipeSlot(slot, ingredient);
             sets = Math.min(sets, room / ingredient.stackSize);
@@ -307,7 +313,7 @@ class AdjacentInventoryHandler {
     }
 
     private int missingFor(ItemStack pattern, ItemIdentifier item) {
-        return Math.max(0, patternHandler.ingredientAmount(pattern, item) - amountOf(item));
+        return Math.max(0, module.localIngredientAmount(pattern, item) - amountOf(item));
     }
 
     boolean isEmpty(AdjacentTile connected) {

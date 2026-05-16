@@ -7,10 +7,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 
-import logisticspipes.LogisticsPipes;
 import logisticspipes.blocks.crafting.LogisticsCraftingTableTileEntity;
-import logisticspipes.crafting.Pattern;
-import logisticspipes.crafting.PatternFluidStack;
+import logisticspipes.crafting.PatternNEIImportHandler;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -33,6 +31,9 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
     @Getter
     @Setter
     private ItemStack result;
+    @Getter
+    @Setter
+    private ItemStack[] outputs = new ItemStack[0];
 
     public NEISetCraftingRecipe(int id) {
         super(id);
@@ -60,53 +61,8 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
     }
 
     private void handlePatternRecipePacket(EntityPlayer player) {
-        if (patternInventorySlot >= player.inventory.mainInventory.length) {
-            return;
-        }
-        ItemStack pattern = player.inventory.mainInventory[patternInventorySlot];
-        if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
-            return;
-        }
-        for (int i = 0; i < Pattern.INGREDIENT_SLOTS; i++) {
-            Pattern.setStackInSlot(pattern, i, null);
-        }
-        ItemStack[] recipeContent = content != null ? content : new ItemStack[0];
-        int nextFluidInputSlot = 0;
-        for (int i = 0; i < Pattern.INGREDIENT_SLOTS; i++) {
-            ItemStack stack = i < recipeContent.length ? copy(recipeContent[i]) : null;
-            PatternFluidStack fluid = PatternFluidStack.fromItemStack(stack);
-            if (fluid != null) {
-                nextFluidInputSlot = setNextFluidStack(pattern, 0, Pattern.INGREDIENT_SLOTS, nextFluidInputSlot, fluid);
-            } else {
-                Pattern.setStackInSlot(pattern, i, stack);
-            }
-        }
-
-        PatternFluidStack fluidResult = PatternFluidStack.fromItemStack(result);
-        for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
-            Pattern.setStackInSlot(
-                    pattern,
-                    Pattern.INGREDIENT_SLOTS + i,
-                    i == 0 && fluidResult == null ? copy(result) : null);
-        }
-        if (fluidResult != null) {
-            Pattern.setStackInSlot(pattern, Pattern.INGREDIENT_SLOTS, fluidResult.makePatternStack());
-        }
-        player.inventory.markDirty();
-        if (player.openContainer != null) {
-            player.openContainer.detectAndSendChanges();
-        }
-    }
-
-    private int setNextFluidStack(ItemStack pattern, int start, int end, int nextSlot, PatternFluidStack fluid) {
-        while (start + nextSlot < end && Pattern.getStackInSlot(pattern, start + nextSlot) != null) {
-            nextSlot++;
-        }
-        if (start + nextSlot < end) {
-            Pattern.setStackInSlot(pattern, start + nextSlot, fluid.makePatternStack());
-            nextSlot++;
-        }
-        return nextSlot;
+        ItemStack[] recipeOutputs = outputs != null && outputs.length > 0 ? outputs : new ItemStack[] { result };
+        PatternNEIImportHandler.importRecipe(player, patternInventorySlot, content, recipeOutputs);
     }
 
     @Override
@@ -115,6 +71,7 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
 
         data.writeInt(patternInventorySlot);
         writeItemStack(data, result);
+        writeItemStackArray(data, outputs);
         ItemStack[] recipeContent = content != null ? content : new ItemStack[0];
         data.writeInt(recipeContent.length);
 
@@ -138,6 +95,7 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
 
         patternInventorySlot = data.readInt();
         result = readItemStack(data);
+        outputs = readItemStackArray(data);
         content = new ItemStack[data.readInt()];
 
         byte index = data.readByte();
@@ -179,7 +137,19 @@ public class NEISetCraftingRecipe extends CoordinatesPacket {
         return stack;
     }
 
-    private static ItemStack copy(ItemStack stack) {
-        return stack != null && stack.stackSize > 0 ? stack.copy() : null;
+    private static void writeItemStackArray(LPDataOutputStream data, ItemStack[] stacks) throws IOException {
+        ItemStack[] safeStacks = stacks != null ? stacks : new ItemStack[0];
+        data.writeInt(safeStacks.length);
+        for (ItemStack stack : safeStacks) {
+            writeItemStack(data, stack);
+        }
+    }
+
+    private static ItemStack[] readItemStackArray(LPDataInputStream data) throws IOException {
+        ItemStack[] stacks = new ItemStack[data.readInt()];
+        for (int i = 0; i < stacks.length; i++) {
+            stacks[i] = readItemStack(data);
+        }
+        return stacks;
     }
 }

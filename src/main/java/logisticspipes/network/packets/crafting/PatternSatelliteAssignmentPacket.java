@@ -1,4 +1,4 @@
-package logisticspipes.network.packets.gui;
+package logisticspipes.network.packets.crafting;
 
 import java.io.IOException;
 
@@ -6,7 +6,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
 import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.AbstractPattern;
 import logisticspipes.crafting.Pattern;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
@@ -16,29 +15,27 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 @Accessors(chain = true)
-public class PatternSlotActionPacket extends ModernPacket {
-
-    public enum Action {
-        CLEAR,
-        MULTIPLY_TWO
-    }
+public class PatternSatelliteAssignmentPacket extends ModernPacket {
 
     @Getter
     @Setter
     private int inventorySlot;
-
     @Getter
     @Setter
-    private int action;
+    private int inputSlot;
+    @Getter
+    @Setter
+    private int satelliteId;
 
-    public PatternSlotActionPacket(int id) {
+    public PatternSatelliteAssignmentPacket(int id) {
         super(id);
     }
 
     @Override
     public void readData(LPDataInputStream data) throws IOException {
         inventorySlot = data.readInt();
-        action = data.readInt();
+        inputSlot = data.readInt();
+        satelliteId = data.readInt();
     }
 
     @Override
@@ -50,12 +47,7 @@ public class PatternSlotActionPacket extends ModernPacket {
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
-        if (action == Action.CLEAR.ordinal()) {
-            configuredPattern.clear();
-        } else if (action == Action.MULTIPLY_TWO.ordinal()) {
-            configuredPattern.multiply(2);
-        }
+        Pattern.fromStack(pattern).setSatelliteIdForInputSlot(inputSlot, satelliteId);
         player.inventory.markDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();
@@ -65,11 +57,12 @@ public class PatternSlotActionPacket extends ModernPacket {
     @Override
     public void writeData(LPDataOutputStream data) throws IOException {
         data.writeInt(inventorySlot);
-        data.writeInt(action);
+        data.writeInt(inputSlot);
+        data.writeInt(satelliteId);
     }
 
     @Override
     public ModernPacket template() {
-        return new PatternSlotActionPacket(getId());
+        return new PatternSatelliteAssignmentPacket(getId());
     }
 }
