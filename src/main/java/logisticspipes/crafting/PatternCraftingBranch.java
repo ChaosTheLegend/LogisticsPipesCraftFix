@@ -12,7 +12,6 @@ import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidLogisticsPromise;
-import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.utils.FluidIdentifier;
@@ -183,12 +182,11 @@ public class PatternCraftingBranch {
             IAdditionalTargetInformation targetInfo = infoOverride;
             IOrderInfoProvider result;
             if (promise.getType() == ResourceType.CRAFTING
-                    && promise instanceof LogisticsPromise
                     && promise.getProvider() instanceof IStagedCraftingProvider) {
                 PatternCraftingBranch stagedBranch = copyForAmount(toRequest);
                 reserveSubRequestsFor(toRequest);
                 result = ((IStagedCraftingProvider) promise.getProvider())
-                        .fullFillStagedCrafting((LogisticsPromise) promise, request, targetInfo, stagedBranch);
+                        .fullFillStagedCrafting(promise, request, targetInfo, stagedBranch);
                 if (result == null) {
                     stagedBranch.releaseProviderPromises();
                 }

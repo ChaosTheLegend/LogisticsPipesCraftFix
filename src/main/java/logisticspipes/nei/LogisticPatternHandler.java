@@ -3,13 +3,21 @@ package logisticspipes.nei;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
+import com.glodblock.github.FluidCraft;
+import com.glodblock.github.nei.object.OrderStack;
+import com.glodblock.github.nei.recipes.FluidRecipe;
+import com.glodblock.github.network.CPacketTransferRecipe;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.IPatternStack;
+import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.crafting.PatternGui;
+import logisticspipes.crafting.PatternSolidStack;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.NEISetPatternCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,18 +35,50 @@ public class LogisticPatternHandler implements IOverlayHandler {
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
         if (!(firstGui instanceof PatternGui gui)) return;
 
-        try {
-            List<IPatternStack> inputs = getInputs(recipe, recipeIndex);
+        // we can just steal ae2 fluid implementation here for now, so we dont need to rewrite all the handlers.
+        List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
+        List<OrderStack<?>> out = FluidRecipe.getPackageOutputs(recipe, recipeIndex, true);
 
-            List<IPatternStack> outputs = getAggregatedOutputs(recipe, recipeIndex);
+        List<IPatternStack> inputs = new ArrayList<>();
+        List<IPatternStack> outputs = new ArrayList<>();
 
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
+        for (var inputStack : in) {
+            if (inputStack == null) continue;
+            var stack = inputStack.getStack();
+
+            if (stack instanceof ItemStack itemStack){
+                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                if (patternSolidStack == null) continue;
+                inputs.add(patternSolidStack);
+            }
+            if (stack instanceof FluidStack fluidStack){
+                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+                if (patternFluidStack == null) continue;
+                inputs.add(patternFluidStack);
+            }
+        }
+
+        for (var outputStack : out) {
+            if (outputStack == null) continue;
+            var stack = outputStack.getStack();
+            if (stack instanceof ItemStack itemStack){
+                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                if (patternSolidStack == null) continue;
+                outputs.add(patternSolidStack);
+            }
+
+            if (stack instanceof FluidStack fluidStack){
+                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+                if (patternFluidStack == null) continue;
+                outputs.add(patternFluidStack);
+            }
+        }
+
+
+        MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
                 .setPatternInventorySlot(gui.getInventorySlot())
                 .setInputs(inputs)
                 .setOutputs(outputs));
-        } catch (Exception e) {
-            LogisticsPipes.log.error(e.getMessage(), e);
-        }
 
     }
 

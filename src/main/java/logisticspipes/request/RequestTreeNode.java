@@ -30,7 +30,6 @@ import logisticspipes.request.RequestTree.workWeightedSorter;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.ExitRoute;
 import logisticspipes.routing.IRouter;
-import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.PipeRoutingConnectionType;
 import logisticspipes.routing.ServerRouter;
 import logisticspipes.routing.order.IOrderInfoProvider;
@@ -253,8 +252,7 @@ public class RequestTreeNode {
      * Checks whether a promise belongs to a staged pattern crafting provider.
      */
     private boolean isStagedCraftingPromise(IPromise promise) {
-        return promise instanceof LogisticsPromise
-                && promise.getType() == ResourceType.CRAFTING
+        return promise.getType() == ResourceType.CRAFTING
                 && promise.getProvider() instanceof IStagedCraftingProvider;
     }
 
@@ -274,7 +272,7 @@ public class RequestTreeNode {
                 PatternCraftingBranch stagedBranch = branch.copyAndReserve(promise.getAmount());
                 stagedBranch.reserveProviderPromises();
                 result = ((IStagedCraftingProvider) promise.getProvider()).fullFillStagedCrafting(
-                        (LogisticsPromise) promiseCopy,
+                        promiseCopy,
                         requestType.copyForDisplayWith(promise.getAmount()),
                         info,
                         stagedBranch);

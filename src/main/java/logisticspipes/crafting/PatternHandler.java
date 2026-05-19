@@ -3,7 +3,6 @@ package logisticspipes.crafting;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
-import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.SimpleStackInventory;
 import net.minecraft.item.ItemStack;
 
@@ -50,11 +49,11 @@ class PatternHandler {
         Set<ItemIdentifier> items = new TreeSet<>();
         for (ItemStack pattern : getConfiguredPatterns()) {
             AbstractPattern configuredPattern = Pattern.fromStack(pattern);
-            for (ItemIdentifierStack ingredient : configuredPattern.getIngredients()) {
-                items.add(ingredient.getItem());
-            }
-            for (PatternFluidStack ingredient : configuredPattern.getFluidIngredients()) {
-                items.add(ingredient.getFluid().getItemIdentifier());
+            for (IPatternStack ingredient : configuredPattern.getInputs()) {
+                ItemIdentifier item = PatternStackHelper.getRoutingItem(ingredient);
+                if (item != null) {
+                    items.add(item);
+                }
             }
         }
         return items;
@@ -104,9 +103,9 @@ class PatternHandler {
             return 0;
         }
         int amount = 0;
-        for (ItemIdentifierStack result : Pattern.fromStack(pattern).getResults()) {
-            if (result.getItem().equalsForCrafting(item)) {
-                amount += result.getStackSize();
+        for (IPatternStack result : Pattern.fromStack(pattern).getOutputs()) {
+            if (PatternStackHelper.matches(result, item)) {
+                amount += result.getAmount();
             }
         }
         return amount;
@@ -117,8 +116,8 @@ class PatternHandler {
         if (pattern == null || fluid == null) {
             return amount;
         }
-        for (PatternFluidStack ingredient : Pattern.fromStack(pattern).getFluidIngredients()) {
-            if (ingredient.getFluid().equals(fluid)) {
+        for (IPatternStack ingredient : Pattern.fromStack(pattern).getInputs()) {
+            if (PatternStackHelper.matches(ingredient, fluid)) {
                 amount += ingredient.getAmount();
             }
         }
@@ -130,53 +129,26 @@ class PatternHandler {
         if (pattern == null || item == null) {
             return amount;
         }
-        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
-            if (ingredient.getItem().equalsForCrafting(item)) {
-                amount += ingredient.getStackSize();
+        for (IPatternStack ingredient : Pattern.fromStack(pattern).getInputs()) {
+            if (PatternStackHelper.matches(ingredient, item)) {
+                amount += ingredient.getAmount();
             }
         }
         return amount;
     }
 
-    List<ItemIdentifierStack> getAggregatedIngredients(ItemStack pattern) {
-        List<ItemIdentifierStack> result = new ArrayList<>();
+    List<IPatternStack> getAggregatedInputs(ItemStack pattern) {
         if (pattern == null) {
-            return result;
+            return new ArrayList<>();
         }
-        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
-            boolean merged = false;
-            for (ItemIdentifierStack existing : result) {
-                if (existing.getItem().equalsForCrafting(ingredient.getItem())) {
-                    existing.setStackSize(existing.getStackSize() + ingredient.getStackSize());
-                    merged = true;
-                    break;
-                }
-            }
-            if (!merged) {
-                result.add(ingredient.clone());
-            }
-        }
-        return result;
+        return Pattern.fromStack(pattern).getAggregatedInputs();
     }
 
-    List<PatternFluidStack> getAggregatedFluidIngredients(ItemStack pattern) {
-        List<PatternFluidStack> result = new ArrayList<>();
+    List<IPatternStack> getAggregatedOutputs(ItemStack pattern) {
         if (pattern == null) {
-            return result;
+            return new ArrayList<>();
         }
-        for (PatternFluidStack ingredient : Pattern.fromStack(pattern).getFluidIngredients()) {
-            boolean merged = false;
-            for (PatternFluidStack existing : result) {
-                if (existing.getFluid().equals(ingredient.getFluid())) {
-                    existing.addAmount(ingredient.getAmount());
-                    merged = true;
-                    break;
-                }
-            }
-            if (!merged) {
-                result.add(ingredient.copy());
-            }
-        }
-        return result;
+        return Pattern.fromStack(pattern).getAggregatedOutputs();
     }
+
 }

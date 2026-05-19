@@ -15,7 +15,6 @@ import logisticspipes.utils.CraftingUtil;
 import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
-import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.SimpleStackInventory;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -23,8 +22,6 @@ import net.minecraft.inventory.SlotCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.nbt.NBTTagCompound;
-
-import java.util.List;
 
 public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
 
@@ -551,24 +548,6 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
 
     private boolean canAcceptInput() {
         return !isCraftCoolingDown() && !hasPendingOutput() && !hasOutput();
-    }
-
-    private List<ItemIdentifierStack> getAggregatedIngredients(ItemStack pattern) {
-        List<ItemIdentifierStack> result = new java.util.ArrayList<>();
-        for (ItemIdentifierStack ingredient : Pattern.fromStack(pattern).getIngredients()) {
-            boolean merged = false;
-            for (ItemIdentifierStack existing : result) {
-                if (existing.getItem().equalsForCrafting(ingredient.getItem())) {
-                    existing.setStackSize(existing.getStackSize() + ingredient.getStackSize());
-                    merged = true;
-                    break;
-                }
-            }
-            if (!merged) {
-                result.add(ingredient.clone());
-            }
-        }
-        return result;
     }
 
     private boolean hasPendingOutput() {

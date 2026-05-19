@@ -22,8 +22,7 @@ class PatternCraftingOrder {
     private final IOrderInfoProvider outputOrder;
     private final ModuleItemCrafting module;
     private final PatternHandler patternHandler;
-    private final IngredientRequestHandler requestedIngredient;
-    private final FluidIngredientRequestHandler requestedFluidIngredient;
+    private final PatternStackRequestHandler requestedIngredient;
 
     PatternCraftingOrder(
             int patternSlot,
@@ -32,8 +31,7 @@ class PatternCraftingOrder {
             IOrderInfoProvider outputOrder,
             ModuleItemCrafting module,
             PatternHandler patternHandler,
-            IngredientRequestHandler requestedIngredient,
-            FluidIngredientRequestHandler requestedFluidIngredient) {
+            PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
         this.remainingSets = (branch.getRequestType().getRequestedAmount() + this.resultAmountPerSet - 1)
@@ -43,7 +41,6 @@ class PatternCraftingOrder {
         this.module = module;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
-        this.requestedFluidIngredient = requestedFluidIngredient;
     }
 
     /**
@@ -61,11 +58,8 @@ class PatternCraftingOrder {
      */
     int availableSetsFromBranches(ItemStack pattern) {
         int sets = Integer.MAX_VALUE;
-        for (ItemIdentifierStack ingredient : patternHandler.getAggregatedIngredients(pattern)) {
-            sets = Math.min(sets, availableFromBranches(ingredient.getItem()) / ingredient.getStackSize());
-        }
-        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
-            sets = Math.min(sets, availableFromBranches(ingredient.getFluid()) / ingredient.getAmount());
+        for (IPatternStack ingredient : patternHandler.getAggregatedInputs(pattern)) {
+            sets = Math.min(sets, availableFromBranches(ingredient) / ingredient.getAmount());
         }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
@@ -78,18 +72,13 @@ class PatternCraftingOrder {
         int requestedSets = sets;
         for (ModuleItemCrafting.PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             int requested = requestFromBranches(
-                    ingredient.item,
-                    ingredient.amount * requestedSets,
+                    ingredient.stack,
+                    ingredient.stack.getAmount() * requestedSets,
                     ingredient.target);
             if (ingredient.target == null) {
-                requestedIngredient.add(patternSlot, ingredient.item, requested);
+                requestedIngredient.add(patternSlot, PatternStackHelper.copyWithAmount(ingredient.stack, requested));
             }
-            requestedSets = Math.min(requestedSets, requested / ingredient.amount);
-        }
-        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
-            int requested = requestFromBranches(ingredient.getFluid(), ingredient.getAmount() * requestedSets);
-            requestedFluidIngredient.add(patternSlot, ingredient.getFluid(), requested);
-            requestedSets = Math.min(requestedSets, requested / ingredient.getAmount());
+            requestedSets = Math.min(requestedSets, requested / ingredient.stack.getAmount());
         }
         remainingSets -= requestedSets;
         return requestedSets;
@@ -146,23 +135,10 @@ class PatternCraftingOrder {
     /**
      * Returns the amount still available for one ingredient across matching branches.
      */
-    private int availableFromBranches(ItemIdentifier item) {
+    private int availableFromBranches(IPatternStack ingredient) {
         int available = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
-            if (branch.matches(item)) {
-                available += branch.getRemainingAmount();
-            }
-        }
-        return available;
-    }
-
-    /**
-     * Returns the amount still available for one fluid ingredient across matching branches.
-     */
-    private int availableFromBranches(FluidIdentifier fluid) {
-        int available = 0;
-        for (PatternCraftingBranch branch : ingredientBranches) {
-            if (branch.matches(fluid)) {
+            if (branchMatches(branch, ingredient)) {
                 available += branch.getRemainingAmount();
             }
         }
@@ -172,36 +148,32 @@ class PatternCraftingOrder {
     /**
      * Places provider or staged crafting orders for an ingredient, consuming the matching branch state as it goes.
      */
-    private int requestFromBranches(ItemIdentifier item, int amount, IRequestItems targetOverride) {
+    private int requestFromBranches(IPatternStack ingredient, int amount, IRequestItems targetOverride) {
         int requested = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
             if (requested >= amount) {
                 break;
             }
-            if (!branch.matches(item)) {
+            if (!branchMatches(branch, ingredient)) {
                 continue;
             }
-            requested += branch.request(amount - requested, targetOverride, targetOverride == null
-                    ? new PatternTargetInformation(patternSlot)
-                    : null);
+            if (PatternStackHelper.isFluid(ingredient)) {
+                requested += branch.request(amount - requested);
+            } else {
+                requested += branch.request(amount - requested, targetOverride, targetOverride == null
+                        ? new PatternTargetInformation(patternSlot)
+                        : null);
+            }
         }
         return requested;
     }
 
-    /**
-     * Places provider orders for a fluid ingredient, consuming the matching branch state as it goes.
-     */
-    private int requestFromBranches(FluidIdentifier fluid, int amount) {
-        int requested = 0;
-        for (PatternCraftingBranch branch : ingredientBranches) {
-            if (requested >= amount) {
-                break;
-            }
-            if (!branch.matches(fluid)) {
-                continue;
-            }
-            requested += branch.request(amount - requested);
+    private boolean branchMatches(PatternCraftingBranch branch, IPatternStack ingredient) {
+        FluidIdentifier fluid = PatternStackHelper.asFluid(ingredient);
+        if (fluid != null) {
+            return branch.matches(fluid);
         }
-        return requested;
+        ItemIdentifier item = PatternStackHelper.getRoutingItem(ingredient);
+        return item != null && branch.matches(item);
     }
 }

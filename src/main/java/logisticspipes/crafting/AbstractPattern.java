@@ -1,18 +1,13 @@
 package logisticspipes.crafting;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import lombok.NonNull;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.ChatColor;
 import logisticspipes.utils.string.StringUtils;
@@ -46,35 +41,20 @@ public abstract class AbstractPattern {
         return getIngredientSlotCount() + getResultSlotCount();
     }
 
+    public List<IPatternStack> getAggregatedInputs() {
+        return PatternStackHelper.aggregate(getInputs());
+    }
+
+    public List<IPatternStack> getAggregatedOutputs() {
+        return PatternStackHelper.aggregate(getOutputs());
+    }
+
     public List<ItemIdentifierStack> getAggregatedIngredients() {
-        HashMap<ItemIdentifier, Integer> ingredientCounts = new HashMap<>();
-
-        for (ItemIdentifierStack ingredient : getIngredients()) {
-            ItemIdentifier item = ingredient.getItem();
-            ingredientCounts.putIfAbsent(item, 0);
-            ingredientCounts.compute(item, (key, value) -> value + ingredient.getStackSize());
-        }
-
-        ArrayList<ItemIdentifierStack> result = new ArrayList<>();
-        for (Map.Entry<ItemIdentifier, Integer> entry : ingredientCounts.entrySet()) {
-            result.add(new ItemIdentifierStack(entry.getKey(), entry.getValue()));
-        }
-
-        return result;
+        return toItemIdentifierStacks(getSolidPatternStacks(getAggregatedInputs()));
     }
 
     public List<PatternFluidStack> getAggregatedFluidIngredients() {
-        LinkedHashMap<FluidIdentifier, Integer> fluidCounts = new LinkedHashMap<>();
-        for (PatternFluidStack ingredient : getFluidIngredients()) {
-            fluidCounts.putIfAbsent(ingredient.getFluid(), 0);
-            fluidCounts.compute(ingredient.getFluid(), (key, value) -> value + ingredient.getAmount());
-        }
-
-        ArrayList<PatternFluidStack> result = new ArrayList<>();
-        for (Map.Entry<FluidIdentifier, Integer> entry : fluidCounts.entrySet()) {
-            result.add(new PatternFluidStack(entry.getKey(), entry.getValue()));
-        }
-        return result;
+        return getFluidPatternStacks(getAggregatedInputs());
     }
 
     /**
@@ -169,7 +149,7 @@ public abstract class AbstractPattern {
     }
 
     public boolean isCraftingPattern() {
-        if (patternStack == null) {
+        if (patternStack == null || !patternStack.hasTagCompound()) {
             return false;
         }
         return patternStack.getTagCompound().getBoolean(CRAFTING_PATTERN_TAG);
@@ -239,10 +219,7 @@ public abstract class AbstractPattern {
         if (!getInputs().isEmpty()) {
             StringUtils.addShiftAction(tooltip, () -> {
                 tooltip.add(ChatColor.DARK_GREEN + "Ingredients:");
-                List<IPatternStack> inputs = new ArrayList<>();
-                inputs.addAll(getAggregatedSolidPatternStacks(readSolidRange(0, getIngredientSlotCount())));
-                inputs.addAll(getAggregatedFluidIngredients());
-                addPatternStacksToTooltip(tooltip, inputs, ChatColor.GREEN);
+                addPatternStacksToTooltip(tooltip, getAggregatedInputs(), ChatColor.GREEN);
             });
         }
     }
@@ -268,20 +245,21 @@ public abstract class AbstractPattern {
         return result;
     }
 
-    private List<PatternSolidStack> getAggregatedSolidPatternStacks(List<PatternSolidStack> stacks) {
+    private List<PatternSolidStack> getSolidPatternStacks(List<IPatternStack> stacks) {
         List<PatternSolidStack> result = new ArrayList<>();
-        for (PatternSolidStack stack : stacks) {
-            PatternSolidStack patternStack = stack.copy();
-            boolean merged = false;
-            for (PatternSolidStack existing : result) {
-                if (existing.canMerge(patternStack)) {
-                    existing.addAmount(patternStack.getAmount());
-                    merged = true;
-                    break;
-                }
+        for (IPatternStack stack : stacks) {
+            if (stack instanceof PatternSolidStack) {
+                result.add(((PatternSolidStack) stack).copy());
             }
-            if (!merged) {
-                result.add(patternStack);
+        }
+        return result;
+    }
+
+    private List<PatternFluidStack> getFluidPatternStacks(List<IPatternStack> stacks) {
+        List<PatternFluidStack> result = new ArrayList<>();
+        for (IPatternStack stack : stacks) {
+            if (stack instanceof PatternFluidStack) {
+                result.add(((PatternFluidStack) stack).copy());
             }
         }
         return result;

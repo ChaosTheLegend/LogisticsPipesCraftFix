@@ -24,12 +24,10 @@ class AdjacentInventoryHandler {
 
     private final ModuleItemCrafting module;
     private final PipeItemsPatternCraftingLogistics pipe;
-    private final PatternHandler patternHandler;
 
-    AdjacentInventoryHandler(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe, PatternHandler patternHandler) {
+    AdjacentInventoryHandler(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe) {
         this.module = module;
         this.pipe = pipe;
-        this.patternHandler = patternHandler;
     }
 
     AdjacentTile getConnected() {
@@ -84,8 +82,10 @@ class AdjacentInventoryHandler {
         }
         int sets = Integer.MAX_VALUE;
         boolean hasIngredient = false;
-        List<ItemIdentifierStack> localIngredients = module.getLocalAggregatedIngredients(pattern);
-        if (!localIngredients.isEmpty()) {
+        List<IPatternStack> localIngredients = module.getLocalAggregatedIngredients(pattern);
+        List<ItemIdentifierStack> solidIngredients = getSolidIngredients(localIngredients);
+        List<PatternFluidStack> fluidIngredients = getFluidIngredients(localIngredients);
+        if (!solidIngredients.isEmpty()) {
             hasIngredient = true;
             if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity) {
                 sets = Math.min(
@@ -94,17 +94,17 @@ class AdjacentInventoryHandler {
                                 pattern,
                                 (PatternLogisticsCraftingTableTileEntity) connected.tile));
             } else if (connected.tile instanceof IInventory) {
-                sets = Math.min(sets, availablePatternSetsDisregardingSlots(localIngredients, connected));
+                sets = Math.min(sets, availablePatternSetsDisregardingSlots(solidIngredients, connected));
             } else {
                 return 0;
             }
         }
-        if (!patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()) {
+        if (!fluidIngredients.isEmpty()) {
             hasIngredient = true;
             if (!(connected.tile instanceof IFluidHandler)) {
                 return 0;
             }
-            sets = Math.min(sets, availablePatternSetsForFluids(pattern, connected));
+            sets = Math.min(sets, availablePatternSetsForFluids(fluidIngredients, connected));
         }
         return hasIngredient && sets != Integer.MAX_VALUE ? Math.max(0, sets) : 0;
     }
@@ -117,29 +117,32 @@ class AdjacentInventoryHandler {
         if (connected != null
                 && connected.tile instanceof PatternLogisticsCraftingTableTileEntity
                 && !module.hasLinkedSatelliteAssignments(pattern)
-                && patternHandler.getAggregatedFluidIngredients(pattern).isEmpty()) {
+                && getFluidIngredients(module.getLocalAggregatedIngredients(pattern)).isEmpty()) {
             return ((PatternLogisticsCraftingTableTileEntity) connected.tile).insertPatternFromPatternPipe(pattern, sets);
         }
-        for (ItemIdentifierStack ingredient : module.getLocalAggregatedIngredients(pattern)) {
-            ItemIdentifierStack stack = new ItemIdentifierStack(ingredient.getItem(), ingredient.getStackSize() * sets);
-            if (insert(pattern, stack) != stack.getStackSize()) {
-                return false;
-            }
-        }
-        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
-            PatternFluidStack stack = new PatternFluidStack(ingredient.getFluid(), ingredient.getAmount() * sets);
-            if (insertFluid(stack) != stack.getAmount()) {
-                return false;
+        for (IPatternStack ingredient : module.getLocalAggregatedIngredients(pattern)) {
+            if (ingredient instanceof PatternSolidStack) {
+                ItemIdentifierStack item = ((PatternSolidStack) ingredient).getItem();
+                ItemIdentifierStack stack = new ItemIdentifierStack(item.getItem(), item.getStackSize() * sets);
+                if (insert(pattern, stack) != stack.getStackSize()) {
+                    return false;
+                }
+            } else if (ingredient instanceof PatternFluidStack) {
+                PatternFluidStack fluid = (PatternFluidStack) ingredient;
+                PatternFluidStack stack = new PatternFluidStack(fluid.getFluid(), fluid.getAmount() * sets);
+                if (insertFluid(stack) != stack.getAmount()) {
+                    return false;
+                }
             }
         }
         return true;
     }
 
-    private int availablePatternSetsForFluids(ItemStack pattern, AdjacentTile connected) {
+    private int availablePatternSetsForFluids(List<PatternFluidStack> ingredients, AdjacentTile connected) {
         IFluidHandler handler = (IFluidHandler) connected.tile;
         ForgeDirection side = getFluidInsertionOrientation(connected);
         int sets = Integer.MAX_VALUE;
-        for (PatternFluidStack ingredient : patternHandler.getAggregatedFluidIngredients(pattern)) {
+        for (PatternFluidStack ingredient : ingredients) {
             int upperBound = ingredient.getFluid().getFreeSpaceInsideTank(handler, side) / ingredient.getAmount();
             int low = 0;
             int high = upperBound;
@@ -155,6 +158,27 @@ class AdjacentInventoryHandler {
             sets = Math.min(sets, low);
         }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
+    }
+
+    private List<ItemIdentifierStack> getSolidIngredients(List<IPatternStack> ingredients) {
+        List<ItemIdentifierStack> result = new ArrayList<>();
+        for (IPatternStack ingredient : ingredients) {
+            ItemIdentifierStack stack = PatternStackHelper.asSolidStack(ingredient);
+            if (stack != null) {
+                result.add(stack.clone());
+            }
+        }
+        return result;
+    }
+
+    private List<PatternFluidStack> getFluidIngredients(List<IPatternStack> ingredients) {
+        List<PatternFluidStack> result = new ArrayList<>();
+        for (IPatternStack ingredient : ingredients) {
+            if (ingredient instanceof PatternFluidStack) {
+                result.add(((PatternFluidStack) ingredient).copy());
+            }
+        }
+        return result;
     }
 
     private int availablePatternSetsDisregardingSlots(List<ItemIdentifierStack> ingredients, AdjacentTile connected) {

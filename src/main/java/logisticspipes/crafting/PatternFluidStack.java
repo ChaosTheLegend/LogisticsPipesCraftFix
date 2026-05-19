@@ -1,5 +1,6 @@
 package logisticspipes.crafting;
 
+import gregtech.common.items.ItemFluidDisplay;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
@@ -20,22 +21,31 @@ public class PatternFluidStack implements IPatternStack {
     }
 
     public static PatternFluidStack fromItemStack(ItemStack stack) {
-        if (stack == null || stack.stackSize <= 0) {
-            return null;
+        if (stack == null) return null;
+
+        FluidStack fluid = null;
+
+        if (stack.getItem() instanceof ItemFluidDisplay) {
+
         }
-        FluidStack fluidStack = FluidContainerRegistry.getFluidForFilledItem(stack);
-        if (fluidStack == null && stack.getItem() instanceof IFluidContainerItem) {
-            fluidStack = ((IFluidContainerItem) stack.getItem()).drain(stack, Integer.MAX_VALUE, false);
+
+        if (stack.getItem() instanceof IFluidContainerItem) {
+            fluid = ((IFluidContainerItem) stack.getItem()).getFluid(stack);
+        } else if (FluidContainerRegistry.isContainer(stack)) {
+            fluid = FluidContainerRegistry.getFluidForFilledItem(stack);
         }
-        if (fluidStack == null) {
-            fluidStack = SimpleServiceLocator.logisticsFluidManager
-                    .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+
+        if (fluid == null) {
+            fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
         }
-        if (fluidStack == null) {
-            return null;
-        }
-        int amount = fluidStack.amount > 0 ? fluidStack.amount : (stack.stackSize > 1 ? stack.stackSize : 1000);
-        return new PatternFluidStack(FluidIdentifier.get(fluidStack), amount);
+
+        if (fluid == null) return null;
+
+        fluid = fluid.copy();
+        fluid.amount *= stack.stackSize;
+
+
+        return new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount);
     }
 
     public static PatternFluidStack readFromNBT(NBTTagCompound tag) {
@@ -44,6 +54,13 @@ public class PatternFluidStack implements IPatternStack {
             return null;
         }
         return new PatternFluidStack(FluidIdentifier.get(fluidStack), fluidStack.amount);
+    }
+
+    public static PatternFluidStack fromFluidStack(FluidStack stack) {
+        if (stack == null || stack.amount <= 0) {
+            return null;
+        }
+        return new PatternFluidStack(FluidIdentifier.get(stack), stack.amount);
     }
 
     public FluidIdentifier getFluid() {
