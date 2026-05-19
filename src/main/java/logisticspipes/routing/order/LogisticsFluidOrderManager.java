@@ -1,5 +1,9 @@
 package logisticspipes.routing.order;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.ILPPositionProvider;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
@@ -20,7 +24,15 @@ public class LogisticsFluidOrderManager extends LogisticsOrderManager<LogisticsF
 
         @Override
         public boolean isExtra(LogisticsFluidOrder o) {
-            return false;
+            return o instanceof LogisticsFluidOrderExtra;
+        }
+    }
+
+    private static class LogisticsFluidOrderExtra extends LogisticsFluidOrder {
+
+        public LogisticsFluidOrderExtra(FluidIdentifier liquid, Integer amount, IRequestFluid destination,
+                ResourceType type, IAdditionalTargetInformation info) {
+            super(liquid, amount, destination, type, info);
         }
     }
 
@@ -52,6 +64,44 @@ public class LogisticsFluidOrderManager extends LogisticsOrderManager<LogisticsF
         _orders.addLast(order);
         listen();
         return order;
+    }
+
+    public LogisticsFluidOrderExtra addExtra(FluidIdentifier fluid, int amount) {
+        if (amount < 0) {
+            throw new RuntimeException("The amount can't be less than zero");
+        }
+        LogisticsFluidOrderExtra order = new LogisticsFluidOrderExtra(fluid, amount, null, ResourceType.EXTRA, null);
+        _orders.addLast(order);
+        listen();
+        return order;
+    }
+
+    public void removeExtras(FluidIdentifier fluid, int amount) {
+        int fluidsToRemove = amount;
+        Iterator<LogisticsFluidOrder> iter = _orders.iterator();
+        List<LogisticsFluidOrder> toRemove = new LinkedList<>();
+        while (iter.hasNext()) {
+            LogisticsFluidOrder order = iter.next();
+            if (order.getType() != ResourceType.EXTRA) {
+                continue;
+            }
+            if (order.getFluid().equals(fluid)) {
+                if (fluidsToRemove >= order.getAmount()) {
+                    fluidsToRemove -= order.getAmount();
+                    toRemove.add(order);
+                    if (fluidsToRemove == 0) {
+                        _orders.removeAll(toRemove);
+                        listen();
+                        return;
+                    }
+                } else {
+                    order.reduceAmountBy(fluidsToRemove);
+                    break;
+                }
+            }
+        }
+        _orders.removeAll(toRemove);
+        listen();
     }
 
     public Integer totalFluidsCountInOrders(FluidIdentifier fluid) {

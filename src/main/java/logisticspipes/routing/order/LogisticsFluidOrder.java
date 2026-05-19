@@ -12,9 +12,6 @@ public class LogisticsFluidOrder extends LogisticsOrder {
     public LogisticsFluidOrder(FluidIdentifier fuild, Integer amount, IRequestFluid destination, ResourceType type,
             IAdditionalTargetInformation info) {
         super(type, info);
-        if (destination == null) {
-            throw new NullPointerException();
-        }
         fluid = fuild;
         this.amount = amount;
         this.destination = destination;
@@ -26,6 +23,7 @@ public class LogisticsFluidOrder extends LogisticsOrder {
     @Getter
     private int amount;
 
+    @Getter
     private final IRequestFluid destination;
 
     @Override
@@ -35,11 +33,17 @@ public class LogisticsFluidOrder extends LogisticsOrder {
 
     @Override
     public IRouter getRouter() {
+        if (destination == null) {
+            return null;
+        }
         return destination.getRouter();
     }
 
     @Override
     public void sendFailed() {
+        if (destination == null) {
+            return;
+        }
         destination.sendFailed(fluid, amount);
     }
 

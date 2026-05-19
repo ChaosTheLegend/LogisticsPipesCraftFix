@@ -1,6 +1,7 @@
 package logisticspipes.routing;
 
 import logisticspipes.interfaces.routing.IProvideFluids;
+import logisticspipes.interfaces.routing.ICraftFluids;
 import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.order.IOrderInfoProvider;
@@ -17,11 +18,19 @@ public class FluidExtraPromise extends FluidLogisticsPromise implements IExtraPr
 
     @Override
     public void registerExtras(IResource requestType) {
+        if (getSender() instanceof ICraftFluids) {
+            ((ICraftFluids) getSender()).registerExtras(this);
+        }
     }
 
     @Override
     public FluidExtraPromise copy() {
         return new FluidExtraPromise(getLiquid(), getAmount(), getSender(), provided);
+    }
+
+    @Override
+    public FluidExtraPromise copyWithAmount(int amount) {
+        return new FluidExtraPromise(getLiquid(), amount, getSender(), provided);
     }
 
     @Override
