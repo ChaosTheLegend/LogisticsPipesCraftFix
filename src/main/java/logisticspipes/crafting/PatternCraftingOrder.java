@@ -78,7 +78,7 @@ class PatternCraftingOrder {
      */
     int requestIngredients(ItemStack pattern, int sets) {
         int requestedSets = sets;
-        module.debug("order request ingredients slot=%d requestedSetsStart=%d remainingSets=%d",
+        module.debugEvent("REQUEST", "order request ingredients slot=%d requestedSetsStart=%d remainingSets=%d",
                 patternSlot,
                 sets,
                 remainingSets);
@@ -87,7 +87,7 @@ class PatternCraftingOrder {
                     ingredient.stack,
                     ingredient.stack.getAmount() * requestedSets,
                     ingredient.target);
-            module.debug("order requested ingredient slot=%d ingredient=%s target=%s requested=%d amountPerSet=%d",
+            module.debugEvent("REQUEST", "order requested ingredient slot=%d ingredient=%s target=%s requested=%d amountPerSet=%d",
                     patternSlot,
                     ingredient.stack,
                     ingredient.target,
@@ -95,7 +95,7 @@ class PatternCraftingOrder {
                     ingredient.stack.getAmount());
             if (ingredient.target == null) {
                 requestedIngredient.add(patternSlot, PatternStackHelper.copyWithAmount(ingredient.stack, requested));
-                module.debug("order reserved local requested ingredient slot=%d ingredient=%s requested=%d",
+                module.debugEvent("BUFFER", "order reserved local requested ingredient slot=%d ingredient=%s requested=%d",
                         patternSlot,
                         ingredient.stack,
                         requested);
@@ -187,7 +187,7 @@ class PatternCraftingOrder {
             if (PatternStackHelper.isFluid(ingredient)) {
                 int branchRequested = branch.request(amount - requested);
                 requested += branchRequested;
-                module.debug("branch fluid request slot=%d ingredient=%s requested=%d total=%d/%d",
+                module.debugEvent("REQUEST", "branch fluid request slot=%d ingredient=%s requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
                         branchRequested,
@@ -198,7 +198,7 @@ class PatternCraftingOrder {
                         ? new PatternTargetInformation(patternSlot)
                         : null);
                 requested += branchRequested;
-                module.debug("branch item request slot=%d ingredient=%s target=%s requested=%d total=%d/%d",
+                module.debugEvent("REQUEST", "branch item request slot=%d ingredient=%s target=%s requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
                         targetOverride,

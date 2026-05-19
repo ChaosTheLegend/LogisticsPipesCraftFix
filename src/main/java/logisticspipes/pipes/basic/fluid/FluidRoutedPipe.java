@@ -41,6 +41,10 @@ public abstract class FluidRoutedPipe extends CoreRoutedPipe {
         super(new PipeFluidTransportLogistics(), item);
     }
 
+    protected FluidRoutedPipe(PipeFluidTransportLogistics transport, Item item) {
+        super(transport, item);
+    }
+
     @Override
     public void setTile(TileEntity tile) {
         super.setTile(tile);

@@ -45,6 +45,7 @@ import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
 import logisticspipes.network.packets.orderer.OrdererManagerContent;
 import logisticspipes.network.packets.orderer.PatternCraftingHudContent;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
+import logisticspipes.pipes.basic.fluid.FluidRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.ICraftingTemplate;
@@ -55,17 +56,19 @@ import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.routing.order.LogisticsFluidOrderManager;
+import logisticspipes.routing.order.LogisticsOrderManager;
 import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
-import logisticspipes.transport.PipeTransportLogistics;
+import logisticspipes.transport.PipeFluidTransportLogistics;
 import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.InventoryHelper;
 import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
-public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements ICraftItems, IRequireReliableTransport,
+public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implements ICraftItems, IRequireReliableTransport,
         IFluidSink, IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver {
 
     public enum BlockingMode {
@@ -91,7 +94,7 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     private final Set<Integer> linkedPatternSatelliteIds = new TreeSet<>();
 
     public PipeItemsPatternCraftingLogistics(Item item) {
-        super(new PipeTransportLogistics(true) {
+        super(new PipeFluidTransportLogistics() {
 
             @Override
             public boolean canPipeConnect(TileEntity tile, ForgeDirection dir) {
@@ -350,6 +353,59 @@ public class PipeItemsPatternCraftingLogistics extends CoreRoutedPipe implements
     @Override
     public ItemSendMode getItemSendMode() {
         return ItemSendMode.Normal;
+    }
+
+    @Override
+    public boolean canInsertToTanks() {
+        return false;
+    }
+
+    @Override
+    public boolean canInsertFromSideToTanks() {
+        return false;
+    }
+
+    @Override
+    public boolean canReceiveFluid() {
+        return false;
+    }
+
+    @Override
+    public LogisticsFluidOrderManager getFluidOrderManager() {
+        return fluidOrderManager;
+    }
+
+    @Override
+    public LogisticsOrderManager<?, ?> getOrderManager() {
+        return getItemOrderManager();
+    }
+
+    @Override
+    public boolean sharesInterestWith(CoreRoutedPipe other) {
+        return super.sharesInterestWith(other) || sharesInventoryInterestWith(other);
+    }
+
+    private boolean sharesInventoryInterestWith(CoreRoutedPipe other) {
+        List<IInventory> otherInventories = getConnectedInventories(other);
+        if (otherInventories.isEmpty()) {
+            return false;
+        }
+        for (IInventory inventory : getConnectedInventories(this)) {
+            if (otherInventories.contains(inventory)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<IInventory> getConnectedInventories(CoreRoutedPipe pipe) {
+        List<IInventory> inventories = new ArrayList<>();
+        for (AdjacentTile tile : pipe.getConnectedEntities()) {
+            if (tile.tile instanceof IInventory) {
+                inventories.add(InventoryHelper.getInventory((IInventory) tile.tile));
+            }
+        }
+        return inventories;
     }
 
     @Override

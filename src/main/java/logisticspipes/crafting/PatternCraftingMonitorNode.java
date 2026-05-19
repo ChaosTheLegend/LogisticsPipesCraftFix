@@ -8,12 +8,17 @@ import java.util.List;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
 
 public class PatternCraftingMonitorNode {
 
+    @Getter
     private final ItemIdentifierStack stack;
+    @Getter
     private final int unrequestedAmount;
+    @Getter
     private final int orderedAmount;
+    @Getter
     private boolean inProgress;
     private final List<PatternCraftingMonitorNode> children = new ArrayList<>();
 
@@ -26,22 +31,6 @@ public class PatternCraftingMonitorNode {
         this.unrequestedAmount = Math.max(0, unrequestedAmount);
         this.orderedAmount = Math.max(0, orderedAmount);
         this.inProgress = inProgress;
-    }
-
-    public ItemIdentifierStack getStack() {
-        return stack;
-    }
-
-    public int getUnrequestedAmount() {
-        return unrequestedAmount;
-    }
-
-    public int getOrderedAmount() {
-        return orderedAmount;
-    }
-
-    public boolean isInProgress() {
-        return inProgress;
     }
 
     public List<PatternCraftingMonitorNode> getChildren() {

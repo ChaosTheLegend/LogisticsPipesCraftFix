@@ -68,13 +68,7 @@ public final class PatternCraftingMonitorRegistry {
 
     private static void cleanupFinishedOrders() {
         synchronized (STAGED_ORDERS) {
-            Iterator<IOrderInfoProvider> iterator = STAGED_ORDERS.keySet().iterator();
-            while (iterator.hasNext()) {
-                IOrderInfoProvider order = iterator.next();
-                if (order == null || order.isFinished() && order.getProgresses().isEmpty()) {
-                    iterator.remove();
-                }
-            }
+            STAGED_ORDERS.keySet().removeIf(order -> order == null || order.isFinished() && order.getProgresses().isEmpty());
         }
     }
 }

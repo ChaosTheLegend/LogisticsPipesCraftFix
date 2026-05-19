@@ -20,6 +20,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -42,21 +43,18 @@ public class LogisticPatternHandler implements IOverlayHandler {
         List<IPatternStack> inputs = new ArrayList<>();
         List<IPatternStack> outputs = new ArrayList<>();
 
-        for (var inputStack : in) {
-            if (inputStack == null) continue;
-            var stack = inputStack.getStack();
-
-            if (stack instanceof ItemStack itemStack){
+        in.stream().filter(Objects::nonNull).sorted(Comparator.comparingInt(OrderStack::getIndex)).map(OrderStack::getStack).forEach(stack -> {
+            if (stack instanceof ItemStack itemStack) {
                 PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
-                if (patternSolidStack == null) continue;
+                if (patternSolidStack == null) return;
                 inputs.add(patternSolidStack);
             }
-            if (stack instanceof FluidStack fluidStack){
+            if (stack instanceof FluidStack fluidStack) {
                 PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
-                if (patternFluidStack == null) continue;
+                if (patternFluidStack == null) return;
                 inputs.add(patternFluidStack);
             }
-        }
+        });
 
         for (var outputStack : out) {
             if (outputStack == null) continue;

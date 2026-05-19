@@ -1,19 +1,11 @@
 package logisticspipes.logistics;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeSet;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.FluidStack;
-
 import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.interfaces.routing.IFluidSink;
 import logisticspipes.interfaces.routing.IProvideFluids;
 import logisticspipes.items.LogisticsFluidContainer;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.routing.ExitRoute;
 import logisticspipes.routing.IRouter;
@@ -21,32 +13,31 @@ import logisticspipes.routing.PipeRoutingConnectionType;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.Pair;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fluids.FluidStack;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeSet;
 
 public class LogisticsFluidManager implements ILogisticsFluidManager {
 
     @Override
     public Pair<Integer, Integer> getBestReply(FluidStack stack, IRouter sourceRouter, List<Integer> jamList) {
         for (ExitRoute candidateRouter : sourceRouter.getIRoutersByCost()) {
-            if (!candidateRouter.containsFlag(PipeRoutingConnectionType.canRouteTo)) {
-                continue;
-            }
-            if (candidateRouter.destination.getSimpleID() == sourceRouter.getSimpleID()) {
-                continue;
-            }
-            if (jamList.contains(candidateRouter.destination.getSimpleID())) {
-                continue;
-            }
+            if (!candidateRouter.containsFlag(PipeRoutingConnectionType.canRouteTo)) continue;
+            if (candidateRouter.destination.getSimpleID() == sourceRouter.getSimpleID()) continue;
+            if (jamList.contains(candidateRouter.destination.getSimpleID())) continue;
+            if (candidateRouter.destination.getPipe() == null || !candidateRouter.destination.getPipe().isEnabled()) continue;
 
-            if (candidateRouter.destination.getPipe() == null || !candidateRouter.destination.getPipe().isEnabled()) {
-                continue;
-            }
             CoreRoutedPipe pipe = candidateRouter.destination.getPipe();
+            if (!(pipe instanceof IFluidSink iFluidSink)) continue;
+            if (pipe instanceof PipeItemsPatternCraftingLogistics || pipe instanceof PipeItemsPatternSatelliteLogistics) continue;
 
-            if (!(pipe instanceof IFluidSink)) {
-                continue;
-            }
-
-            int amount = ((IFluidSink) pipe).sinkAmount(stack);
+            int amount = iFluidSink.sinkAmount(stack);
             if (amount > 0) {
                 return new Pair<>(candidateRouter.destination.getSimpleID(), amount);
             }
