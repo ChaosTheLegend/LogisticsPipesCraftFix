@@ -17,6 +17,12 @@ public class PatternFluidCraftingTemplate extends FluidCraftingTemplate {
         this.patternSlot = patternSlot;
     }
 
+    /**
+     * Creates a fluid promise that keeps the source pattern slot and per-set fluid amount.
+     * <p>
+     * The staged crafting module uses those values to request the matching ingredient sets gradually and to drain the
+     * correct amount of crafted fluid from the connected handler.
+     */
     @Override
     public PatternFluidCraftingPromise generatePromise(int nResultSets) {
         return new PatternFluidCraftingPromise(

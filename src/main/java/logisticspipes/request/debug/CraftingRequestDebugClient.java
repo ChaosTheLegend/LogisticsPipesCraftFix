@@ -47,6 +47,7 @@ public final class CraftingRequestDebugClient {
     private static long requestSentAt = 0L;
     private static long nextAutoRefresh = 0L;
     private static DebugWindow window = null;
+    private static boolean clearInfo = false;
 
     private CraftingRequestDebugClient() {}
 
@@ -113,6 +114,11 @@ public final class CraftingRequestDebugClient {
         refreshRequested = true;
     }
 
+    private static void clearInfo() {
+        clearInfo = true;
+        requestRefreshSoon();
+    }
+
     private static void sendRefreshRequest() {
         if (requestInFlight) {
             if (System.currentTimeMillis() - requestSentAt < 5000L) {
@@ -126,7 +132,12 @@ public final class CraftingRequestDebugClient {
         requestInFlight = true;
         requestSentAt = System.currentTimeMillis();
         refreshRequested = false;
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(CraftingRequestDebugRequest.class));
+        var packet = PacketHandler.getPacket(CraftingRequestDebugRequest.class);
+        if (clearInfo) {
+            packet.clearInfo = true;
+            clearInfo = false;
+        }
+        MainProxy.sendPacketToServer(packet);
     }
 
     /**
@@ -146,7 +157,9 @@ public final class CraftingRequestDebugClient {
         private final JCheckBox autoRefresh;
         private final JLabel status;
         private final JTextArea overview;
+        private final JTextArea flow;
         private final JTextArea timeline;
+        private final JTextArea verboseTimeline;
         private final JTextArea requests;
         private final JTextArea pipes;
         private final JTextArea raw;
@@ -170,20 +183,28 @@ public final class CraftingRequestDebugClient {
             autoRefresh = new JCheckBox("Auto refresh", true);
             status = new JLabel("Waiting for snapshot");
 
+            JButton clearInfo = new JButton("Clear Info");
+            clearInfo.addActionListener(e -> clearInfo());
+
             JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT));
             toolbar.add(refresh);
             toolbar.add(autoRefresh);
             toolbar.add(status);
+            toolbar.add(clearInfo);
 
             overview = createTextArea();
+            flow = createTextArea();
             timeline = createTextArea();
+            verboseTimeline = createTextArea();
             requests = createTextArea();
             pipes = createTextArea();
             raw = createTextArea();
 
             JTabbedPane tabs = new JTabbedPane();
             tabs.addTab("Overview", new JScrollPane(overview));
+            tabs.addTab("Crafting Flow", new JScrollPane(flow));
             tabs.addTab("Timeline", new JScrollPane(timeline));
+            tabs.addTab("Verbose Timeline", new JScrollPane(verboseTimeline));
             tabs.addTab("Requests", new JScrollPane(requests));
             tabs.addTab("Pattern Pipes", new JScrollPane(pipes));
             tabs.addTab("Raw", new JScrollPane(raw));
@@ -215,7 +236,9 @@ public final class CraftingRequestDebugClient {
             String header = sections.get("");
             String summary = sections.get("Summary");
             setTextPreservingCaret(overview, joinSections(header, summary));
+            setTextPreservingCaret(flow, sections.get("Crafting Flow"));
             setTextPreservingCaret(timeline, sections.get("Timeline"));
+            setTextPreservingCaret(verboseTimeline, sections.get("Verbose Timeline"));
             setTextPreservingCaret(requests, sections.get("Recorded Request Trees"));
             setTextPreservingCaret(pipes, sections.get("Active Pattern Crafting Pipes"));
             setTextPreservingCaret(raw, text);

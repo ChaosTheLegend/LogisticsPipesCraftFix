@@ -50,6 +50,9 @@ public class LogisticsFluidOrderManager extends LogisticsOrderManager<LogisticsF
         super.sendFailed();
     }
 
+    /**
+     * Adds a normal fluid order for a requester or staged crafting output.
+     */
     public LogisticsFluidOrder addOrder(FluidLogisticsPromise promise, IRequestFluid destination, ResourceType type,
             IAdditionalTargetInformation info) {
         if (promise.getAmount() < 0) {
@@ -66,6 +69,12 @@ public class LogisticsFluidOrderManager extends LogisticsOrderManager<LogisticsF
         return order;
     }
 
+    /**
+     * Adds a destinationless extra fluid order.
+     * <p>
+     * The crafting module drains these orders from the adjacent fluid handler and sends the resulting fluid container
+     * with destination {@code -1}, allowing normal storage routing or dropping if no sink exists.
+     */
     public LogisticsFluidOrderExtra addExtra(FluidIdentifier fluid, int amount) {
         if (amount < 0) {
             throw new RuntimeException("The amount can't be less than zero");
@@ -76,6 +85,12 @@ public class LogisticsFluidOrderManager extends LogisticsOrderManager<LogisticsF
         return order;
     }
 
+    /**
+     * Removes fluid extra orders that have been consumed by another request.
+     * <p>
+     * This mirrors the item extra-order flow: when an extra promise is fulfilled as a real request, the corresponding
+     * destinationless extra order is reduced or removed so the same produced fluid is not extracted twice.
+     */
     public void removeExtras(FluidIdentifier fluid, int amount) {
         int fluidsToRemove = amount;
         Iterator<LogisticsFluidOrder> iter = _orders.iterator();

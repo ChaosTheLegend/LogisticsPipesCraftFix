@@ -30,10 +30,22 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
         this.patternSlot = patternSlot;
     }
 
+    /**
+     * Registers an item output from the same pattern that is not the requested result.
+     * <p>
+     * These outputs become extra promises when the request tree decides to craft this template, so the crafting pipe
+     * will later extract them from the connected inventory and route them to storage or a consumer.
+     */
     public void addByproduct(ItemIdentifierStack stack) {
         byproducts.add(stack);
     }
 
+    /**
+     * Registers a fluid output from the same pattern that is not the requested item result.
+     * <p>
+     * Pattern item crafts may still produce fluid byproducts. They are tracked separately from item byproducts because
+     * the request tree must create {@link FluidExtraPromise}s and the pipe must drain those fluids from a fluid handler.
+     */
     public void addFluidByproduct(FluidIdentifierStack stack) {
         if (stack == null || stack.getStackSize() <= 0) {
             return;
@@ -50,6 +62,12 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
         fluidByproducts.add(new FluidIdentifierStack(stack.getFluidIdentifier(), stack.getStackSize()));
     }
 
+    /**
+     * Creates extra promises for every item and fluid byproduct produced by the requested number of pattern work sets.
+     * <p>
+     * The promises are registered during request fulfilment and become destinationless extra orders. Once the craft has
+     * run, those orders force the pipe to remove the byproducts from the adjacent inventory or fluid handler.
+     */
     @Override
     public List<IExtraPromise> getByproducts(int workSets) {
         List<IExtraPromise> result = new ArrayList<>();
@@ -72,6 +90,12 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
         return result;
     }
 
+    /**
+     * Creates the staged promise for the requested item result and records the pattern slot that produced it.
+     * <p>
+     * The slot and per-set result amount let {@link ModuleItemCrafting} request ingredients gradually while the output
+     * order remains visible in the normal item order manager.
+     */
     @Override
     public IPromise generatePromise(int nCraftingSetsNeeded) {
         return new PatternCraftingPromise(

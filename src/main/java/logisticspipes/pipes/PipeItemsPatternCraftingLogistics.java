@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -13,6 +12,7 @@ import java.util.TreeSet;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModuleItemCrafting;
+import logisticspipes.crafting.PatternCraftingTargetSelector;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.gui.hud.HUDPatternCrafting;
 import logisticspipes.network.LPDataInputStream;
@@ -64,10 +64,17 @@ import logisticspipes.transport.PipeFluidTransportLogistics;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.InventoryHelper;
 import logisticspipes.utils.PlayerCollectionList;
-import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
+/**
+ * Pattern crafting pipe that can stage item and fluid ingredients while still behaving like an item crafting pipe for
+ * normal order-manager and HUD interactions.
+ * <p>
+ * The pipe extends {@link FluidRoutedPipe} so routed fluid containers reach the fluid transport hook, but raw tank
+ * insertion is disabled. Fluid ingredients are accepted through the reliable item-arrival path and buffered by the
+ * crafting module as pattern ingredients.
+ */
 public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implements ICraftItems, IRequireReliableTransport,
         IFluidSink, IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver {
 
@@ -77,19 +84,17 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         SMART
     }
 
-    private static final String CONNECTED_INVENTORY_DIRECTION_TAG = "patternConnectedInventoryDirection";
     private static final String LINKED_PATTERN_SATELLITES_TAG = "linkedPatternSatelliteIds";
 
     private final ModuleItemCrafting module;
     private final LogisticsFluidOrderManager fluidOrderManager;
+    private final PatternCraftingTargetSelector targetSelector;
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
     private final LinkedList<ItemIdentifierStack> oldResultList = new LinkedList<>();
     private final LinkedList<ItemIdentifierStack> displayResultList = new LinkedList<>();
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     private final HUDPatternCrafting HUD = new HUDPatternCrafting(this);
-    private ForgeDirection connectedInventoryDirection = ForgeDirection.UNKNOWN;
-    private AdjacentTile cachedConnectedInventory;
     private boolean doContentUpdate = true;
     private final Set<Integer> linkedPatternSatelliteIds = new TreeSet<>();
 
@@ -115,6 +120,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         module = new ModuleItemCrafting(this);
         _orderItemManager = new logisticspipes.routing.order.LogisticsItemOrderManager(this, this);
         fluidOrderManager = new LogisticsFluidOrderManager(this, this);
+        targetSelector = new PatternCraftingTargetSelector(this);
         throttleTime = 40;
     }
 
@@ -125,7 +131,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
 
     @Override
     public void onNeighborBlockChange(int blockId) {
-        cachedConnectedInventory = null;
+        targetSelector.clearCache();
         super.onNeighborBlockChange(blockId);
     }
 
@@ -135,7 +141,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
             return false;
         }
         if (tile instanceof IInventory || tile instanceof IFluidHandler) {
-            return !isSelectedInventory(tile, dir);
+            return !targetSelector.isSelectedInventory(tile, dir);
         }
         return true;
     }
@@ -166,7 +172,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         }
         if (MainProxy.isServer(entityplayer.worldObj)) {
             if (settings == null || settings.openGui) {
-                cycleConnectedInventory(entityplayer);
+                targetSelector.cycleConnectedInventory(entityplayer);
             } else {
                 entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
             }
@@ -176,11 +182,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     }
 
     public AdjacentTile getConnectedInventoryTile() {
-        if (isCachedConnectedInventoryValid()) {
-            return cachedConnectedInventory;
-        }
-        cachedConnectedInventory = resolveConnectedInventoryTile();
-        return cachedConnectedInventory;
+        return targetSelector.getConnectedInventoryTile();
     }
 
     public boolean isPatternSatelliteLinked(int satelliteId) {
@@ -214,117 +216,11 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         return added;
     }
 
-    private boolean isCachedConnectedInventoryValid() {
-        return cachedConnectedInventory != null
-                && cachedConnectedInventory.orientation == connectedInventoryDirection
-                && cachedConnectedInventory.tile != null
-                && !cachedConnectedInventory.tile.isInvalid()
-                && getAdjacentTile(cachedConnectedInventory.orientation) == cachedConnectedInventory.tile
-                && isSelectableInventory(cachedConnectedInventory.tile, cachedConnectedInventory.orientation);
-    }
-
-    private AdjacentTile resolveConnectedInventoryTile() {
-        AdjacentTile selected = getSelectableAdjacentInventory(connectedInventoryDirection);
-        if (selected != null) {
-            return selected;
-        }
-        if (connectedInventoryDirection != ForgeDirection.UNKNOWN) {
-            return null;
-        }
-        List<AdjacentTile> inventories = getSelectableAdjacentInventories();
-        if (inventories.isEmpty()) {
-            return null;
-        }
-        selected = inventories.get(0);
-        connectedInventoryDirection = selected.orientation;
-        return selected;
-    }
-
-    private boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
-        AdjacentTile selected = getConnectedInventoryTile();
-        return selected != null
-                && selected.tile == tile
-                && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
-    }
-
-    private void cycleConnectedInventory(EntityPlayer player) {
-        List<AdjacentTile> inventories = getSelectableAdjacentInventories();
-        if (inventories.isEmpty()) {
-            connectedInventoryDirection = ForgeDirection.UNKNOWN;
-            cachedConnectedInventory = null;
-            refreshSelectedInventoryConnection();
-            player.addChatComponentMessage(new ChatComponentText("Pattern crafting target: none"));
-            return;
-        }
-        int current = -1;
-        for (int i = 0; i < inventories.size(); i++) {
-            if (inventories.get(i).orientation == connectedInventoryDirection) {
-                current = i;
-                break;
-            }
-        }
-        AdjacentTile selected = inventories.get((current + 1) % inventories.size());
-        connectedInventoryDirection = selected.orientation;
-        cachedConnectedInventory = selected;
-        refreshSelectedInventoryConnection();
-        player.addChatComponentMessage(new ChatComponentText("Pattern crafting target: "
-                + connectedInventoryDirection.name().toLowerCase(Locale.ENGLISH)));
-    }
-
-    private void refreshSelectedInventoryConnection() {
+    public void refreshSelectedInventoryConnection() {
         clearCache();
         triggerConnectionCheck();
         connectionUpdate();
         refreshRender(false);
-    }
-
-    private List<AdjacentTile> getSelectableAdjacentInventories() {
-        List<AdjacentTile> inventories = new ArrayList<>();
-        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
-            AdjacentTile tile = getSelectableAdjacentInventory(direction);
-            if (tile != null) {
-                inventories.add(tile);
-            }
-        }
-        return inventories;
-    }
-
-    private AdjacentTile getSelectableAdjacentInventory(ForgeDirection direction) {
-        if (direction == null || direction == ForgeDirection.UNKNOWN) {
-            return null;
-        }
-        TileEntity tile = getAdjacentTile(direction);
-        if (!isSelectableInventory(tile, direction)) {
-            return null;
-        }
-        return new AdjacentTile(tile, direction);
-    }
-
-    private TileEntity getAdjacentTile(ForgeDirection direction) {
-        if (direction == null || direction == ForgeDirection.UNKNOWN) {
-            return null;
-        }
-        return new WorldUtil(getWorld(), getX(), getY(), getZ()).getAdjacentTileEntitie(direction);
-    }
-
-    private ForgeDirection getDirectionTo(TileEntity tile) {
-        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
-            if (getAdjacentTile(direction) == tile) {
-                return direction;
-            }
-        }
-        return ForgeDirection.UNKNOWN;
-    }
-
-    private boolean isSelectableInventory(TileEntity tile, ForgeDirection direction) {
-        boolean hasInventory = tile instanceof IInventory && ((IInventory) tile).getSizeInventory() > 0;
-        boolean hasTank = tile instanceof IFluidHandler
-                && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
-                && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
-        return (hasInventory || hasTank)
-                && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
-                && !isSideBlocked(direction, false)
-                && transport.canPipeConnect(tile, direction);
     }
 
     @Override
@@ -355,36 +251,74 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         return ItemSendMode.Normal;
     }
 
+    /**
+     * Prevents routed fluid ingredients from being stored in the inherited internal fluid tanks.
+     * <p>
+     * Pattern crafting needs the LogisticsFluidContainer item to arrive so the module can match it to a pattern slot and
+     * record buffered ingredient state.
+     */
     @Override
     public boolean canInsertToTanks() {
         return false;
     }
 
+    /**
+     * Disables the background side-tank transfer behavior from {@link FluidRoutedPipe}.
+     * <p>
+     * The selected adjacent inventory or fluid handler is managed explicitly by {@link ModuleItemCrafting}.
+     */
     @Override
     public boolean canInsertFromSideToTanks() {
         return false;
     }
 
+    /**
+     * Rejects direct fluid-handler fills into this pipe.
+     * <p>
+     * Fluid ingredients must enter as routed fluid container items so request tracking and staged buffer accounting stay
+     * consistent with item ingredients.
+     */
     @Override
     public boolean canReceiveFluid() {
         return false;
     }
 
+    /**
+     * Returns the pattern-specific fluid order manager.
+     * <p>
+     * This manager tracks crafted fluid outputs and fluid extra orders; it is separate from the lazy manager provided by
+     * the generic fluid pipe base class.
+     */
     @Override
     public LogisticsFluidOrderManager getFluidOrderManager() {
         return fluidOrderManager;
     }
 
+    /**
+     * Keeps generic order-manager watching on the item manager.
+     * <p>
+     * Pattern crafting exposes both item and fluid orders in its custom HUD content, but callers expecting CoreRoutedPipe
+     * behavior should still see the item order manager here.
+     */
     @Override
     public LogisticsOrderManager<?, ?> getOrderManager() {
         return getItemOrderManager();
     }
 
+    /**
+     * Combines fluid-pipe shared-tank protection with the original item-inventory overlap protection.
+     * <p>
+     * Extending {@link FluidRoutedPipe} would otherwise only compare adjacent tanks, which would lose the item crafting
+     * safeguard against two crafting pipes pulling from the same inventory.
+     */
     @Override
     public boolean sharesInterestWith(CoreRoutedPipe other) {
         return super.sharesInterestWith(other) || sharesInventoryInterestWith(other);
     }
 
+    /**
+     * Checks whether this pipe and another routed pipe touch the same inventory.
+     */
     private boolean sharesInventoryInterestWith(CoreRoutedPipe other) {
         List<IInventory> otherInventories = getConnectedInventories(other);
         if (otherInventories.isEmpty()) {
@@ -398,6 +332,11 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
         return false;
     }
 
+    /**
+     * Returns normalized inventories connected to a routed pipe.
+     * <p>
+     * Inventory wrappers are normalized through {@link InventoryHelper} to match the old CoreRoutedPipe comparison.
+     */
     private List<IInventory> getConnectedInventories(CoreRoutedPipe pipe) {
         List<IInventory> inventories = new ArrayList<>();
         for (AdjacentTile tile : pipe.getConnectedEntities()) {
@@ -512,7 +451,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     @Override
     public void writeToNBT(NBTTagCompound nbttagcompound) {
         super.writeToNBT(nbttagcompound);
-        nbttagcompound.setInteger(CONNECTED_INVENTORY_DIRECTION_TAG, connectedInventoryDirection.ordinal());
+        targetSelector.writeToNBT(nbttagcompound);
         int[] satelliteIds = new int[linkedPatternSatelliteIds.size()];
         int index = 0;
         for (Integer satelliteId : linkedPatternSatelliteIds) {
@@ -524,37 +463,25 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     @Override
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         super.readFromNBT(nbttagcompound);
-        connectedInventoryDirection = nbttagcompound.hasKey(CONNECTED_INVENTORY_DIRECTION_TAG)
-                ? directionFromOrdinal(nbttagcompound.getInteger(CONNECTED_INVENTORY_DIRECTION_TAG))
-                : ForgeDirection.UNKNOWN;
+        targetSelector.readFromNBT(nbttagcompound);
         linkedPatternSatelliteIds.clear();
         for (int satelliteId : nbttagcompound.getIntArray(LINKED_PATTERN_SATELLITES_TAG)) {
             if (satelliteId > 0) {
                 linkedPatternSatelliteIds.add(satelliteId);
             }
         }
-        cachedConnectedInventory = null;
     }
 
     @Override
     public void writeData(LPDataOutputStream data) throws IOException {
         super.writeData(data);
-        data.writeInt(connectedInventoryDirection.ordinal());
+        targetSelector.writeData(data);
     }
 
     @Override
     public void readData(LPDataInputStream data) throws IOException {
         super.readData(data);
-        connectedInventoryDirection = directionFromOrdinal(data.readInt());
-        cachedConnectedInventory = null;
-    }
-
-    private ForgeDirection directionFromOrdinal(int ordinal) {
-        ForgeDirection[] values = ForgeDirection.values();
-        if (ordinal < 0 || ordinal >= values.length) {
-            return ForgeDirection.UNKNOWN;
-        }
-        return values[ordinal];
+        targetSelector.readData(data);
     }
 
     @Override

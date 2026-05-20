@@ -32,6 +32,12 @@ public class PatternCraftingBranch {
     private final List<PatternCraftingBranch> subRequests;
     private final List<IOrderInfoProvider> liveOrders = new ArrayList<>();
 
+    /**
+     * Captures the request-tree state that belongs to one staged crafting output.
+     * <p>
+     * The branch keeps copies of provider promises, crafting promises, extras, byproducts, and child branches so the
+     * pattern pipe can request ingredients later without rebuilding the original request tree.
+     */
     public PatternCraftingBranch(
             IResource requestType,
             IAdditionalTargetInformation info,
@@ -64,14 +70,23 @@ public class PatternCraftingBranch {
         this.subRequests = subRequests;
     }
 
+    /**
+     * Returns the item or fluid resource represented by this branch.
+     */
     public IResource getRequestType() {
         return requestType;
     }
 
+    /**
+     * Returns child branches that must be requested to satisfy this branch.
+     */
     public List<PatternCraftingBranch> getSubRequests() {
         return Collections.unmodifiableList(subRequests);
     }
 
+    /**
+     * Returns the amount of this branch that has not yet been requested or reserved.
+     */
     public int getRemainingAmount() {
         return remainingAmount;
     }

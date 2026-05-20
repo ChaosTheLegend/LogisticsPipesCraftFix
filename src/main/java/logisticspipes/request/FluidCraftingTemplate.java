@@ -42,6 +42,12 @@ public class FluidCraftingTemplate extends BaseCraftingTemplate {
         byproductItems.add(byproductItem.clone());
     }
 
+    /**
+     * Registers an additional fluid output for a fluid craft.
+     * <p>
+     * The requested fluid result is not stored here; this list only describes extra fluids that must be drained after
+     * the craft so the adjacent handler is ready for later crafts.
+     */
     public void addFluidByproduct(FluidIdentifierStack byproductFluid) {
         if (byproductFluid == null || byproductFluid.getStackSize() <= 0) {
             return;

@@ -210,6 +210,9 @@ class PatternCraftingOrder {
         return requested;
     }
 
+    /**
+     * Checks whether a staged branch can provide the requested item or fluid ingredient.
+     */
     private boolean branchMatches(PatternCraftingBranch branch, IPatternStack ingredient) {
         FluidIdentifier fluid = PatternStackHelper.asFluid(ingredient);
         if (fluid != null) {

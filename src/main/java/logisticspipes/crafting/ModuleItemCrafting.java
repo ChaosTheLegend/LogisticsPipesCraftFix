@@ -2,10 +2,7 @@ package logisticspipes.crafting;
 
 import logisticspipes.interfaces.ISlotUpgradeManager;
 import logisticspipes.interfaces.routing.*;
-import logisticspipes.config.Configs;
 import logisticspipes.logistics.LogisticsManager;
-import logisticspipes.logisticspipes.IRoutedItem;
-import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.network.NewGuiHandler;
@@ -13,7 +10,6 @@ import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.network.abstractguis.ModuleInHandGuiProvider;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.ICraftingTemplate;
@@ -32,8 +28,8 @@ import logisticspipes.routing.LogisticsDictPromise;
 import logisticspipes.routing.LogisticsExtraPromise;
 import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
-import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
+import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.utils.*;
@@ -55,15 +51,11 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.DelayQueue;
 
 public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItems, ICraftFluids, IRequestFluid,
         IRequireReliableTransport, IStagedCraftingProvider {
-
-    private static final int MAX_EXTRACTED_ITEMS_PER_TICK = 64;
-    private static final int MAX_EXTRACTED_STACKS_PER_TICK = 16;
 
     private final PipeItemsPatternCraftingLogistics pipe;
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
@@ -75,7 +67,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private final AdjacentInventoryHandler adjacentInventory;
     private final PatternStackBufferHandler ingredientBuffer = new PatternStackBufferHandler(bufferedIngredients);
     private final PatternStackRequestHandler requestedIngredient = new PatternStackRequestHandler(requestedIngredients);
-    private WeakReference<TileEntity> lastAccessedCrafter = new WeakReference<>(null);
+    private final PatternCraftingTemplateBuilder templateBuilder;
+    private final PatternCraftingResultExtractor resultExtractor;
     private SinkReply sinkReply;
     private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.OFF;
     private int runningCraft = -1;
@@ -85,6 +78,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     public ModuleItemCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
         adjacentInventory = new AdjacentInventoryHandler(this, pipe);
+        templateBuilder = new PatternCraftingTemplateBuilder(this, patternHandler);
+        resultExtractor = new PatternCraftingResultExtractor(this, pipe, adjacentInventory);
         _service = pipe;
         _world = pipe;
         registerPosition(ModulePositionType.IN_PIPE, 0);
@@ -164,6 +159,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return new SinkReply(sinkReply, room, areAllOrdersBuffered() ? BufferMode.DESTINATION_BUFFERED : BufferMode.NONE);
     }
 
+    /**
+     * Reports how much of a routed fluid container can currently be accepted as a pattern ingredient.
+     * <p>
+     * The pattern pipe advertises itself as a fluid sink so storage routing can find it, but the accepted fluid is still
+     * delivered as a LogisticsFluidContainer item and buffered by this module.
+     */
     public int sinkAmount(FluidStack stack) {
         if (stack == null || stack.amount <= 0) {
             return 0;
@@ -184,8 +185,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         pushBufferedIngredients();
         requestIngredientsForStagedCrafts();
         clearRunningCraftIfFinished();
-        craftFromAdjacentInventory();
-        craftFluidsFromAdjacentInventory();
+        resultExtractor.tick();
     }
 
     @Override
@@ -198,6 +198,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return patternHandler.getIngredientItems();
     }
 
+    /**
+     * Returns every item identity this module can craft, including fluid outputs represented by their display item.
+     */
     public Set<ItemIdentifier> getCraftedItems() {
         Set<ItemIdentifier> crafted = new TreeSet<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
@@ -302,6 +305,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         CraftingRequestDebugManager.recordPipeEvent(pipe, category, message, args);
     }
 
+    /**
+     * Offers already-registered extra outputs to a request tree before new crafting work is considered.
+     * <p>
+     * Item extras and fluid extras are checked against their own order managers. If an extra is consumed, fulfilment will
+     * remove or reduce the destinationless extra order so the byproduct is not extracted twice.
+     */
     @Override
     public void canProvide(RequestTreeNode tree, RequestTree root, List<IFilter> filters) {
         IResource requested = tree.getRequestType();
@@ -338,6 +347,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Creates an item output order for a pattern craft or for a previously registered item extra.
+     * <p>
+     * When an extra promise is used to satisfy a request, its destinationless extra order is removed first; the new order
+     * then targets the real requester like a normal craft output.
+     */
     @Override
     public LogisticsOrder fullFill(LogisticsPromise promise, IRequestItems destination, IAdditionalTargetInformation info) {
         if (promise instanceof LogisticsExtraPromise) {
@@ -401,6 +416,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return order;
     }
 
+    /**
+     * Checks whether a promise can be fulfilled as a staged craft for the supplied request resource.
+     */
     private boolean hasRequestTarget(IPromise promise, IResource requestType) {
         if (promise instanceof FluidLogisticsPromise) {
             return requestType instanceof FluidResource && ((FluidResource) requestType).getTarget() != null;
@@ -408,6 +426,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return getRequestTarget(requestType) != null;
     }
 
+    /**
+     * Extracts the item requester from an item resource variant.
+     */
     private IRequestItems getRequestTarget(IResource requestType) {
         if (requestType instanceof ItemResource) {
             return ((ItemResource) requestType).getTarget();
@@ -418,6 +439,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return null;
     }
 
+    /**
+     * Resolves the pattern slot associated with a crafting promise.
+     * <p>
+     * Pattern promises carry this directly; older generic promises fall back to matching the result against configured
+     * pattern outputs.
+     */
     private int getPatternSlotForPromise(IPromise promise) {
         if (promise instanceof PatternCraftingPromise) {
             return ((PatternCraftingPromise) promise).getPatternSlot();
@@ -428,6 +455,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return patternHandler.findPatternSlotForResult(promise.getItemType());
     }
 
+    /**
+     * Resolves how much output one pattern set creates for the given promise.
+     */
     private int getResultAmountPerSet(IPromise promise, int patternSlot) {
         if (promise instanceof PatternCraftingPromise) {
             return ((PatternCraftingPromise) promise).getResultAmountPerSet();
@@ -447,6 +477,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return Collections.emptyMap();
     }
 
+    /**
+     * Creates a fluid output order for a pattern craft or for a previously registered fluid extra.
+     * <p>
+     * Consumed fluid extras are removed from the destinationless extra-order queue before the new requester-targeted
+     * order is added.
+     */
     @Override
     public IOrderInfoProvider fullFill(
             FluidLogisticsPromise promise,
@@ -495,6 +531,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return getID() - request.getID();
     }
 
+    /**
+     * Registers item or fluid byproducts as destinationless extra orders.
+     * <p>
+     * Those orders force the extraction phase to remove extra products from the connected inventory or fluid handler,
+     * then route them to storage or drop them if no storage can accept them.
+     */
     @Override
     public void registerExtras(IPromise promise) {
         if (promise instanceof FluidLogisticsPromise) {
@@ -514,96 +556,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         pipe.getItemOrderManager().addExtra(new DictResource(new ItemIdentifierStack(promise.getItemType(), promise.getAmount()), null));
     }
 
+    /**
+     * Builds a crafting template for the requested item or fluid output.
+     * <p>
+     * The template records all local ingredients and all non-requested outputs as byproducts. Fluid outputs are matched
+     * through their fluid display item identity so the normal request tree can discover them.
+     */
     @Override
     public ICraftingTemplate addCrafting(IResource toCraft) {
-        for (int slot = 0; slot < patternHandler.size(); slot++) {
-            ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null) {
-                continue;
-            }
-            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
-            List<IPatternStack> outputs = configuredPattern.getOutputs();
-            for (IPatternStack output : outputs) {
-                ItemIdentifierStack result = PatternStackHelper.asSolidStack(output);
-                if (result == null || !toCraft.matches(result.getItem(), IResource.MatchSettings.NORMAL)) {
-                    continue;
-                }
-                debug("crafting template matched item output slot=%d result=%s request=%s",
-                        slot,
-                        result,
-                        toCraft);
-                PatternCraftingTemplate template = new PatternCraftingTemplate(result.clone(), this, 0, slot);
-                addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
-                for (IPatternStack byproductStack : outputs) {
-                    ItemIdentifierStack byproduct = PatternStackHelper.asSolidStack(byproductStack);
-                    if (byproduct != null && !byproduct.getItem().equals(result.getItem())) {
-                        template.addByproduct(byproduct.clone());
-                        continue;
-                    }
-                    if (byproductStack instanceof PatternFluidStack) {
-                        PatternFluidStack fluidByproduct = (PatternFluidStack) byproductStack;
-                        template.addFluidByproduct(new FluidIdentifierStack(
-                                fluidByproduct.getFluid(),
-                                fluidByproduct.getAmount()));
-                    }
-                }
-                return template;
-            }
-            for (IPatternStack output : outputs) {
-                if (!(output instanceof PatternFluidStack)) {
-                    continue;
-                }
-                PatternFluidStack result = (PatternFluidStack) output;
-                if (!toCraft.matches(result.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
-                    continue;
-                }
-                debug("crafting template matched fluid output slot=%d result=%s request=%s",
-                        slot,
-                        result,
-                        toCraft);
-                PatternFluidCraftingTemplate template = new PatternFluidCraftingTemplate(
-                        new FluidResource(result.getFluid(), result.getAmount(), this),
-                        this,
-                        0,
-                        slot);
-                addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
-                for (IPatternStack byproductStack : outputs) {
-                    ItemIdentifierStack byproduct = PatternStackHelper.asSolidStack(byproductStack);
-                    if (byproduct != null) {
-                        template.addByproduct(byproduct.clone());
-                        continue;
-                    }
-                    if (byproductStack instanceof PatternFluidStack) {
-                        PatternFluidStack fluidByproduct = (PatternFluidStack) byproductStack;
-                        if (!fluidByproduct.getFluid().equals(result.getFluid())) {
-                            template.addFluidByproduct(new FluidIdentifierStack(
-                                    fluidByproduct.getFluid(),
-                                    fluidByproduct.getAmount()));
-                        }
-                    }
-                }
-                return template;
-            }
-        }
-        return null;
-    }
-
-    private void addPatternIngredients(logisticspipes.request.BaseCraftingTemplate template, List<IPatternStack> ingredients, int slot) {
-        for (IPatternStack ingredient : ingredients) {
-            ItemIdentifierStack item = PatternStackHelper.asSolidStack(ingredient);
-            if (item != null) {
-                debug("template ingredient slot=%d item=%s", slot, item);
-                template.addIngredient(new ItemResource(item.clone(), this), new PatternTargetInformation(slot));
-                continue;
-            }
-            if (ingredient instanceof PatternFluidStack) {
-                PatternFluidStack fluid = (PatternFluidStack) ingredient;
-                debug("template ingredient slot=%d fluid=%s", slot, fluid);
-                template.addIngredient(
-                        new FluidResource(fluid.getFluid(), fluid.getAmount(), this),
-                        new PatternTargetInformation(slot));
-            }
-        }
+        return templateBuilder.addCrafting(toCraft);
     }
 
     @Override
@@ -757,6 +718,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Accepts a routed fluid container as a buffered fluid ingredient for one pattern slot.
+     * <p>
+     * The routed item is consumed only when the full fluid amount can fit in the staged buffer. Partial acceptance would
+     * split the opaque LogisticsFluidContainer item and lose the exact routed-fluid accounting.
+     */
     private void fluidArrived(int patternSlot, ItemStack pattern, ItemIdentifierStack routedStack, FluidStack fluidStack) {
         FluidIdentifier fluid = FluidIdentifier.get(fluidStack);
         if (pattern == null || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
@@ -791,6 +758,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Finds the best pattern slot for a fluid container that arrived without explicit pattern target information.
+     * <p>
+     * Requested fluid ingredients win over general capacity so rerouted or retried fluids complete the craft that asked
+     * for them first.
+     */
     private int findFluidArrivalPattern(FluidIdentifier fluid) {
         int fallback = -1;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
@@ -830,6 +803,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return space;
     }
 
+    /**
+     * Calculates whether an arriving fluid container can be accepted for a pattern slot.
+     * <p>
+     * Fluid containers are accepted all-or-nothing, but blocking mode can reserve one extra craft set when all solid
+     * ingredients for that set are already buffered.
+     */
     private int spaceForArrivingFluidIngredient(int patternSlot, ItemStack pattern, FluidIdentifier fluid) {
         int space = spaceForPatternFluidIngredient(patternSlot, pattern, fluid);
         AdjacentTile connected = adjacentInventory.getConnected();
@@ -847,6 +826,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return space;
     }
 
+    /**
+     * Checks whether every local item ingredient for one set is already buffered.
+     * <p>
+     * This is used before accepting an extra blocking-mode fluid set so a fluid-only buffer cannot start a craft without
+     * its matching solid ingredients.
+     */
     private boolean itemIngredientsBufferedForOneSet(int patternSlot, ItemStack pattern) {
         for (IPatternStack ingredient : getLocalAggregatedIngredients(pattern)) {
             if (!PatternStackHelper.isSolid(ingredient)) {
@@ -907,6 +892,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return Math.max(0, count);
     }
 
+    /**
+     * Calculates how much of a fluid ingredient this module can currently sink.
+     * <p>
+     * This mirrors item capacity but measures millibuckets in the module's pattern buffer instead of item stack counts.
+     */
     private int spaceForFluid(FluidIdentifier fluid, boolean includeInTransit) {
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
@@ -926,6 +916,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return Math.max(0, count);
     }
 
+    /**
+     * Returns whether a pattern slot is currently allowed to receive more local ingredients.
+     * <p>
+     * Blocking modes restrict buffering to the active craft or to an empty connected inventory.
+     */
     private boolean canReceiveForPattern(int patternSlot) {
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
@@ -944,6 +939,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
      * Blocking mode only stages one complete pattern in the module. Smart blocking and non-blocking mode also include
      * the number of complete pattern sets that can currently fit in the adjacent inventory.
      */
+    /**
+     * Calculates item ingredient capacity for one pattern slot, including the number of sets that fit in the adjacent
+     * inventory for non-blocking modes.
+     */
     private int spaceForPatternIngredient(int patternSlot, ItemStack pattern, ItemIdentifier item) {
         int sets = 1;
         if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
@@ -961,6 +960,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return result;
     }
 
+    /**
+     * Calculates fluid ingredient capacity for one pattern slot in millibuckets.
+     */
     private int spaceForPatternFluidIngredient(int patternSlot, ItemStack pattern, FluidIdentifier fluid) {
         int sets = 1;
         if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
@@ -978,6 +980,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return result;
     }
 
+    /**
+     * Dispatches capacity checks for item and fluid pattern ingredients.
+     */
     private int spaceForPatternIngredient(int patternSlot, ItemStack pattern, IPatternStack ingredient) {
         ItemIdentifierStack solid = PatternStackHelper.asSolidStack(ingredient);
         if (solid != null) {
@@ -1124,6 +1129,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return false;
     }
 
+    /**
+     * Resolves the linked pattern satellite assigned to one solid input slot.
+     * <p>
+     * Fluid ingredients are always local to the pattern crafting pipe; only item ingredients can be routed to pattern
+     * satellites.
+     */
     private IRequestItems getSatelliteTargetForInputSlot(AbstractPattern pattern, int inputSlot) {
         if (adjacentInventory.isConnectedToPatternCraftingTable()) {
             return null;
@@ -1135,10 +1146,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return pipe.getLinkedPatternSatellite(satelliteId);
     }
 
+    /**
+     * Returns the mutable ingredient buffer for one pattern slot, creating it on demand.
+     */
     private List<IPatternStack> getBuffer(int patternSlot) {
         return bufferedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
     }
 
+    /**
+     * Returns true when any pattern slot still has local ingredients waiting to be pushed.
+     */
     private boolean hasBufferedIngredients() {
         for (List<IPatternStack> buffer : bufferedIngredients.values()) {
             if (!buffer.isEmpty()) {
@@ -1148,6 +1165,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return false;
     }
 
+    /**
+     * Attempts to push complete buffered pattern sets into the selected adjacent inventory or fluid handler.
+     * <p>
+     * Blocking modes keep one active pattern slot locked until its output has been extracted.
+     */
     private void pushBufferedIngredients() {
         AdjacentTile connected = getConnectedInventoryTile();
         if (connected == null) {
@@ -1174,6 +1196,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Pushes complete buffered sets for one pattern slot into the connected crafting target.
+     */
     private void pushBufferedIngredientsFor(int patternSlot) {
         ItemStack pattern = getPatternStack(patternSlot);
         if (pattern == null) {
@@ -1224,6 +1249,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         requestIngredientsForStagedCrafts();
     }
 
+    /**
+     * Counts complete local ingredient sets currently buffered for one pattern slot.
+     */
     private int completeBufferedSets(int patternSlot, ItemStack pattern) {
         List<IPatternStack> localIngredients = getLocalAggregatedIngredients(pattern);
         int sets = localIngredients.isEmpty() ? 0 : ingredientBuffer.completeSets(patternSlot, localIngredients);
@@ -1234,7 +1262,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     /**
      * Requests ingredients for all staged crafting orders that still have room in this module or the adjacent inventory.
      */
-    private void requestIngredientsForStagedCrafts() {
+    void requestIngredientsForStagedCrafts() {
         for (PatternCraftingOrder order : new ArrayList<>(stagedCrafts)) {
             requestIngredientsForStagedCrafts(order.patternSlot);
         }
@@ -1585,6 +1613,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Re-requests ingredients whose routed item or fluid container was lost before reaching this module.
+     */
     private void retryLostItems() {
         DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>> lost = lostIngredients.poll();
         int rerequested = 0;
@@ -1611,6 +1642,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
     }
 
+    /**
+     * Places a partial request for a lost item or fluid ingredient.
+     */
     private int requestLostIngredient(IPatternStack stack, IAdditionalTargetInformation info) {
         ItemIdentifierStack item = PatternStackHelper.asSolidStack(stack);
         if (item != null) {
@@ -1623,147 +1657,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             return RequestTree.requestFluidPartial(fluid, stack.getAmount(), this, null, info);
         }
         return 0;
-    }
-
-    /**
-     * Drains completed craft results, including extra and byproduct orders that were produced by the same staged craft.
-     */
-    private void craftFromAdjacentInventory() {
-        if (!pipe.isNthTick(6) || !pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
-            return;
-        }
-        List<AdjacentTile> inventories = adjacentInventory.locateInventories();
-        if (inventories.isEmpty()) {
-            debug("extract items failed: no adjacent inventories");
-            pipe.getItemOrderManager().sendFailed();
-            return;
-        }
-        pipe.spawnParticle(Particles.VioletParticle, 2);
-        LogisticsItemOrder order = pipe.getItemOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
-        if (order == null) {
-            debug("extract items skipped: no top order");
-            return;
-        }
-
-        int itemsLeft = MAX_EXTRACTED_ITEMS_PER_TICK;
-        int stacksLeft = MAX_EXTRACTED_STACKS_PER_TICK;
-        boolean extractedAny = false;
-        while (itemsLeft > 0 && stacksLeft > 0
-                && pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
-            order = pipe.getItemOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
-            int maxToSend = Math.min(order.getAmount(), order.getResource().getItem().getMaxStackSize());
-            maxToSend = Math.min(maxToSend, itemsLeft);
-            ItemStack extracted = null;
-            AdjacentTile source = null;
-            for (AdjacentTile tile : inventories) {
-                extracted = adjacentInventory.extract(tile, order.getResource(), maxToSend);
-                if (extracted != null && extracted.stackSize > 0) {
-                    source = tile;
-                    break;
-                }
-            }
-            if (extracted == null || extracted.stackSize <= 0 || source == null) {
-                debugEvent("FLOW", "extract item deferred order=%s amount=%d", order.getResource().getItem(), maxToSend);
-                pipe.getItemOrderManager().deferSend();
-                break;
-            }
-            debugEvent("FLOW", "extract item success order=%s extracted=%d source=%s",
-                    order.getResource().getItem(),
-                    extracted.stackSize,
-                    source.tile);
-            extractedAny = true;
-            itemsLeft -= extracted.stackSize;
-            stacksLeft--;
-            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-            lastAccessedCrafter = new WeakReference<>(source.tile);
-            sendExtracted(order, extracted, source.orientation);
-        }
-        if (extractedAny) {
-            requestIngredientsForStagedCrafts();
-        }
-    }
-
-    private void sendExtracted(LogisticsItemOrder order, ItemStack extracted, ForgeDirection orientation) {
-        if (order.getDestination() != null) {
-            IRoutedItem item = SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted);
-            item.setDestination(order.getDestination().getRouter().getSimpleID());
-            item.setTransportMode(TransportMode.Active);
-            item.setAdditionalTargetInformation(order.getInformation());
-            pipe.queueRoutedItem(item, orientation);
-            pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, item);
-            debugEvent("FLOW", "sent extracted item=%s amount=%d destination=%d",
-                    ItemIdentifier.get(extracted),
-                    extracted.stackSize,
-                    order.getDestination().getRouter().getSimpleID());
-        } else {
-            pipe.sendStack(extracted, -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
-            pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, null);
-            debugEvent("FLOW", "sent extracted item=%s amount=%d without routed destination",
-                    ItemIdentifier.get(extracted),
-                    extracted.stackSize);
-        }
-    }
-
-    /**
-     * Drains completed fluid craft results, including extra and byproduct orders from the connected fluid handler.
-     */
-    private void craftFluidsFromAdjacentInventory() {
-        if (!pipe.isNthTick(6)
-                || !pipe.getPatternFluidOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
-            return;
-        }
-        List<AdjacentTile> handlers = adjacentInventory.locateFluidHandlers();
-        if (handlers.isEmpty()) {
-            debug("extract fluids failed: no adjacent fluid handlers");
-            pipe.getPatternFluidOrderManager().sendFailed();
-            return;
-        }
-        LogisticsFluidOrder order = pipe.getPatternFluidOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
-        if (order == null) {
-            debug("extract fluids skipped: no top fluid order");
-            return;
-        }
-
-        int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
-        PatternFluidStack wanted = new PatternFluidStack(order.getFluid(), amountToDrain);
-        for (AdjacentTile tile : handlers) {
-            FluidStack drained = adjacentInventory.extractFluid(tile, wanted, amountToDrain);
-            if (drained == null || drained.amount <= 0) {
-                continue;
-            }
-            debugEvent("FLOW", "extract fluid success fluid=%s amount=%d source=%s",
-                    order.getFluid(),
-                    drained.amount,
-                    tile.tile);
-            if (order.getDestination() != null) {
-                IRoutedItem item = SimpleServiceLocator.routedItemHelper
-                        .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
-                item.setDestination(order.getRouter().getSimpleID());
-                item.setTransportMode(TransportMode.Active);
-                item.setAdditionalTargetInformation(order.getInformation());
-                pipe.queueRoutedItem(item, tile.orientation);
-                pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, item);
-                debugEvent("FLOW", "sent extracted fluid=%s amount=%d destination=%d",
-                        order.getFluid(),
-                        drained.amount,
-                        order.getDestination().getRouter().getSimpleID());
-            } else {
-                pipe.sendStack(
-                        SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack(),
-                        -1,
-                        CoreRoutedPipe.ItemSendMode.Normal,
-                        order.getInformation());
-                pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, null);
-                debugEvent("FLOW", "sent extracted fluid=%s amount=%d without routed destination",
-                        order.getFluid(),
-                        drained.amount);
-            }
-            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-            requestIngredientsForStagedCrafts();
-            return;
-        }
-        debugEvent("FLOW", "extract fluid deferred fluid=%s amount=%d", order.getFluid(), amountToDrain);
-        pipe.getPatternFluidOrderManager().deferSend();
     }
 
     public void onAllowedRemoval() {
