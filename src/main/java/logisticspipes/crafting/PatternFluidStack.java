@@ -4,6 +4,7 @@ import gregtech.common.items.ItemFluidDisplay;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidContainerRegistry;
@@ -108,6 +109,11 @@ public class PatternFluidStack implements IPatternStack {
     public void writeToNBT(NBTTagCompound tag) {
         tag.setString(TYPE_TAG, TYPE_FLUID);
         tag.setTag(FLUID_TAG, writeToNBT());
+    }
+
+    @Override
+    public Item getItem() {
+        return fluid.getItemIdentifier().item;
     }
 
     @Override

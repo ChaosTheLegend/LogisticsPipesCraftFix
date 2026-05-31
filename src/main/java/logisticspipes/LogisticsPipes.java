@@ -45,6 +45,7 @@ import cpw.mods.fml.relauncher.Side;
 import logisticspipes.crafting.Pattern;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
+import logisticspipes.crafting.requesttable.RequestTablePipe;
 import logisticspipes.asm.LogisticsPipesClassInjector;
 import logisticspipes.asm.wrapper.LogisticsWrapperHandler;
 import logisticspipes.blocks.LogisticsSolidBlock;
@@ -219,6 +220,7 @@ public class LogisticsPipes {
     public static Item LogisticsDestinationPipe;
     public static Item LogisticsFirewallPipe;
     public static Item logisticsRequestTable;
+    public static Item logisticsNewRequestTable;
 
     // Logistics Apiarist's Pipes
     public static Item LogisticsApiaristAnalyzerPipe;
@@ -711,6 +713,7 @@ public class LogisticsPipes {
                 side);
 
         LogisticsPipes.logisticsRequestTable = createPipe(PipeBlockRequestTable.class, "Request Table", side);
+        LogisticsPipes.logisticsNewRequestTable = createPipe(RequestTablePipe.class, "New Request Table", side);
 
         LogisticsPipes.BasicTransportPipe = createPipe(PipeItemsBasicTransport.class, "Basic Transport Pipe", side);
     }

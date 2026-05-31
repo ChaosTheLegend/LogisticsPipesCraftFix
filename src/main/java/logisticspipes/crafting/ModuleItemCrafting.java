@@ -46,7 +46,6 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
@@ -72,6 +71,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     private SinkReply sinkReply;
     private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.OFF;
     private int runningCraft = -1;
+    private boolean runningCraftInAdjacent = false;
     private final Set<Integer> requestingStagedIngredientPatterns = new HashSet<>();
     private boolean checkingBufferedOrders = false;
 
@@ -240,6 +240,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         patternInventory.readFromNBT(tag, "PatternCrafting");
         blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.values()[Math.max(0, Math.min(PipeItemsPatternCraftingLogistics.BlockingMode.values().length - 1, tag.getInteger("patternBlockingMode")))];
         runningCraft = tag.hasKey("runningCraft") ? tag.getInteger("runningCraft") : tag.getInteger("bufferedPatternSlot");
+        runningCraftInAdjacent = tag.hasKey("runningCraftInAdjacent") ? tag.getBoolean("runningCraftInAdjacent") : runningCraft >= 0;
         bufferedIngredients.clear();
         NBTTagList buffer = tag.getTagList("patternIngredientBuffer", tag.getId());
         for (int i = 0; i < buffer.tagCount(); i++) {
@@ -259,10 +260,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                 getBuffer(patternSlot).add(fluid);
             }
         }
-        debug("loaded patterns=%d bufferedSlots=%d runningCraft=%d mode=%s",
+        debug("loaded patterns=%d bufferedSlots=%d runningCraft=%d adjacentBatch=%s mode=%s",
                 patternInventory.getSizeInventory(),
                 bufferedIngredients.size(),
                 runningCraft,
+                runningCraftInAdjacent,
                 blockingMode);
     }
 
@@ -272,6 +274,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         tag.setInteger("patternBlockingMode", blockingMode.ordinal());
         tag.setInteger("runningCraft", runningCraft);
         tag.setInteger("bufferedPatternSlot", runningCraft);
+        tag.setBoolean("runningCraftInAdjacent", runningCraftInAdjacent);
         NBTTagList buffer = new NBTTagList();
         for (Map.Entry<Integer, List<IPatternStack>> entry : bufferedIngredients.entrySet()) {
             for (IPatternStack stack : entry.getValue()) {
@@ -282,9 +285,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
         }
         tag.setTag("patternIngredientBuffer", buffer);
-        debug("saved buffered ingredient slots=%d runningCraft=%d mode=%s",
+        debug("saved buffered ingredient slots=%d runningCraft=%d adjacentBatch=%s mode=%s",
                 bufferedIngredients.size(),
                 runningCraft,
+                runningCraftInAdjacent,
                 blockingMode);
     }
 
@@ -618,6 +622,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
                 .append(isBlockingModeFixed())
                 .append(" runningCraft=")
                 .append(runningCraft)
+                .append(" adjacentBatch=")
+                .append(runningCraftInAdjacent)
                 .append("\n");
         appendConnectedInventoryDebug(out);
         appendPatternDebug(out);
@@ -707,9 +713,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         requestedIngredient.remove(patternSlot, new PatternSolidStack(new ItemIdentifierStack(item.getItem(), accepted)), accepted);
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternSolidStack(new ItemIdentifierStack(item.getItem(), accepted)));
-            if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && runningCraft < 0) {
-                runningCraft = patternSlot;
-            }
+            activateRunningCraftFromBuffer(patternSlot);
             pushBufferedIngredientsFor(patternSlot);
         }
         item.setStackSize(original - accepted);
@@ -749,9 +753,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         requestedIngredient.remove(patternSlot, new PatternFluidStack(fluid, accepted), accepted);
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternFluidStack(fluid, accepted));
-            if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && runningCraft < 0) {
-                runningCraft = patternSlot;
-            }
+            activateRunningCraftFromBuffer(patternSlot);
             pushBufferedIngredientsFor(patternSlot);
             routedStack.setStackSize(0);
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
@@ -934,12 +936,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     }
 
     /**
-     * Calculates module-side capacity for one ingredient according to the current blocking mode.
-     * <p>
-     * Blocking mode only stages one complete pattern in the module. Smart blocking and non-blocking mode also include
-     * the number of complete pattern sets that can currently fit in the adjacent inventory.
-     */
-    /**
      * Calculates item ingredient capacity for one pattern slot, including the number of sets that fit in the adjacent
      * inventory for non-blocking modes.
      */
@@ -1039,7 +1035,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
             if (!(stack instanceof PatternSolidStack)
-                    || !((PatternSolidStack) stack).getItem().getItem().equalsForCrafting(item)) {
+                    || !((PatternSolidStack) stack).getItemIdentifierStack().getItem().equalsForCrafting(item)) {
                 continue;
             }
             IRequestItems target = getSatelliteTargetForInputSlot(configuredPattern, slot);
@@ -1154,21 +1150,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
     }
 
     /**
-     * Returns true when any pattern slot still has local ingredients waiting to be pushed.
-     */
-    private boolean hasBufferedIngredients() {
-        for (List<IPatternStack> buffer : bufferedIngredients.values()) {
-            if (!buffer.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Attempts to push complete buffered pattern sets into the selected adjacent inventory or fluid handler.
      * <p>
-     * Blocking modes keep one active pattern slot locked until its output has been extracted.
+     * Blocking modes keep one active pattern slot locked only while arrived ingredients are still buffered or while the
+     * adjacent target is processing a batch inserted by that slot.
      */
     private void pushBufferedIngredients() {
         AdjacentTile connected = getConnectedInventoryTile();
@@ -1184,13 +1169,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
             }
             return;
         }
-        releaseIdleRunningCraft(connected);
-        if (runningCraft != -1) {
-            Integer next = findCompleteBufferedPattern();
-            if (next != null && isInventoryEmpty(connected)) {
-                runningCraft = next;
-            }
-        }
+        refreshRunningCraftState(connected);
         if (runningCraft >= 0) {
             pushBufferedIngredientsFor(runningCraft);
         }
@@ -1245,6 +1224,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         ingredientBuffer.removePatternSets(patternSlot, getLocalAggregatedIngredients(pattern), sets);
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             runningCraft = patternSlot;
+            runningCraftInAdjacent = true;
         }
         requestIngredientsForStagedCrafts();
     }
@@ -1281,7 +1261,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         }
         try {
             debug("request ingredients slot=%d start stagedCrafts=%d", patternSlot, stagedCrafts.size());
+
             for (PatternCraftingOrder order : new ArrayList<>(stagedCrafts)) {
+                if (order.outputOrder.isFinished()) {
+                    debug("request ingredients slot=%d removing staged order: the order output is already satisfied", order.patternSlot);
+                    stagedCrafts.remove(order);
+                    continue;
+                }
                 if (order.patternSlot != patternSlot) {
                     continue;
                 }
@@ -1371,6 +1357,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return result;
     }
 
+    /**
+     * Returns a pattern slot whose buffered arrived ingredients can be pushed as a complete set.
+     */
     private Integer findCompleteBufferedPattern() {
         for (Integer patternSlot : bufferedIngredients.keySet()) {
             ItemStack pattern = getPatternStack(patternSlot);
@@ -1384,43 +1373,97 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         return null;
     }
 
+    /**
+     * Returns any pattern slot that has arrived local ingredients buffered, even if the set is not complete yet.
+     */
+    private Integer findBufferedPattern() {
+        for (Map.Entry<Integer, List<IPatternStack>> entry : bufferedIngredients.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().isEmpty() || getPatternStack(entry.getKey()) == null) {
+                continue;
+            }
+            return entry.getKey();
+        }
+        return null;
+    }
+
+    /**
+     * Checks whether a pattern slot has arrived ingredients waiting in the module buffer.
+     */
+    private boolean hasBufferedIngredients(int patternSlot) {
+        List<IPatternStack> buffer = bufferedIngredients.get(patternSlot);
+        return buffer != null && !buffer.isEmpty();
+    }
+
+    /**
+     * Marks the first arrived ingredient for a slot as the active blocking craft when no other slot is active.
+     */
+    private void activateRunningCraftFromBuffer(int patternSlot) {
+        if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.OFF || runningCraft >= 0) {
+            return;
+        }
+        runningCraft = patternSlot;
+        runningCraftInAdjacent = false;
+        debug("running craft activated from buffer slot=%d", patternSlot);
+    }
+
+    /**
+     * Returns whether the active slot is still locked by arrived buffered ingredients or an inserted adjacent batch.
+     */
     private boolean isRunningCraftLocked() {
+        refreshRunningCraftState(getConnectedInventoryTile());
         if (runningCraft < 0) {
             return false;
         }
+        if (hasBufferedIngredients(runningCraft)) {
+            return true;
+        }
         AdjacentTile connected = getConnectedInventoryTile();
-        return connected != null && !isInventoryEmpty(connected);
+        return runningCraftInAdjacent && connected != null && !isInventoryEmpty(connected);
     }
 
-    private void releaseIdleRunningCraft(AdjacentTile connected) {
-        if (runningCraft < 0 || connected == null || !isInventoryEmpty(connected)) {
-            return;
-        }
-        ItemStack pattern = getPatternStack(runningCraft);
-        if (pattern == null || completeBufferedSets(runningCraft, pattern) <= 0) {
-            debug("running craft released slot=%d", runningCraft);
+    /**
+     * Releases stale blocking state and adopts already-buffered ingredients as the next active slot.
+     */
+    private void refreshRunningCraftState(AdjacentTile connected) {
+        if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             runningCraft = -1;
-        }
-    }
-
-    private void clearRunningCraftIfFinished() {
-        if (runningCraft < 0) {
+            runningCraftInAdjacent = false;
             return;
         }
-        if (getPatternStack(runningCraft) == null) {
+        if (runningCraft >= 0 && getPatternStack(runningCraft) == null) {
             debug("running craft cleared slot=%d: pattern missing", runningCraft);
             runningCraft = -1;
-            return;
+            runningCraftInAdjacent = false;
         }
-        AdjacentTile connected = getConnectedInventoryTile();
-        releaseIdleRunningCraft(connected);
-        if (runningCraft < 0) {
-            return;
+        if (runningCraft >= 0
+                && runningCraftInAdjacent
+                && (connected == null || isInventoryEmpty(connected))) {
+            debug("running craft adjacent batch finished slot=%d", runningCraft);
+            runningCraftInAdjacent = false;
         }
-        if (!pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING) && !hasBufferedIngredients() && (connected == null || isInventoryEmpty(connected))) {
-            debug("running craft cleared slot=%d: no orders, no buffer, adjacent empty", runningCraft);
+        if (runningCraft >= 0 && !runningCraftInAdjacent && !hasBufferedIngredients(runningCraft)) {
+            debug("running craft released slot=%d: no arrived ingredients remain", runningCraft);
             runningCraft = -1;
         }
+        if (runningCraft < 0) {
+            runningCraftInAdjacent = false;
+            Integer next = findCompleteBufferedPattern();
+            if (next == null) {
+                next = findBufferedPattern();
+            }
+            if (next != null) {
+                runningCraft = next;
+                runningCraftInAdjacent = false;
+                debug("running craft selected buffered slot=%d", runningCraft);
+            }
+        }
+    }
+
+    /**
+     * Refreshes blocking state once per tick after push/request processing.
+     */
+    private void clearRunningCraftIfFinished() {
+        refreshRunningCraftState(getConnectedInventoryTile());
     }
 
     private AdjacentTile getConnectedInventoryTile() {
@@ -1670,6 +1713,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule implements ICraftItem
         stagedCrafts.clear();
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
+        ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
 
         for (List<IPatternStack> value : bufferedIngredients.values()) {
             for (IPatternStack ingredient : value) {

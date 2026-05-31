@@ -1,5 +1,6 @@
 package logisticspipes.crafting;
 
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -44,4 +45,6 @@ public interface IPatternStack {
     ItemStack makeDisplayItemStack();
 
     void writeToNBT(NBTTagCompound tag);
+
+    Item getItem();
 }

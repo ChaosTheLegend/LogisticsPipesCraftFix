@@ -24,9 +24,9 @@ import logisticspipes.utils.tuples.Pair;
 
 public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pair<ItemStack, Integer>> {
 
-    private final ItemStack[] _contents;
+    private ItemStack[] _contents;
     private final String _name;
-    private final int _stackLimit;
+    private int _stackLimit;
 
     private final LinkedList<ISimpleInventoryEventHandler> _listener = new LinkedList<>();
 
@@ -34,6 +34,36 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
         _contents = new ItemStack[size];
         _name = name;
         _stackLimit = stackLimit;
+    }
+
+    /**
+     * Resizes this inventory while preserving all stacks that still fit into the new slot range.
+     *
+     * @param size new inventory size
+     */
+    public void setSizeInventory(int size) {
+        if (size < 0) {
+            throw new IllegalArgumentException("Inventory size cannot be negative");
+        }
+        if (_contents.length == size) {
+            return;
+        }
+        _contents = Arrays.copyOf(_contents, size);
+        markDirty();
+    }
+
+    /**
+     * Changes the maximum amount accepted by a single slot.
+     *
+     * @param stackLimit new per-slot stack limit
+     */
+    public void setInventoryStackLimit(int stackLimit) {
+        int newStackLimit = Math.max(1, stackLimit);
+        if (_stackLimit == newStackLimit) {
+            return;
+        }
+        _stackLimit = newStackLimit;
+        markDirty();
     }
 
     @Override
@@ -106,6 +136,10 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
 
     public void readFromNBT(NBTTagCompound nbttagcompound, String prefix) {
         NBTTagList nbttaglist = nbttagcompound.getTagList(prefix + "items", nbttagcompound.getId());
+        int storedSize = nbttagcompound.getInteger(prefix + "itemsCount");
+        if (storedSize > _contents.length) {
+            setSizeInventory(storedSize);
+        }
 
         for (int j = 0; j < nbttaglist.tagCount(); ++j) {
             NBTTagCompound nbttagcompound2 = nbttaglist.getCompoundTagAt(j);

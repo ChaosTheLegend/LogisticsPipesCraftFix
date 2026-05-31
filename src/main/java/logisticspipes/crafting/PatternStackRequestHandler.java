@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
+import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
 
 class PatternStackRequestHandler {
 

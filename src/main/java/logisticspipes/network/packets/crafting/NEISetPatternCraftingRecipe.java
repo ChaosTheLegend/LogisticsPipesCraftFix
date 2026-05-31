@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.glodblock.github.util.FluidPatternDetails;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.AbstractPattern;
 import logisticspipes.crafting.IPatternStack;
@@ -29,6 +30,7 @@ import lombok.experimental.Accessors;
 public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 
     private List<IPatternStack> inputs = new ArrayList<>();
+    private List<Integer> indices = new ArrayList<>();
     private List<IPatternStack> outputs = new ArrayList<>();
     private int patternInventorySlot = -1;
     private ItemStack result;
@@ -42,7 +44,7 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 
         if (patternInventorySlot >= 0) {
 
-            importRecipe(player, patternInventorySlot, inputs, outputs);
+            importRecipe(player, patternInventorySlot, inputs, indices, outputs);
             return;
         }
 
@@ -56,7 +58,7 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 //                }
     }
 
-    public void importRecipe(EntityPlayer player, int patternInventorySlot, @NonNull List<IPatternStack> inputs, @NonNull List<IPatternStack> outputs) {
+    public void importRecipe(EntityPlayer player, int patternInventorySlot, @NonNull List<IPatternStack> inputs, @NonNull List<Integer> indices, @NonNull List<IPatternStack> outputs) {
         if (patternInventorySlot < 0 || patternInventorySlot >= player.inventory.mainInventory.length) return;
 
         ItemStack patternStack = player.inventory.mainInventory[patternInventorySlot];
@@ -64,7 +66,7 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 
         //clear pattern
         AbstractPattern pattern = Pattern.fromStack(patternStack);
-        pattern.setInputsAndOutputs(inputs, outputs);
+        pattern.setInputsAndOutputs(inputs, indices, outputs);
 
         //reload the gui from the new pattern
         if (!(player.openContainer instanceof PatternContainer container)) return;
@@ -82,10 +84,16 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 
         data.writeInt(patternInventorySlot);
         data.writeList(inputs, (data1, object) -> {
-            var nbt =  new NBTTagCompound();
+            var nbt = new NBTTagCompound();
             object.writeToNBT(nbt);
             data1.writeNBTTagCompound(nbt);
         });
+
+        var indicesNBT = new NBTTagCompound();
+        for (int i = 0; i < indices.size(); i++) {
+            indicesNBT.setInteger(String.valueOf(i), indices.get(i));
+        }
+        data.writeNBTTagCompound(indicesNBT);
 
         data.writeList(outputs, (data1, object) -> {
             var nbt = new NBTTagCompound();
@@ -100,6 +108,10 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
 
         patternInventorySlot = data.readInt();
         inputs = data.readList(data1 -> IPatternStack.readFromNBT(data1.readNBTTagCompound()));
+        var indicesNBT = data.readNBTTagCompound();
+        for (int i = 0; i < inputs.size(); i++) {
+            indices.add(indicesNBT.getInteger(String.valueOf(i)));
+        }
         outputs = data.readList(data1 -> IPatternStack.readFromNBT(data1.readNBTTagCompound()));
     }
 }

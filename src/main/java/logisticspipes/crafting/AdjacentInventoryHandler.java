@@ -134,7 +134,7 @@ class AdjacentInventoryHandler {
         }
         for (IPatternStack ingredient : module.getLocalAggregatedIngredients(pattern)) {
             if (ingredient instanceof PatternSolidStack) {
-                ItemIdentifierStack item = ((PatternSolidStack) ingredient).getItem();
+                ItemIdentifierStack item = ((PatternSolidStack) ingredient).getItemIdentifierStack();
                 ItemIdentifierStack stack = new ItemIdentifierStack(item.getItem(), item.getStackSize() * sets);
                 int inserted = insert(pattern, stack);
                 module.debug("adjacent insert item ingredient=%s wanted=%d inserted=%d", item.getItem(), stack.getStackSize(), inserted);

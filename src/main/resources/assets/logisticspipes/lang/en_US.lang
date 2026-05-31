@@ -182,6 +182,8 @@ item.PipeFluidSatellite=Logistics Fluid Satellite Pipe
 item.PipeFluidSatellite.name=Logistics Fluid Satellite Pipe
 item.PipeBlockRequestTable=Logistics Request Table
 item.PipeBlockRequestTable.name=Logistics Request Table
+item.RequestTablePipe=New Logistics Request Table
+item.RequestTablePipe.name=New Logistics Request Table
 
 item.logisticspipes.tip.active_destination=Valid destination for %cYELLOW Active%cGRAY  routes
 item.logisticspipes.tip.passive_destination=Valid destination for %cYELLOW Passive%cGRAY  routes
@@ -312,6 +314,10 @@ item.OpaqueUpgrade=Opaque Upgrade
 item.CraftingCleanupUpgrade=Crafting Cleanup Upgrade
 item.LogicControllerUpgrade=Logic Controller Upgrade
 item.UpgradeModuleUpgrade=Upgrade Module Upgrade
+item.RequestTableItemInventoryUpgrade=Request Table Item Slot Upgrade
+item.RequestTableItemStackUpgrade=Request Table Item Stack Upgrade
+item.RequestTableFluidInventoryUpgrade=Request Table Fluid Slot Upgrade
+item.RequestTableFluidCapacityUpgrade=Request Table Fluid Capacity Upgrade
 
 #Upgrade info
 

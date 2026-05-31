@@ -1,7 +1,6 @@
 package logisticspipes.nei;
 
-import com.glodblock.github.nei.AE2FC_NEIGuiHandler;
-import com.glodblock.github.nei.recipes.FluidRecipe;
+//import com.glodblock.github.nei.recipes.FluidRecipe;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
@@ -12,6 +11,7 @@ import cpw.mods.fml.common.Mod;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.config.Configs;
 import logisticspipes.crafting.PatternGui;
+import logisticspipes.crafting.requesttable.RequestTableGui;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.GuiSolderingStation;
 import logisticspipes.gui.orderer.GuiRequestTable;
@@ -51,15 +51,16 @@ public class NEILogisticsPipesConfig implements IConfigureNEI {
                 LogisticsCraftingOverlayHandler.INSTANCE,
                 "crafting");
         API.registerGuiOverlayHandler(GuiRequestTable.class, LogisticsCraftingOverlayHandler.INSTANCE, "crafting");
+        API.registerGuiOverlayHandler(RequestTableGui.class, LogisticsCraftingOverlayHandler.INSTANCE, "crafting");
 
         //register pattern handling
         API.registerNEIGuiHandler(new LogisticsPattern_NEIGuiHandler());
         API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, "crafting");
-        for (String identifier : FluidRecipe.getSupportRecipes()) {
-            if (!API.hasGuiOverlayHandler(PatternGui.class, identifier)) {
-                API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, identifier);
-            }
-        }
+//        for (String identifier : FluidRecipe.getSupportRecipes()) {
+//            if (!API.hasGuiOverlayHandler(PatternGui.class, identifier)) {
+//                API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, identifier);
+//            }
+//        }
 
 
         if (LogisticsPipes.isGTNH) {

@@ -12,6 +12,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.ChatColor;
 import logisticspipes.utils.string.StringUtils;
 import org.jetbrains.annotations.Nullable;
+import scala.Int;
 
 public abstract class AbstractPattern {
 
@@ -240,7 +241,7 @@ public abstract class AbstractPattern {
     private List<ItemIdentifierStack> toItemIdentifierStacks(List<PatternSolidStack> stacks) {
         List<ItemIdentifierStack> result = new ArrayList<>();
         for (PatternSolidStack stack : stacks) {
-            result.add(stack.getItem().clone());
+            result.add(stack.getItemIdentifierStack().clone());
         }
         return result;
     }
@@ -324,23 +325,16 @@ public abstract class AbstractPattern {
      * @param inputs the new inputs
      * @param outputs the new outputs
      */
-    public void setInputsAndOutputs(@NonNull List<@Nullable IPatternStack> inputs, @NonNull List<@NonNull IPatternStack> outputs) {
+    public void setInputsAndOutputs(@NonNull List<IPatternStack> inputs, @NonNull List<Integer> indices, @NonNull List<IPatternStack> outputs) {
         clear();
 
-        boolean isCraftingPattern = isCraftingPattern();
-
-        int patternSlotId = 0;
-        for (int i = 0; i < inputs.size() && patternSlotId < getIngredientSlotCount(); i++) {
+        for (int i = 0; i < inputs.size(); i++) {
             IPatternStack input = inputs.get(i);
 
-            // in processing patterns we ignore empty stacks
-            if (!isCraftingPattern && input == null) continue;
-
-            setPatternStackInSlot(patternSlotId, input);
-            patternSlotId++;
+            setPatternStackInSlot(indices.get(i), input);
         }
 
-        patternSlotId = getIngredientSlotCount();
+        var patternSlotId = getIngredientSlotCount();
         for (int i = 0; i < outputs.size() && patternSlotId < getItemSlotCount(); i++) {
             IPatternStack output = outputs.get(i);
             setPatternStackInSlot(patternSlotId, output);

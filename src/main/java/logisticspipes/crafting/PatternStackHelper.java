@@ -46,7 +46,7 @@ final class PatternStackHelper {
 
     static ItemIdentifierStack asSolidStack(IPatternStack stack) {
         if (stack instanceof PatternSolidStack) {
-            return ((PatternSolidStack) stack).getItem();
+            return ((PatternSolidStack) stack).getItemIdentifierStack();
         }
         return null;
     }

@@ -33,4 +33,11 @@ public class PatternCraftingPromise extends LogisticsPromise {
     public PatternCraftingPromise copy() {
         return new PatternCraftingPromise(item, numberOfItems, sender, patternSlot, resultAmountPerSet);
     }
+
+    /**
+     * Returns a resized copy while preserving the pattern metadata needed for staged crafting.
+     */
+    public PatternCraftingPromise copyWithAmount(int amount) {
+        return new PatternCraftingPromise(item, amount, sender, patternSlot, resultAmountPerSet);
+    }
 }

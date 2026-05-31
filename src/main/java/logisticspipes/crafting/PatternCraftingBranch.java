@@ -3,6 +3,7 @@ package logisticspipes.crafting;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IRequestItems;
@@ -12,6 +13,7 @@ import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidLogisticsPromise;
+import logisticspipes.routing.LogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.utils.FluidIdentifier;
@@ -67,7 +69,7 @@ public class PatternCraftingBranch {
         this.remainingCraftingAmount = this.originalCraftingAmount;
         this.extraPromises = extraPromises;
         this.byproducts = byproducts;
-        this.subRequests = subRequests;
+        this.subRequests = mergeCompatibleBranches(subRequests);
     }
 
     /**
@@ -184,11 +186,12 @@ public class PatternCraftingBranch {
     public int request(int amount, IRequestItems targetOverride, IAdditionalTargetInformation infoOverride) {
         int wanted = Math.min(amount, remainingAmount);
         int requested = 0;
-        for (PromiseState promiseState : promises) {
+        for (int promiseIndex = 0; promiseIndex < promises.size() && requested < wanted; promiseIndex++) {
+            PromiseState promiseState = promises.get(promiseIndex);
             if (requested >= wanted) {
                 break;
             }
-            int toRequest = Math.min(wanted - requested, promiseState.remainingAmount);
+            int toRequest = requestAmountForPromiseBatch(promiseIndex, wanted - requested);
             if (toRequest <= 0) {
                 continue;
             }
@@ -218,7 +221,7 @@ public class PatternCraftingBranch {
                 registerExtrasFor(toRequest);
                 remainingCraftingAmount -= toRequest;
             }
-            promiseState.remainingAmount -= toRequest;
+            consumePromiseBatch(promiseIndex, promiseState.promise, toRequest);
             remainingAmount -= toRequest;
             requested += toRequest;
         }
@@ -381,6 +384,95 @@ public class PatternCraftingBranch {
     }
 
     /**
+     * Calculates how much can be fulfilled as one promise operation.
+     * <p>
+     * Adjacent compatible staged crafting promises are merged here so one parent ingredient request becomes one staged
+     * child craft. The request tree may contain several smaller promises because it balanced work while building the
+     * tree, but the pattern pipe can handle the combined batch as long as the promises target the same staged provider
+     * and pattern.
+     */
+    private int requestAmountForPromiseBatch(int startIndex, int maxAmount) {
+        PromiseState first = promises.get(startIndex);
+        if (first.remainingAmount <= 0) {
+            return 0;
+        }
+        int amount = Math.min(maxAmount, first.remainingAmount);
+        if (!isMergeableStagedPromise(first.promise)) {
+            return amount;
+        }
+        for (int i = startIndex + 1; i < promises.size() && amount < maxAmount; i++) {
+            PromiseState candidate = promises.get(i);
+            if (candidate.remainingAmount <= 0) {
+                continue;
+            }
+            if (!canMergePromiseBatch(first.promise, candidate.promise)) {
+                break;
+            }
+            amount += Math.min(maxAmount - amount, candidate.remainingAmount);
+        }
+        return amount;
+    }
+
+    /**
+     * Consumes the promise states represented by a fulfilled batch.
+     */
+    private void consumePromiseBatch(int startIndex, IPromise firstPromise, int amount) {
+        int left = amount;
+        for (int i = startIndex; i < promises.size() && left > 0; i++) {
+            PromiseState current = promises.get(i);
+            if (current.remainingAmount <= 0) {
+                continue;
+            }
+            if (i != startIndex && !canMergePromiseBatch(firstPromise, current.promise)) {
+                break;
+            }
+            int moved = Math.min(left, current.remainingAmount);
+            current.remainingAmount -= moved;
+            left -= moved;
+        }
+    }
+
+    private boolean isMergeableStagedPromise(IPromise promise) {
+        return promise.getType() == ResourceType.CRAFTING
+                && promise.getProvider() instanceof IStagedCraftingProvider;
+    }
+
+    private boolean canMergePromiseBatch(IPromise first, IPromise candidate) {
+        if (!isMergeableStagedPromise(first) || !isMergeableStagedPromise(candidate)) {
+            return false;
+        }
+        if (first.getProvider() != candidate.getProvider()
+                || !first.getItemType().equals(candidate.getItemType())) {
+            return false;
+        }
+        if (first instanceof PatternCraftingPromise || candidate instanceof PatternCraftingPromise) {
+            if (!(first instanceof PatternCraftingPromise) || !(candidate instanceof PatternCraftingPromise)) {
+                return false;
+            }
+            PatternCraftingPromise firstPattern = (PatternCraftingPromise) first;
+            PatternCraftingPromise candidatePattern = (PatternCraftingPromise) candidate;
+            return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()
+                    && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
+        }
+        if (first instanceof PatternFluidCraftingPromise || candidate instanceof PatternFluidCraftingPromise) {
+            if (!(first instanceof PatternFluidCraftingPromise) || !(candidate instanceof PatternFluidCraftingPromise)) {
+                return false;
+            }
+            PatternFluidCraftingPromise firstPattern = (PatternFluidCraftingPromise) first;
+            PatternFluidCraftingPromise candidatePattern = (PatternFluidCraftingPromise) candidate;
+            return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()
+                    && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
+        }
+        if (first instanceof FluidLogisticsPromise || candidate instanceof FluidLogisticsPromise) {
+            return first instanceof FluidLogisticsPromise
+                    && candidate instanceof FluidLogisticsPromise
+                    && ((FluidLogisticsPromise) first).getLiquid()
+                            .equals(((FluidLogisticsPromise) candidate).getLiquid());
+        }
+        return true;
+    }
+
+    /**
      * Copies promise states in request order until {@code amount} items are represented.
      */
     private List<PromiseState> copyPromiseStatesFor(int amount) {
@@ -442,6 +534,59 @@ public class PatternCraftingBranch {
         return allocations;
     }
 
+    /**
+     * Combines equivalent sibling branches that were split while the request tree probed partial crafting capacity.
+     */
+    private static List<PatternCraftingBranch> mergeCompatibleBranches(List<PatternCraftingBranch> branches) {
+        List<PatternCraftingBranch> merged = new ArrayList<>();
+        for (PatternCraftingBranch branch : branches) {
+            int index = findCompatibleBranch(merged, branch);
+            if (index < 0) {
+                merged.add(branch);
+            } else {
+                merged.set(index, merged.get(index).mergeWith(branch));
+            }
+        }
+        return merged;
+    }
+
+    private static int findCompatibleBranch(List<PatternCraftingBranch> branches, PatternCraftingBranch candidate) {
+        for (int i = 0; i < branches.size(); i++) {
+            if (branches.get(i).canMergeWith(candidate)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private boolean canMergeWith(PatternCraftingBranch other) {
+        return other != null
+                && Objects.equals(info, other.info)
+                && requestType.getClass() == other.requestType.getClass()
+                && requestType.matches(other.requestType.getAsItem(), IResource.MatchSettings.NORMAL)
+                && other.requestType.matches(requestType.getAsItem(), IResource.MatchSettings.NORMAL);
+    }
+
+    private PatternCraftingBranch mergeWith(PatternCraftingBranch other) {
+        List<PromiseState> mergedPromises = new ArrayList<>(promises);
+        mergedPromises.addAll(other.promises);
+        List<ExtraState> mergedExtras = new ArrayList<>(extraPromises);
+        mergedExtras.addAll(other.extraPromises);
+        List<ExtraState> mergedByproducts = new ArrayList<>(byproducts);
+        mergedByproducts.addAll(other.byproducts);
+        List<PatternCraftingBranch> mergedChildren = new ArrayList<>(subRequests);
+        mergedChildren.addAll(other.subRequests);
+        return new PatternCraftingBranch(
+                requestType.copyForDisplayWith(originalAmount + other.originalAmount),
+                info,
+                originalAmount + other.originalAmount,
+                remainingAmount + other.remainingAmount,
+                mergedPromises,
+                mergedExtras,
+                mergedByproducts,
+                mergedChildren);
+    }
+
     private static List<PromiseState> copyPromiseStates(List<IPromise> promises) {
         List<PromiseState> result = new ArrayList<>();
         for (IPromise promise : promises) {
@@ -497,10 +642,17 @@ public class PatternCraftingBranch {
      * Creates a promise copy with the requested amount while keeping the source promise untouched.
      */
     private static IPromise copyPromiseForAmount(IPromise promise, int amount) {
+        if (promise instanceof PatternCraftingPromise) {
+            return ((PatternCraftingPromise) promise).copyWithAmount(amount);
+        }
         if (promise instanceof FluidLogisticsPromise) {
             return ((FluidLogisticsPromise) promise).copyWithAmount(amount);
         }
         IPromise copy = promise.copy();
+        if (copy instanceof LogisticsPromise) {
+            ((LogisticsPromise) copy).numberOfItems = amount;
+            return copy;
+        }
         if (copy.getAmount() > amount) {
             copy.split(copy.getAmount() - amount);
         }

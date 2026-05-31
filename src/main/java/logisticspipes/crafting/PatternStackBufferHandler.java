@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
+import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
 
 class PatternStackBufferHandler {
 
@@ -121,5 +124,22 @@ class PatternStackBufferHandler {
 
     private List<IPatternStack> getBuffer(int patternSlot) {
         return bufferedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
+    }
+
+    public void dropContents(World world, int x, int y, int z) {
+        if (MainProxy.isServer(world)) {
+            for (List<IPatternStack> patternStacks : bufferedIngredients.values()) {
+                // we need to drop stack by stack in case we stored a higher stack count than possible (otherwise we could get a 256 stack of oak planks)
+                for (IPatternStack patternStack : patternStacks) {
+                    var item = patternStack.getItem();
+                    var maxStackSize = new ItemStack(item, 0).getMaxStackSize();
+                    while (patternStack.getAmount() > 0) {
+                        ItemStack toDrop = new ItemStack(item);
+                        toDrop.stackSize = Math.min(patternStack.getAmount(), maxStackSize);
+                        patternStack.addAmount(-toDrop.stackSize);
+                    }
+                }
+            }
+        }
     }
 }

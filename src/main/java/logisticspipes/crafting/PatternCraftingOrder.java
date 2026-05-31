@@ -19,7 +19,7 @@ class PatternCraftingOrder {
     final List<PatternCraftingBranch> ingredientBranches;
     int remainingSets;
 
-    private final IOrderInfoProvider outputOrder;
+    final IOrderInfoProvider outputOrder;
     private final ModuleItemCrafting module;
     private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;

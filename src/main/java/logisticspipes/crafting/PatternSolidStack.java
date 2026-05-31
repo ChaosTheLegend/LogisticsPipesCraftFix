@@ -1,5 +1,6 @@
 package logisticspipes.crafting;
 
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -25,7 +26,7 @@ public class PatternSolidStack implements IPatternStack {
         return fromItemStack(stack);
     }
 
-    public ItemIdentifierStack getItem() {
+    public ItemIdentifierStack getItemIdentifierStack() {
         return stack;
     }
 
@@ -69,5 +70,10 @@ public class PatternSolidStack implements IPatternStack {
     @Override
     public String toString() {
         return stack.toString();
+    }
+
+    @Override
+    public Item getItem() {
+        return stack.getItem().item;
     }
 }
