@@ -3,8 +3,8 @@ package logisticspipes.nei;
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
-//import com.glodblock.github.nei.object.OrderStack;
-//import com.glodblock.github.nei.recipes.FluidRecipe;
+import com.glodblock.github.nei.object.OrderStack;
+import com.glodblock.github.nei.recipes.FluidRecipe;
 import logisticspipes.crafting.IPatternStack;
 import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.crafting.PatternGui;
@@ -17,7 +17,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -34,53 +33,53 @@ public class LogisticPatternHandler implements IOverlayHandler {
         if (!(firstGui instanceof PatternGui gui)) return;
 
         // we can just steal ae2 fluid implementation here for now, so we dont need to rewrite all the handlers.
-//        List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
-//        List<OrderStack<?>> out = FluidRecipe.getPackageOutputs(recipe, recipeIndex, true);
-//
-//        List<IPatternStack> inputs = new ArrayList<>();
-//        List<Integer> indices = new ArrayList<>();
-//        List<IPatternStack> outputs = new ArrayList<>();
-//
-//        for (OrderStack<?> orderStack : in) {
-//            var stack = orderStack.getStack();
-//            if (stack instanceof ItemStack itemStack) {
-//                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
-//                if (patternSolidStack == null) continue;
-//
-//                inputs.add(patternSolidStack);
-//                indices.add(orderStack.getIndex());
-//            }
-//            if (stack instanceof FluidStack fluidStack) {
-//                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
-//                if (patternFluidStack == null) continue;
-//
-//                inputs.add(patternFluidStack);
-//                indices.add(orderStack.getIndex());
-//            }
-//        }
-//
-//        for (var outputStack : out) {
-//            if (outputStack == null) continue;
-//            var stack = outputStack.getStack();
-//            if (stack instanceof ItemStack itemStack){
-//                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
-//                if (patternSolidStack == null) continue;
-//                outputs.add(patternSolidStack);
-//            }
-//
-//            if (stack instanceof FluidStack fluidStack){
-//                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
-//                if (patternFluidStack == null) continue;
-//                outputs.add(patternFluidStack);
-//            }
-//        }
-//
-//
-//        MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
-//            .setPatternInventorySlot(gui.getInventorySlot())
-//            .setInputs(inputs)
-//            .setIndices(indices)
-//            .setOutputs(outputs));
+        List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
+        List<OrderStack<?>> out = FluidRecipe.getPackageOutputs(recipe, recipeIndex, true);
+
+        List<IPatternStack> inputs = new ArrayList<>();
+        List<Integer> indices = new ArrayList<>();
+        List<IPatternStack> outputs = new ArrayList<>();
+
+        for (OrderStack<?> orderStack : in) {
+            var stack = orderStack.getStack();
+            if (stack instanceof ItemStack itemStack) {
+                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                if (patternSolidStack == null) continue;
+
+                inputs.add(patternSolidStack);
+                indices.add(orderStack.getIndex());
+            }
+            if (stack instanceof FluidStack fluidStack) {
+                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+                if (patternFluidStack == null) continue;
+
+                inputs.add(patternFluidStack);
+                indices.add(orderStack.getIndex());
+            }
+        }
+
+        for (var outputStack : out) {
+            if (outputStack == null) continue;
+            var stack = outputStack.getStack();
+            if (stack instanceof ItemStack itemStack){
+                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                if (patternSolidStack == null) continue;
+                outputs.add(patternSolidStack);
+            }
+
+            if (stack instanceof FluidStack fluidStack){
+                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+                if (patternFluidStack == null) continue;
+                outputs.add(patternFluidStack);
+            }
+        }
+
+
+        MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
+            .setPatternInventorySlot(gui.getInventorySlot())
+            .setInputs(inputs)
+            .setIndices(indices)
+            .setOutputs(outputs));
 
     }
 

@@ -1,18 +1,15 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.string.ChatColor;
+import logisticspipes.utils.string.StringUtils;
 import lombok.NonNull;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
-import logisticspipes.utils.item.ItemIdentifierStack;
-import logisticspipes.utils.string.ChatColor;
-import logisticspipes.utils.string.StringUtils;
-import org.jetbrains.annotations.Nullable;
-import scala.Int;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class AbstractPattern {
 
