@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
+
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
 
 class PatternStackBufferHandler {
 
@@ -70,9 +71,7 @@ class PatternStackBufferHandler {
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
-    boolean canCompleteOneSetAfterAdding(
-            int patternSlot,
-            List<IPatternStack> ingredients,
+    boolean canCompleteOneSetAfterAdding(int patternSlot, List<IPatternStack> ingredients,
             IPatternStack arrivingStack) {
         if (arrivingStack == null || arrivingStack.getAmount() <= 0) {
             return completeSets(patternSlot, ingredients) > 0;
@@ -129,7 +128,8 @@ class PatternStackBufferHandler {
     public void dropContents(World world, int x, int y, int z) {
         if (MainProxy.isServer(world)) {
             for (List<IPatternStack> patternStacks : bufferedIngredients.values()) {
-                // we need to drop stack by stack in case we stored a higher stack count than possible (otherwise we could get a 256 stack of oak planks)
+                // we need to drop stack by stack in case we stored a higher stack count than possible (otherwise we
+                // could get a 256 stack of oak planks)
                 for (IPatternStack patternStack : patternStacks) {
                     var item = patternStack.getItem();
                     var maxStackSize = new ItemStack(item, 0).getMaxStackSize();

@@ -32,10 +32,9 @@ public class CraftingRequestDebugRequest extends ModernPacket {
         if (clearInfo) CraftingRequestDebugManager.clear();
 
         MainProxy.sendPacketToPlayer(
-            PacketHandler.getPacket(CraftingRequestDebugResponse.class)
-                .setTitle("Crafting Request Debug")
-                .setPayload(CraftingRequestDebugManager.buildSnapshot()),
-            player);
+                PacketHandler.getPacket(CraftingRequestDebugResponse.class).setTitle("Crafting Request Debug")
+                        .setPayload(CraftingRequestDebugManager.buildSnapshot()),
+                player);
     }
 
     @Override

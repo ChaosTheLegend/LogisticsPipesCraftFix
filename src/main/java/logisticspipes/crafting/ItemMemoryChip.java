@@ -7,12 +7,12 @@ import java.util.TreeSet;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.utils.string.ChatColor;
-import net.minecraft.world.World;
 
 public class ItemMemoryChip extends LogisticsItem {
 

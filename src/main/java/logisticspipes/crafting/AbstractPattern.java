@@ -1,15 +1,16 @@
 package logisticspipes.crafting;
 
-import logisticspipes.utils.item.ItemIdentifierStack;
-import logisticspipes.utils.string.ChatColor;
-import logisticspipes.utils.string.StringUtils;
-import lombok.NonNull;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
-import java.util.ArrayList;
-import java.util.List;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.string.ChatColor;
+import logisticspipes.utils.string.StringUtils;
+import lombok.NonNull;
 
 public abstract class AbstractPattern {
 
@@ -225,12 +226,16 @@ public abstract class AbstractPattern {
     private void addPatternStacksToTooltip(List<String> tooltip, List<IPatternStack> stacks, ChatColor color) {
         for (IPatternStack stack : stacks) {
             if (stack instanceof PatternFluidStack) {
-                tooltip.add("  " + ChatColor.WHITE + stack.getAmount() + "mB " + color
-                    + ((PatternFluidStack) stack).makeFluidStack().getLocalizedName());
+                tooltip.add(
+                        "  " + ChatColor.WHITE
+                                + stack.getAmount()
+                                + "mB "
+                                + color
+                                + ((PatternFluidStack) stack).makeFluidStack().getLocalizedName());
             } else {
                 ItemStack normalStack = stack.makeDisplayItemStack();
-                tooltip.add("  " + ChatColor.WHITE + normalStack.stackSize + " " + color
-                    + normalStack.getDisplayName());
+                tooltip.add(
+                        "  " + ChatColor.WHITE + normalStack.stackSize + " " + color + normalStack.getDisplayName());
             }
         }
     }
@@ -316,13 +321,15 @@ public abstract class AbstractPattern {
     }
 
     /**
-     * Clears the pattern, and sets the given in and outputs.
-     * If this is a processing pattern, null items in the inputs will be ignored.
-     * If this is a crafting pattern, null items in the inputs will be respected, and the slot will be kept empty.
-     * @param inputs the new inputs
+     * Clears the pattern, and sets the given in and outputs. If this is a processing pattern, null items in the inputs
+     * will be ignored. If this is a crafting pattern, null items in the inputs will be respected, and the slot will be
+     * kept empty.
+     * 
+     * @param inputs  the new inputs
      * @param outputs the new outputs
      */
-    public void setInputsAndOutputs(@NonNull List<IPatternStack> inputs, @NonNull List<Integer> indices, @NonNull List<IPatternStack> outputs) {
+    public void setInputsAndOutputs(@NonNull List<IPatternStack> inputs, @NonNull List<Integer> indices,
+            @NonNull List<IPatternStack> outputs) {
         clear();
 
         for (int i = 0; i < inputs.size(); i++) {

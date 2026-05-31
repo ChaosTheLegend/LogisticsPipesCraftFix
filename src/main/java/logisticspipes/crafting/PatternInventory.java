@@ -1,11 +1,11 @@
 package logisticspipes.crafting;
 
-import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
 import logisticspipes.LogisticsPipes;
+import lombok.Getter;
 
 public class PatternInventory implements IInventory {
 

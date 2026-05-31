@@ -5,12 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.AdjacentTile;
-import logisticspipes.utils.WorldUtil;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
@@ -19,11 +13,18 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.IFluidHandler;
 
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.WorldUtil;
+
 /**
  * Maintains the adjacent inventory or fluid handler selected as the pattern crafting target.
  * <p>
- * The pipe still owns connection refreshes and rendering, while this helper owns target discovery, caching, cycling, and
- * persistence of the selected side.
+ * The pipe still owns connection refreshes and rendering, while this helper owns target discovery, caching, cycling,
+ * and persistence of the selected side.
  */
 public class PatternCraftingTargetSelector {
 
@@ -63,13 +64,13 @@ public class PatternCraftingTargetSelector {
      */
     public boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
         AdjacentTile selected = getConnectedInventoryTile();
-        return selected != null
-                && selected.tile == tile
+        return selected != null && selected.tile == tile
                 && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
     }
 
     /**
-     * Advances the selected target to the next adjacent inventory or fluid handler and reports the choice to the player.
+     * Advances the selected target to the next adjacent inventory or fluid handler and reports the choice to the
+     * player.
      */
     public void cycleConnectedInventory(EntityPlayer player) {
         List<AdjacentTile> inventories = getSelectableAdjacentInventories();
@@ -91,8 +92,9 @@ public class PatternCraftingTargetSelector {
         connectedInventoryDirection = selected.orientation;
         cachedConnectedInventory = selected;
         pipe.refreshSelectedInventoryConnection();
-        player.addChatComponentMessage(new ChatComponentText("Pattern crafting target: "
-                + connectedInventoryDirection.name().toLowerCase(Locale.ENGLISH)));
+        player.addChatComponentMessage(
+                new ChatComponentText(
+                        "Pattern crafting target: " + connectedInventoryDirection.name().toLowerCase(Locale.ENGLISH)));
     }
 
     /**
@@ -131,8 +133,7 @@ public class PatternCraftingTargetSelector {
      * Checks that the cached target still exists on the selected side and remains connectable.
      */
     private boolean isCachedConnectedInventoryValid() {
-        return cachedConnectedInventory != null
-                && cachedConnectedInventory.orientation == connectedInventoryDirection
+        return cachedConnectedInventory != null && cachedConnectedInventory.orientation == connectedInventoryDirection
                 && cachedConnectedInventory.tile != null
                 && !cachedConnectedInventory.tile.isInvalid()
                 && getAdjacentTile(cachedConnectedInventory.orientation) == cachedConnectedInventory.tile
@@ -217,8 +218,7 @@ public class PatternCraftingTargetSelector {
         boolean hasTank = tile instanceof IFluidHandler
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
-        return (hasInventory || hasTank)
-                && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
+        return (hasInventory || hasTank) && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
                 && !pipe.isSideBlocked(direction, false)
                 && pipe.transport.canPipeConnect(tile, direction);
     }

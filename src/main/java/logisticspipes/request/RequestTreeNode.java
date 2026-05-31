@@ -14,15 +14,14 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
+import logisticspipes.crafting.IStagedCraftingProvider;
+import logisticspipes.crafting.PatternCraftingBranch;
 import logisticspipes.interfaces.IStack;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.ICraft;
 import logisticspipes.interfaces.routing.IFilter;
 import logisticspipes.interfaces.routing.IProvide;
-import logisticspipes.crafting.IStagedCraftingProvider;
-import logisticspipes.crafting.PatternCraftingBranch;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
@@ -252,8 +251,7 @@ public class RequestTreeNode {
      * Checks whether a promise belongs to a staged pattern crafting provider.
      */
     private boolean isStagedCraftingPromise(IPromise promise) {
-        return promise.getType() == ResourceType.CRAFTING
-                && promise.getProvider() instanceof IStagedCraftingProvider;
+        return promise.getType() == ResourceType.CRAFTING && promise.getProvider() instanceof IStagedCraftingProvider;
     }
 
     /**
@@ -319,7 +317,8 @@ public class RequestTreeNode {
     }
 
     /**
-     * Copies extra promises into a staged crafting branch so branch fulfilment can register the matching extra output later.
+     * Copies extra promises into a staged crafting branch so branch fulfilment can register the matching extra output
+     * later.
      */
     private List<IExtraPromise> copyExtraPromises(List<IExtraPromise> promises) {
         List<IExtraPromise> copies = new ArrayList<>();
@@ -841,32 +840,17 @@ public class RequestTreeNode {
     public String toString() {
         var out = new StringBuilder();
 
-        appendToString(
-            out,
-            "",
-            true,
-            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>())
-        );
+        appendToString(out, "", true, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
 
         return out.toString();
     }
 
-    private void appendToString(
-        StringBuilder out,
-        String prefix,
-        boolean isLast,
-        java.util.Set<RequestTreeNode> visited
-    ) {
-        out.append(prefix)
-            .append(isLast ? "└── " : "├── ")
-            .append(parentNode == null ? "RequestTree@" : "RequestTreeNode@")
-            .append(Integer.toHexString(System.identityHashCode(this)))
-            .append(" ")
-            .append(requestType)
-            .append(" promised=")
-            .append(promiseAmount)
-            .append("/")
-            .append(requestType.getRequestedAmount());
+    private void appendToString(StringBuilder out, String prefix, boolean isLast,
+            java.util.Set<RequestTreeNode> visited) {
+        out.append(prefix).append(isLast ? "└── " : "├── ")
+                .append(parentNode == null ? "RequestTree@" : "RequestTreeNode@")
+                .append(Integer.toHexString(System.identityHashCode(this))).append(" ").append(requestType)
+                .append(" promised=").append(promiseAmount).append("/").append(requestType.getRequestedAmount());
 
         if (getMissingAmount() > 0) {
             out.append(" missing=").append(getMissingAmount());
@@ -910,10 +894,7 @@ public class RequestTreeNode {
         for (int i = 0; i < details.size(); i++) {
             boolean detailIsLast = subRequests.isEmpty() && i == details.size() - 1;
 
-            out.append(childPrefix)
-                .append(detailIsLast ? "└── " : "├── ")
-                .append(details.get(i))
-                .append("\n");
+            out.append(childPrefix).append(detailIsLast ? "└── " : "├── ").append(details.get(i)).append("\n");
         }
 
         for (int i = 0; i < subRequests.size(); i++) {
@@ -924,20 +905,15 @@ public class RequestTreeNode {
         }
     }
 
-    private String formatPromises(
-        java.util.Collection<? extends IPromise> promises,
-        boolean includeType
-    ) {
-        return promises.stream()
-            .map(promise -> {
-                var text = promise.getAmount() + "x " + promise.getItemType();
+    private String formatPromises(java.util.Collection<? extends IPromise> promises, boolean includeType) {
+        return promises.stream().map(promise -> {
+            var text = promise.getAmount() + "x " + promise.getItemType();
 
-                if (includeType) {
-                    text += " " + promise.getType();
-                }
+            if (includeType) {
+                text += " " + promise.getType();
+            }
 
-                return text;
-            })
-            .collect(java.util.stream.Collectors.joining(", "));
+            return text;
+        }).collect(java.util.stream.Collectors.joining(", "));
     }
 }

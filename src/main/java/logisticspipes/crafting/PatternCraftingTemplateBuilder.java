@@ -2,6 +2,8 @@ package logisticspipes.crafting;
 
 import java.util.List;
 
+import net.minecraft.item.ItemStack;
+
 import logisticspipes.request.BaseCraftingTemplate;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.resources.FluidResource;
@@ -9,7 +11,6 @@ import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.utils.FluidIdentifierStack;
 import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.item.ItemStack;
 
 /**
  * Builds request-tree crafting templates from configured pattern items.
@@ -56,20 +57,14 @@ class PatternCraftingTemplateBuilder {
     /**
      * Builds an item crafting template when one output item identity matches the requested resource.
      */
-    private ICraftingTemplate buildItemTemplate(
-            IResource toCraft,
-            int slot,
-            AbstractPattern configuredPattern,
+    private ICraftingTemplate buildItemTemplate(IResource toCraft, int slot, AbstractPattern configuredPattern,
             List<IPatternStack> outputs) {
         for (IPatternStack output : outputs) {
             ItemIdentifierStack result = PatternStackHelper.asSolidStack(output);
             if (result == null || !toCraft.matches(result.getItem(), IResource.MatchSettings.NORMAL)) {
                 continue;
             }
-            module.debug("crafting template matched item output slot=%d result=%s request=%s",
-                    slot,
-                    result,
-                    toCraft);
+            module.debug("crafting template matched item output slot=%d result=%s request=%s", slot, result, toCraft);
             PatternCraftingTemplate template = new PatternCraftingTemplate(result.clone(), module, 0, slot);
             addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
             addItemResultByproducts(template, result, outputs);
@@ -81,10 +76,7 @@ class PatternCraftingTemplateBuilder {
     /**
      * Builds a fluid crafting template when one output fluid display item identity matches the requested resource.
      */
-    private ICraftingTemplate buildFluidTemplate(
-            IResource toCraft,
-            int slot,
-            AbstractPattern configuredPattern,
+    private ICraftingTemplate buildFluidTemplate(IResource toCraft, int slot, AbstractPattern configuredPattern,
             List<IPatternStack> outputs) {
         for (IPatternStack output : outputs) {
             if (!(output instanceof PatternFluidStack)) {
@@ -94,10 +86,7 @@ class PatternCraftingTemplateBuilder {
             if (!toCraft.matches(result.getFluid().getItemIdentifier(), IResource.MatchSettings.NORMAL)) {
                 continue;
             }
-            module.debug("crafting template matched fluid output slot=%d result=%s request=%s",
-                    slot,
-                    result,
-                    toCraft);
+            module.debug("crafting template matched fluid output slot=%d result=%s request=%s", slot, result, toCraft);
             PatternFluidCraftingTemplate template = new PatternFluidCraftingTemplate(
                     new FluidResource(result.getFluid(), result.getAmount(), module),
                     module,
@@ -113,9 +102,7 @@ class PatternCraftingTemplateBuilder {
     /**
      * Adds every non-requested output from an item-producing pattern as an extra item or fluid byproduct.
      */
-    private void addItemResultByproducts(
-            PatternCraftingTemplate template,
-            ItemIdentifierStack result,
+    private void addItemResultByproducts(PatternCraftingTemplate template, ItemIdentifierStack result,
             List<IPatternStack> outputs) {
         for (IPatternStack byproductStack : outputs) {
             ItemIdentifierStack byproduct = PatternStackHelper.asSolidStack(byproductStack);
@@ -125,9 +112,8 @@ class PatternCraftingTemplateBuilder {
             }
             if (byproductStack instanceof PatternFluidStack) {
                 PatternFluidStack fluidByproduct = (PatternFluidStack) byproductStack;
-                template.addFluidByproduct(new FluidIdentifierStack(
-                        fluidByproduct.getFluid(),
-                        fluidByproduct.getAmount()));
+                template.addFluidByproduct(
+                        new FluidIdentifierStack(fluidByproduct.getFluid(), fluidByproduct.getAmount()));
             }
         }
     }
@@ -135,9 +121,7 @@ class PatternCraftingTemplateBuilder {
     /**
      * Adds every secondary output from a fluid-producing pattern as an extra item or fluid byproduct.
      */
-    private void addFluidResultByproducts(
-            PatternFluidCraftingTemplate template,
-            PatternFluidStack result,
+    private void addFluidResultByproducts(PatternFluidCraftingTemplate template, PatternFluidStack result,
             List<IPatternStack> outputs) {
         for (IPatternStack byproductStack : outputs) {
             ItemIdentifierStack byproduct = PatternStackHelper.asSolidStack(byproductStack);
@@ -148,9 +132,8 @@ class PatternCraftingTemplateBuilder {
             if (byproductStack instanceof PatternFluidStack) {
                 PatternFluidStack fluidByproduct = (PatternFluidStack) byproductStack;
                 if (!fluidByproduct.getFluid().equals(result.getFluid())) {
-                    template.addFluidByproduct(new FluidIdentifierStack(
-                            fluidByproduct.getFluid(),
-                            fluidByproduct.getAmount()));
+                    template.addFluidByproduct(
+                            new FluidIdentifierStack(fluidByproduct.getFluid(), fluidByproduct.getAmount()));
                 }
             }
         }

@@ -10,11 +10,7 @@ public class PatternFluidCraftingPromise extends FluidLogisticsPromise {
     private final int patternSlot;
     private final int resultAmountPerSet;
 
-    public PatternFluidCraftingPromise(
-            FluidIdentifier fluid,
-            int amount,
-            IProvideFluids sender,
-            int patternSlot,
+    public PatternFluidCraftingPromise(FluidIdentifier fluid, int amount, IProvideFluids sender, int patternSlot,
             int resultAmountPerSet) {
         super(fluid, amount, sender, ResourceType.CRAFTING);
         this.patternSlot = patternSlot;

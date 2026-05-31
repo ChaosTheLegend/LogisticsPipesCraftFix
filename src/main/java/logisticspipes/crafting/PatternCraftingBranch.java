@@ -40,26 +40,23 @@ public class PatternCraftingBranch {
      * The branch keeps copies of provider promises, crafting promises, extras, byproducts, and child branches so the
      * pattern pipe can request ingredients later without rebuilding the original request tree.
      */
-    public PatternCraftingBranch(
-            IResource requestType,
-            IAdditionalTargetInformation info,
-            List<IPromise> promises,
-            List<IExtraPromise> extraPromises,
-            List<IExtraPromise> byproducts,
+    public PatternCraftingBranch(IResource requestType, IAdditionalTargetInformation info, List<IPromise> promises,
+            List<IExtraPromise> extraPromises, List<IExtraPromise> byproducts,
             List<PatternCraftingBranch> subRequests) {
-        this(requestType, info, requestType.getRequestedAmount(), requestType.getRequestedAmount(),
-                copyPromiseStates(promises), copyExtraStates(extraPromises), copyExtraStates(byproducts), subRequests);
+        this(
+                requestType,
+                info,
+                requestType.getRequestedAmount(),
+                requestType.getRequestedAmount(),
+                copyPromiseStates(promises),
+                copyExtraStates(extraPromises),
+                copyExtraStates(byproducts),
+                subRequests);
     }
 
-    private PatternCraftingBranch(
-            IResource requestType,
-            IAdditionalTargetInformation info,
-            int originalAmount,
-            int remainingAmount,
-            List<PromiseState> promises,
-            List<ExtraState> extraPromises,
-            List<ExtraState> byproducts,
-            List<PatternCraftingBranch> subRequests) {
+    private PatternCraftingBranch(IResource requestType, IAdditionalTargetInformation info, int originalAmount,
+            int remainingAmount, List<PromiseState> promises, List<ExtraState> extraPromises,
+            List<ExtraState> byproducts, List<PatternCraftingBranch> subRequests) {
         this.requestType = requestType;
         this.info = info;
         this.originalAmount = originalAmount;
@@ -97,18 +94,9 @@ public class PatternCraftingBranch {
      * Appends the remaining staged branch state to the crafting request debug dump.
      */
     public void appendDebugState(StringBuilder out, String prefix) {
-        out.append(prefix)
-                .append("- Branch ")
-                .append(requestType)
-                .append(" remaining=")
-                .append(remainingAmount)
-                .append("/")
-                .append(originalAmount)
-                .append(" craftingRemaining=")
-                .append(remainingCraftingAmount)
-                .append("/")
-                .append(originalCraftingAmount)
-                .append("\n");
+        out.append(prefix).append("- Branch ").append(requestType).append(" remaining=").append(remainingAmount)
+                .append("/").append(originalAmount).append(" craftingRemaining=").append(remainingCraftingAmount)
+                .append("/").append(originalCraftingAmount).append("\n");
         appendPromises(out, prefix + "  ");
         appendLiveOrders(out, prefix + "  ");
         appendExtraStates(out, prefix + "  ", "extras", extraPromises);
@@ -157,8 +145,7 @@ public class PatternCraftingBranch {
                 continue;
             }
             PatternCraftingMonitorNode stagedNode = stagedOrder.toMonitorNode(visitedOrders);
-            if (stagedNode.getStack() != null
-                    && stagedNode.getStack().getItem().equalsForCrafting(display.getItem())) {
+            if (stagedNode.getStack() != null && stagedNode.getStack().getItem().equalsForCrafting(display.getItem())) {
                 node.addChildren(stagedNode.getChildren());
             } else {
                 node.addChild(stagedNode);
@@ -170,8 +157,8 @@ public class PatternCraftingBranch {
     /**
      * Fulfils up to {@code amount} items from this branch and advances the branch state by the amount actually ordered.
      * <p>
-     * Crafting promises pass their proportional child branch to the staged crafting pipe. Provider promises are fulfilled
-     * directly, releasing any reservation that was made for this staged craft.
+     * Crafting promises pass their proportional child branch to the staged crafting pipe. Provider promises are
+     * fulfilled directly, releasing any reservation that was made for this staged craft.
      */
     public int request(int amount) {
         return request(amount, null, info);
@@ -233,7 +220,9 @@ public class PatternCraftingBranch {
             return requestType.copyForDisplayWith(amount);
         }
         if (requestType instanceof ItemResource) {
-            return new ItemResource(new ItemIdentifierStack(((ItemResource) requestType).getItem(), amount), targetOverride);
+            return new ItemResource(
+                    new ItemIdentifierStack(((ItemResource) requestType).getItem(), amount),
+                    targetOverride);
         }
         if (requestType instanceof DictResource) {
             DictResource source = (DictResource) requestType;
@@ -276,7 +265,8 @@ public class PatternCraftingBranch {
     }
 
     /**
-     * Registers the extra promises and recipe byproducts that belong to the next consumed crafting slice of this branch.
+     * Registers the extra promises and recipe byproducts that belong to the next consumed crafting slice of this
+     * branch.
      */
     private void registerExtrasFor(int craftingAmount) {
         registerExtrasFor(extraPromises, craftingAmount);
@@ -284,8 +274,8 @@ public class PatternCraftingBranch {
     }
 
     /**
-     * Registers amount-proportional extras using cumulative floor allocation so rounded craft outputs are registered when
-     * the craft set that actually produces the surplus is ordered.
+     * Registers amount-proportional extras using cumulative floor allocation so rounded craft outputs are registered
+     * when the craft set that actually produces the surplus is ordered.
      */
     private void registerExtrasFor(List<ExtraState> states, int craftingAmount) {
         int consumedBefore = originalCraftingAmount - remainingCraftingAmount;
@@ -312,8 +302,8 @@ public class PatternCraftingBranch {
     }
 
     /**
-     * Reserves all provider promises in this branch so separate request trees cannot consume those provider items before
-     * this staged craft asks for them.
+     * Reserves all provider promises in this branch so separate request trees cannot consume those provider items
+     * before this staged craft asks for them.
      */
     public void reserveProviderPromises() {
         for (PromiseState promise : promises) {
@@ -433,16 +423,14 @@ public class PatternCraftingBranch {
     }
 
     private boolean isMergeableStagedPromise(IPromise promise) {
-        return promise.getType() == ResourceType.CRAFTING
-                && promise.getProvider() instanceof IStagedCraftingProvider;
+        return promise.getType() == ResourceType.CRAFTING && promise.getProvider() instanceof IStagedCraftingProvider;
     }
 
     private boolean canMergePromiseBatch(IPromise first, IPromise candidate) {
         if (!isMergeableStagedPromise(first) || !isMergeableStagedPromise(candidate)) {
             return false;
         }
-        if (first.getProvider() != candidate.getProvider()
-                || !first.getItemType().equals(candidate.getItemType())) {
+        if (first.getProvider() != candidate.getProvider() || !first.getItemType().equals(candidate.getItemType())) {
             return false;
         }
         if (first instanceof PatternCraftingPromise || candidate instanceof PatternCraftingPromise) {
@@ -455,7 +443,8 @@ public class PatternCraftingBranch {
                     && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
         }
         if (first instanceof PatternFluidCraftingPromise || candidate instanceof PatternFluidCraftingPromise) {
-            if (!(first instanceof PatternFluidCraftingPromise) || !(candidate instanceof PatternFluidCraftingPromise)) {
+            if (!(first instanceof PatternFluidCraftingPromise)
+                    || !(candidate instanceof PatternFluidCraftingPromise)) {
                 return false;
             }
             PatternFluidCraftingPromise firstPattern = (PatternFluidCraftingPromise) first;
@@ -464,8 +453,7 @@ public class PatternCraftingBranch {
                     && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
         }
         if (first instanceof FluidLogisticsPromise || candidate instanceof FluidLogisticsPromise) {
-            return first instanceof FluidLogisticsPromise
-                    && candidate instanceof FluidLogisticsPromise
+            return first instanceof FluidLogisticsPromise && candidate instanceof FluidLogisticsPromise
                     && ((FluidLogisticsPromise) first).getLiquid()
                             .equals(((FluidLogisticsPromise) candidate).getLiquid());
         }
@@ -484,10 +472,11 @@ public class PatternCraftingBranch {
             }
             int copied = Math.min(amountLeft, promise.remainingAmount);
             if (copied > 0) {
-                copiedPromises.add(new PromiseState(
-                        copyPromiseForAmount(promise.promise, copied),
-                        copied,
-                        promise.providerReserved));
+                copiedPromises.add(
+                        new PromiseState(
+                                copyPromiseForAmount(promise.promise, copied),
+                                copied,
+                                promise.providerReserved));
                 amountLeft -= copied;
             }
         }
@@ -560,8 +549,7 @@ public class PatternCraftingBranch {
     }
 
     private boolean canMergeWith(PatternCraftingBranch other) {
-        return other != null
-                && Objects.equals(info, other.info)
+        return other != null && Objects.equals(info, other.info)
                 && requestType.getClass() == other.requestType.getClass()
                 && requestType.matches(other.requestType.getAsItem(), IResource.MatchSettings.NORMAL)
                 && other.requestType.matches(requestType.getAsItem(), IResource.MatchSettings.NORMAL);
@@ -681,16 +669,9 @@ public class PatternCraftingBranch {
         }
         out.append(prefix).append("promises:\n");
         for (PromiseState promise : promises) {
-            out.append(prefix)
-                    .append("  - ")
-                    .append(promise.promise.getType())
-                    .append(" ")
-                    .append(promise.remainingAmount)
-                    .append("x ")
-                    .append(promise.promise.getItemType())
-                    .append(" from ")
-                    .append(promise.promise.getProvider())
-                    .append(promise.providerReserved ? " reserved" : "")
+            out.append(prefix).append("  - ").append(promise.promise.getType()).append(" ")
+                    .append(promise.remainingAmount).append("x ").append(promise.promise.getItemType()).append(" from ")
+                    .append(promise.promise.getProvider()).append(promise.providerReserved ? " reserved" : "")
                     .append("\n");
         }
     }
@@ -701,16 +682,9 @@ public class PatternCraftingBranch {
         }
         out.append(prefix).append("live orders:\n");
         for (IOrderInfoProvider order : liveOrders) {
-            out.append(prefix)
-                    .append("  - ")
-                    .append(order.getType())
-                    .append(" ")
-                    .append(order.getAsDisplayItem())
-                    .append(" router=")
-                    .append(order.getRouterId())
-                    .append(order.isInProgress() ? " in-progress" : "")
-                    .append(order.isFinished() ? " finished" : "")
-                    .append("\n");
+            out.append(prefix).append("  - ").append(order.getType()).append(" ").append(order.getAsDisplayItem())
+                    .append(" router=").append(order.getRouterId()).append(order.isInProgress() ? " in-progress" : "")
+                    .append(order.isFinished() ? " finished" : "").append("\n");
         }
     }
 
@@ -740,14 +714,8 @@ public class PatternCraftingBranch {
         }
         out.append(prefix).append(label).append(":\n");
         for (ExtraState state : states) {
-            out.append(prefix)
-                    .append("  - ")
-                    .append(state.promise.getAmount())
-                    .append("x ")
-                    .append(state.promise.getItemType())
-                    .append(" original=")
-                    .append(state.originalAmount)
-                    .append("\n");
+            out.append(prefix).append("  - ").append(state.promise.getAmount()).append("x ")
+                    .append(state.promise.getItemType()).append(" original=").append(state.originalAmount).append("\n");
         }
     }
 

@@ -1,10 +1,20 @@
 package logisticspipes.nei;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+
+import com.glodblock.github.nei.object.OrderStack;
+import com.glodblock.github.nei.recipes.FluidRecipe;
+
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
-import com.glodblock.github.nei.object.OrderStack;
-import com.glodblock.github.nei.recipes.FluidRecipe;
 import logisticspipes.crafting.IPatternStack;
 import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.crafting.PatternGui;
@@ -12,19 +22,10 @@ import logisticspipes.crafting.PatternSolidStack;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.NEISetPatternCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class LogisticPatternHandler implements IOverlayHandler {
 
-    private LogisticPatternHandler() {
-    }
+    private LogisticPatternHandler() {}
 
     public static final LogisticPatternHandler INSTANCE = new LogisticPatternHandler();
 
@@ -61,41 +62,43 @@ public class LogisticPatternHandler implements IOverlayHandler {
         for (var outputStack : out) {
             if (outputStack == null) continue;
             var stack = outputStack.getStack();
-            if (stack instanceof ItemStack itemStack){
+            if (stack instanceof ItemStack itemStack) {
                 PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
                 if (patternSolidStack == null) continue;
                 outputs.add(patternSolidStack);
             }
 
-            if (stack instanceof FluidStack fluidStack){
+            if (stack instanceof FluidStack fluidStack) {
                 PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
                 if (patternFluidStack == null) continue;
                 outputs.add(patternFluidStack);
             }
         }
 
-
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
-            .setPatternInventorySlot(gui.getInventorySlot())
-            .setInputs(inputs)
-            .setIndices(indices)
-            .setOutputs(outputs));
+        MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
+                        .setPatternInventorySlot(gui.getInventorySlot()).setInputs(inputs).setIndices(indices)
+                        .setOutputs(outputs));
 
     }
 
     /**
      * Collects the inputs of a given recipe, transformed into IPatternStacks.
-     * @param recipe the recipe
+     * 
+     * @param recipe      the recipe
      * @param recipeIndex the recipe index
      * @return the inputs of the given recipe
      */
     private List<IPatternStack> getInputs(IRecipeHandler recipe, int recipeIndex) {
-        return recipe.getIngredientStacks(recipeIndex).stream().map(stack -> IPatternStack.fromItemStack(stack.item.copy())).filter(Objects::nonNull).collect(Collectors.toList());
+        return recipe.getIngredientStacks(recipeIndex).stream()
+                .map(stack -> IPatternStack.fromItemStack(stack.item.copy())).filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     /**
      * Collects the aggregated outputs of a given recipe, transformed into IPatternStacks.
-     * @param recipe the recipe
+     * 
+     * @param recipe      the recipe
      * @param recipeIndex the recipe index
      * @return the aggregated outputs of the given recipe
      */
@@ -103,8 +106,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
         List<IPatternStack> outputs = new ArrayList<>();
 
         var resultStack = recipe.getResultStack(recipeIndex);
-        if (resultStack != null)
-            addAggregated(outputs, IPatternStack.fromItemStack(resultStack.item.copy()));
+        if (resultStack != null) addAggregated(outputs, IPatternStack.fromItemStack(resultStack.item.copy()));
 
         List<PositionedStack> otherStacks = recipe.getOtherStacks(recipeIndex);
         if (otherStacks == null) return outputs;
@@ -121,8 +123,9 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     /**
      * Adds a patternStack to a list of patternStacks, aggregating if possible.
+     * 
      * @param stacks the list of stacks
-     * @param stack the stack to add
+     * @param stack  the stack to add
      */
     public static void addAggregated(List<IPatternStack> stacks, IPatternStack stack) {
         if (stack == null || stack.getAmount() <= 0) return;

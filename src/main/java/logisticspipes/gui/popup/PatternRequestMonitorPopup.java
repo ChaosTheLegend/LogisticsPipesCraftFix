@@ -105,12 +105,7 @@ public class PatternRequestMonitorPopup extends SubGuiScreen {
         return height;
     }
 
-    private void renderNode(
-            PatternCraftingMonitorNode node,
-            int centerX,
-            int y,
-            int mouseX,
-            int mouseY) {
+    private void renderNode(PatternCraftingMonitorNode node, int centerX, int y, int mouseX, int mouseY) {
         int childTotalWidth = 0;
         for (PatternCraftingMonitorNode child : node.getChildren()) {
             childTotalWidth += child.getTreeRootSize() * NODE_SPACING_X;

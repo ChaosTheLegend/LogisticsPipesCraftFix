@@ -86,9 +86,9 @@ public class GuiRecipeImport extends SubGuiScreen {
         int y = 0;
         for (int i = 0; i < list.size(); i++) {
             buttonList.add(
-                new SmallGuiButton(10 + x + y * 3, guiLeft + 38 + x * 40, guiTop + 88 + y * 40, 15, 10, "/\\"));
+                    new SmallGuiButton(10 + x + y * 3, guiLeft + 38 + x * 40, guiTop + 88 + y * 40, 15, 10, "/\\"));
             buttonList.add(
-                new SmallGuiButton(20 + x + y * 3, guiLeft + 38 + x * 40, guiTop + 98 + y * 40, 15, 10, "\\/"));
+                    new SmallGuiButton(20 + x + y * 3, guiLeft + 38 + x * 40, guiTop + 98 + y * 40, 15, 10, "\\/"));
             x++;
             if (x > 2) {
                 x = 0;
@@ -105,7 +105,7 @@ public class GuiRecipeImport extends SubGuiScreen {
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         fontRendererObj
-            .renderString(StringUtils.translate("misc.selectOreDict"), guiLeft + 10, guiTop + 6, 0x404040, false);
+                .renderString(StringUtils.translate("misc.selectOreDict"), guiLeft + 10, guiTop + 6, 0x404040, false);
         tooltip = null;
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
@@ -121,32 +121,32 @@ public class GuiRecipeImport extends SubGuiScreen {
                 }
 
                 itemRenderer.renderItemAndEffectIntoGUI(
-                    font,
-                    mc.renderEngine,
-                    itemStack,
-                    guiLeft + 45 + x * 18,
-                    guiTop + 20 + y * 18);
+                        font,
+                        mc.renderEngine,
+                        itemStack,
+                        guiLeft + 45 + x * 18,
+                        guiTop + 20 + y * 18);
                 // With empty string, because damage value indicator struggles with the depth
                 itemRenderer.renderItemOverlayIntoGUI(
-                    font,
-                    mc.renderEngine,
-                    itemStack,
-                    guiLeft + 45 + x * 18,
-                    guiTop + 20 + y * 18,
-                    null);
-
-                if (guiLeft + 45 + x * 18 < mouseX && mouseX < guiLeft + 45 + x * 18 + 16
-                    && guiTop + 20 + y * 18 < mouseY
-                    && mouseY < guiTop + 20 + y * 18 + 16
-                    && !hasSubGui()) {
-                    SimpleGraphics.drawGradientRect(
+                        font,
+                        mc.renderEngine,
+                        itemStack,
                         guiLeft + 45 + x * 18,
                         guiTop + 20 + y * 18,
-                        guiLeft + 45 + x * 18 + 16,
-                        guiTop + 20 + y * 18 + 16,
-                        Color.WHITE_50,
-                        Color.WHITE_50,
-                        0.0);
+                        null);
+
+                if (guiLeft + 45 + x * 18 < mouseX && mouseX < guiLeft + 45 + x * 18 + 16
+                        && guiTop + 20 + y * 18 < mouseY
+                        && mouseY < guiTop + 20 + y * 18 + 16
+                        && !hasSubGui()) {
+                    SimpleGraphics.drawGradientRect(
+                            guiLeft + 45 + x * 18,
+                            guiTop + 20 + y * 18,
+                            guiLeft + 45 + x * 18 + 16,
+                            guiTop + 20 + y * 18 + 16,
+                            Color.WHITE_50,
+                            Color.WHITE_50,
+                            0.0);
                     tooltip = new Object[] { guiLeft + mouseX, guiTop + mouseY, itemStack };
                 }
             }
@@ -162,32 +162,32 @@ public class GuiRecipeImport extends SubGuiScreen {
             }
 
             itemRenderer.renderItemAndEffectIntoGUI(
-                font,
-                mc.renderEngine,
-                itemStack,
-                guiLeft + 20 + x * 40,
-                guiTop + 90 + y * 40);
+                    font,
+                    mc.renderEngine,
+                    itemStack,
+                    guiLeft + 20 + x * 40,
+                    guiTop + 90 + y * 40);
             // With empty string, because damage value indicator struggles with the depth
             itemRenderer.renderItemOverlayIntoGUI(
-                font,
-                mc.renderEngine,
-                itemStack,
-                guiLeft + 20 + x * 40,
-                guiTop + 90 + y * 40,
-                "");
-
-            if (guiLeft + 20 + x * 40 < mouseX && mouseX < guiLeft + 20 + x * 40 + 16
-                && guiTop + 90 + y * 40 < mouseY
-                && mouseY < guiTop + 90 + y * 40 + 16
-                && !hasSubGui()) {
-                SimpleGraphics.drawGradientRect(
+                    font,
+                    mc.renderEngine,
+                    itemStack,
                     guiLeft + 20 + x * 40,
                     guiTop + 90 + y * 40,
-                    guiLeft + 20 + x * 40 + 16,
-                    guiTop + 90 + y * 40 + 16,
-                    Color.WHITE_50,
-                    Color.WHITE_50,
-                    0.0);
+                    "");
+
+            if (guiLeft + 20 + x * 40 < mouseX && mouseX < guiLeft + 20 + x * 40 + 16
+                    && guiTop + 90 + y * 40 < mouseY
+                    && mouseY < guiTop + 90 + y * 40 + 16
+                    && !hasSubGui()) {
+                SimpleGraphics.drawGradientRect(
+                        guiLeft + 20 + x * 40,
+                        guiTop + 90 + y * 40,
+                        guiLeft + 20 + x * 40 + 16,
+                        guiTop + 90 + y * 40 + 16,
+                        Color.WHITE_50,
+                        Color.WHITE_50,
+                        0.0);
                 tooltip = new Object[] { guiLeft + mouseX, guiTop + mouseY, itemStack };
             }
 
@@ -203,7 +203,7 @@ public class GuiRecipeImport extends SubGuiScreen {
     protected void renderGuiBackground(int par1, int par2) {
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
         fontRendererObj
-            .renderString(StringUtils.translate("misc.selectOreDict"), guiLeft + 10, guiTop + 6, 0x404040, false);
+                .renderString(StringUtils.translate("misc.selectOreDict"), guiLeft + 10, guiTop + 6, 0x404040, false);
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
                 GuiGraphics.drawSlotBackground(mc, guiLeft + 44 + x * 18, guiTop + 19 + y * 18);
@@ -236,11 +236,11 @@ public class GuiRecipeImport extends SubGuiScreen {
             }
             NEISetCraftingRecipe packet = PacketHandler.getPacket(NEISetCraftingRecipe.class);
             MainProxy.sendPacketToServer(
-                packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
+                    packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
             exitGui();
         } else if (id == 1) {
             MainProxy.sendPacketToServer(
-                PacketHandler.getPacket(FindMostLikelyRecipeComponents.class).setContent(list).setTilePos(tile));
+                    PacketHandler.getPacket(FindMostLikelyRecipeComponents.class).setContent(list).setTilePos(tile));
         } else if (id >= 10 && id < 30) {
             int slot = id % 10;
             boolean up = id < 20;
@@ -277,8 +277,8 @@ public class GuiRecipeImport extends SubGuiScreen {
         for (final Canidates canidate : list) {
 
             if (guiLeft + 20 + x * 40 < mouseX && mouseX < guiLeft + 20 + x * 40 + 16
-                && guiTop + 90 + y * 40 < mouseY
-                && mouseY < guiTop + 90 + y * 40 + 16) {
+                    && guiTop + 90 + y * 40 < mouseY
+                    && mouseY < guiTop + 90 + y * 40 + 16) {
                 setSubGui(new SelectItemOutOfList(canidate.order, slot -> canidate.pos = slot));
             }
 

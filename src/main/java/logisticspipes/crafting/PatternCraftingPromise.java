@@ -10,11 +10,7 @@ public class PatternCraftingPromise extends LogisticsPromise {
     private final int patternSlot;
     private final int resultAmountPerSet;
 
-    public PatternCraftingPromise(
-            ItemIdentifier item,
-            int numberOfItems,
-            IProvideItems sender,
-            int patternSlot,
+    public PatternCraftingPromise(ItemIdentifier item, int numberOfItems, IProvideItems sender, int patternSlot,
             int resultAmountPerSet) {
         super(item, numberOfItems, sender, ResourceType.CRAFTING);
         this.patternSlot = patternSlot;

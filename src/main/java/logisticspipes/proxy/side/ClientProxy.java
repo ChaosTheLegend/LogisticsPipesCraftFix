@@ -34,9 +34,9 @@ import logisticspipes.blocks.powertile.LogisticsIC2PowerProviderTileEntity;
 import logisticspipes.blocks.powertile.LogisticsPowerJunctionTileEntity;
 import logisticspipes.blocks.powertile.LogisticsRFPowerProviderTileEntity;
 import logisticspipes.blocks.stats.LogisticsStatisticsTileEntity;
+import logisticspipes.config.Configs;
 import logisticspipes.crafting.PatternLogisticsCraftingTableTileEntity;
 import logisticspipes.crafting.requesttable.RequestTableGui;
-import logisticspipes.config.Configs;
 import logisticspipes.gui.GuiCraftingPipe;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.GuiSupplierPipe;
@@ -389,21 +389,22 @@ public class ClientProxy implements IProxy {
                     player);
         } else if (Configs.DISPLAY_POPUP
                 && FMLClientHandler.instance().getClient().currentScreen instanceof GuiRequestTable) {
-            ((GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen).handleSimulateAnswer(
-                    packet.getUsed(),
-                    packet.getMissing(),
-                    (GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen,
-                    player);
-        } else {
-            for (IResource item : packet.getUsed()) {
-                player.addChatComponentMessage(
-                        new ChatComponentText("Component: " + item.getDisplayText(IResource.ColorCode.SUCCESS)));
-            }
-            for (IResource item : packet.getMissing()) {
-                player.addChatComponentMessage(
-                        new ChatComponentText("Missing: " + item.getDisplayText(IResource.ColorCode.MISSING)));
-            }
-        }
+                    ((GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen).handleSimulateAnswer(
+                            packet.getUsed(),
+                            packet.getMissing(),
+                            (GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen,
+                            player);
+                } else {
+                    for (IResource item : packet.getUsed()) {
+                        player.addChatComponentMessage(
+                                new ChatComponentText(
+                                        "Component: " + item.getDisplayText(IResource.ColorCode.SUCCESS)));
+                    }
+                    for (IResource item : packet.getMissing()) {
+                        player.addChatComponentMessage(
+                                new ChatComponentText("Missing: " + item.getDisplayText(IResource.ColorCode.MISSING)));
+                    }
+                }
     }
 
     @Override
@@ -416,33 +417,36 @@ public class ClientProxy implements IProxy {
                     player);
         } else if (Configs.DISPLAY_POPUP
                 && FMLClientHandler.instance().getClient().currentScreen instanceof GuiRequestTable) {
-            ((GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen).handleRequestAnswer(
-                    packet.getItems(),
-                    packet.isFlag(),
-                    (GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen,
-                    player);
-        } else if (Configs.DISPLAY_POPUP
-                && FMLClientHandler.instance().getClient().currentScreen instanceof RequestTableGui) {
-            ((RequestTableGui) FMLClientHandler.instance().getClient().currentScreen).handleRequestAnswer(
-                    packet.getItems(),
-                    packet.isFlag(),
-                    (RequestTableGui) FMLClientHandler.instance().getClient().currentScreen,
-                    player);
-        } else if (packet.isFlag()) {
-            for (IResource item : packet.getItems()) {
-                player.addChatComponentMessage(
-                        new ChatComponentText(
-                                ChatColor.RED + "Missing: " + item.getDisplayText(IResource.ColorCode.MISSING)));
-            }
-        } else {
-            for (IResource item : packet.getItems()) {
-                player.addChatComponentMessage(
-                        new ChatComponentText(
-                                ChatColor.GREEN + "Requested: "
-                                        + item.getDisplayText(IResource.ColorCode.SUCCESS)));
-            }
-            player.addChatComponentMessage(new ChatComponentText(ChatColor.GREEN + "Request successful!"));
-        }
+                    ((GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen).handleRequestAnswer(
+                            packet.getItems(),
+                            packet.isFlag(),
+                            (GuiRequestTable) FMLClientHandler.instance().getClient().currentScreen,
+                            player);
+                } else
+            if (Configs.DISPLAY_POPUP
+                    && FMLClientHandler.instance().getClient().currentScreen instanceof RequestTableGui) {
+                        ((RequestTableGui) FMLClientHandler.instance().getClient().currentScreen).handleRequestAnswer(
+                                packet.getItems(),
+                                packet.isFlag(),
+                                (RequestTableGui) FMLClientHandler.instance().getClient().currentScreen,
+                                player);
+                    } else
+                if (packet.isFlag()) {
+                    for (IResource item : packet.getItems()) {
+                        player.addChatComponentMessage(
+                                new ChatComponentText(
+                                        ChatColor.RED + "Missing: "
+                                                + item.getDisplayText(IResource.ColorCode.MISSING)));
+                    }
+                } else {
+                    for (IResource item : packet.getItems()) {
+                        player.addChatComponentMessage(
+                                new ChatComponentText(
+                                        ChatColor.GREEN + "Requested: "
+                                                + item.getDisplayText(IResource.ColorCode.SUCCESS)));
+                    }
+                    player.addChatComponentMessage(new ChatComponentText(ChatColor.GREEN + "Request successful!"));
+                }
     }
 
     @Override

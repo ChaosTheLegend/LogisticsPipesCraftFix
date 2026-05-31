@@ -48,7 +48,10 @@ public class RequestTableFluidStorage implements IInventory {
      * Creates the default one-row request-table fluid storage.
      */
     public static RequestTableFluidStorage createDefault() {
-        return new RequestTableFluidStorage(9, "Request Table Fluids", Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY);
+        return new RequestTableFluidStorage(
+                9,
+                "Request Table Fluids",
+                Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY);
     }
 
     /**

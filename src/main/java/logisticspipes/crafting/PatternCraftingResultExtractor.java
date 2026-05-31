@@ -2,6 +2,10 @@ package logisticspipes.crafting;
 
 import java.util.List;
 
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+
 import logisticspipes.config.Configs;
 import logisticspipes.logisticspipes.IRoutedItem;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
@@ -15,9 +19,6 @@ import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
 import logisticspipes.utils.item.ItemIdentifier;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Drains completed pattern crafting outputs from the selected adjacent inventory or fluid handler.
@@ -38,9 +39,7 @@ class PatternCraftingResultExtractor {
     /**
      * Creates an extractor for one pattern crafting module and its selected adjacent handlers.
      */
-    PatternCraftingResultExtractor(
-            ModuleItemCrafting module,
-            PipeItemsPatternCraftingLogistics pipe,
+    PatternCraftingResultExtractor(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
             AdjacentInventoryHandler adjacentInventory) {
         this.module = module;
         this.pipe = pipe;
@@ -69,7 +68,8 @@ class PatternCraftingResultExtractor {
             return;
         }
         pipe.spawnParticle(Particles.VioletParticle, 2);
-        LogisticsItemOrder order = pipe.getItemOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
+        LogisticsItemOrder order = pipe.getItemOrderManager()
+                .peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
         if (order == null) {
             module.debug("extract items skipped: no top order");
             return;
@@ -93,11 +93,17 @@ class PatternCraftingResultExtractor {
                 }
             }
             if (extracted == null || extracted.stackSize <= 0 || source == null) {
-                module.debugEvent("FLOW", "extract item deferred order=%s amount=%d", order.getResource().getItem(), maxToSend);
+                module.debugEvent(
+                        "FLOW",
+                        "extract item deferred order=%s amount=%d",
+                        order.getResource().getItem(),
+                        maxToSend);
                 pipe.getItemOrderManager().deferSend();
                 break;
             }
-            module.debugEvent("FLOW", "extract item success order=%s extracted=%d source=%s",
+            module.debugEvent(
+                    "FLOW",
+                    "extract item success order=%s extracted=%d source=%s",
                     order.getResource().getItem(),
                     extracted.stackSize,
                     source.tile);
@@ -113,7 +119,8 @@ class PatternCraftingResultExtractor {
     }
 
     /**
-     * Routes an extracted item result either to its requester or, for extra outputs, back through normal storage routing.
+     * Routes an extracted item result either to its requester or, for extra outputs, back through normal storage
+     * routing.
      */
     private void sendExtracted(LogisticsItemOrder order, ItemStack extracted, ForgeDirection orientation) {
         if (order.getDestination() != null) {
@@ -123,14 +130,18 @@ class PatternCraftingResultExtractor {
             item.setAdditionalTargetInformation(order.getInformation());
             pipe.queueRoutedItem(item, orientation);
             pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, item);
-            module.debugEvent("FLOW", "sent extracted item=%s amount=%d destination=%d",
+            module.debugEvent(
+                    "FLOW",
+                    "sent extracted item=%s amount=%d destination=%d",
                     ItemIdentifier.get(extracted),
                     extracted.stackSize,
                     order.getDestination().getRouter().getSimpleID());
         } else {
             pipe.sendStack(extracted, -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
             pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, null);
-            module.debugEvent("FLOW", "sent extracted item=%s amount=%d without routed destination",
+            module.debugEvent(
+                    "FLOW",
+                    "sent extracted item=%s amount=%d without routed destination",
                     ItemIdentifier.get(extracted),
                     extracted.stackSize);
         }
@@ -150,7 +161,8 @@ class PatternCraftingResultExtractor {
             pipe.getPatternFluidOrderManager().sendFailed();
             return;
         }
-        LogisticsFluidOrder order = pipe.getPatternFluidOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
+        LogisticsFluidOrder order = pipe.getPatternFluidOrderManager()
+                .peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
         if (order == null) {
             module.debug("extract fluids skipped: no top fluid order");
             return;
@@ -163,7 +175,9 @@ class PatternCraftingResultExtractor {
             if (drained == null || drained.amount <= 0) {
                 continue;
             }
-            module.debugEvent("FLOW", "extract fluid success fluid=%s amount=%d source=%s",
+            module.debugEvent(
+                    "FLOW",
+                    "extract fluid success fluid=%s amount=%d source=%s",
                     order.getFluid(),
                     drained.amount,
                     tile.tile);
@@ -189,7 +203,9 @@ class PatternCraftingResultExtractor {
             item.setAdditionalTargetInformation(order.getInformation());
             pipe.queueRoutedItem(item, orientation);
             pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, item);
-            module.debugEvent("FLOW", "sent extracted fluid=%s amount=%d destination=%d",
+            module.debugEvent(
+                    "FLOW",
+                    "sent extracted fluid=%s amount=%d destination=%d",
                     order.getFluid(),
                     drained.amount,
                     order.getDestination().getRouter().getSimpleID());
@@ -200,7 +216,9 @@ class PatternCraftingResultExtractor {
                     CoreRoutedPipe.ItemSendMode.Normal,
                     order.getInformation());
             pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, null);
-            module.debugEvent("FLOW", "sent extracted fluid=%s amount=%d without routed destination",
+            module.debugEvent(
+                    "FLOW",
+                    "sent extracted fluid=%s amount=%d without routed destination",
                     order.getFluid(),
                     drained.amount);
         }

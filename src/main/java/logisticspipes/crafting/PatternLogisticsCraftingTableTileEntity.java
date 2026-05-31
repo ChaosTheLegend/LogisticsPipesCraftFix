@@ -1,5 +1,12 @@
 package logisticspipes.crafting;
 
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.SlotCrafting;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.nbt.NBTTagCompound;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.blocks.LogisticsSolidTileEntity;
 import logisticspipes.blocks.crafting.AutoCraftingInventory;
@@ -16,14 +23,9 @@ import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.SimpleStackInventory;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.SlotCrafting;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.nbt.NBTTagCompound;
 
-public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
+public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity
+        implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
 
     private static final int INPUT_SIZE = 9;
     private static final int OUTPUT_SIZE = 3;
@@ -34,8 +36,14 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
 
     private final SimpleStackInventory input = new SimpleStackInventory(INPUT_SIZE, "Pattern Crafting Input", 64);
     private final SimpleStackInventory output = new SimpleStackInventory(OUTPUT_SIZE, "Pattern Crafting Output", 64);
-    private final SimpleStackInventory pendingOutput = new SimpleStackInventory(OUTPUT_SIZE, "Pattern Crafting Pending Output", 64);
-    private final SimpleStackInventory upgrades = new SimpleStackInventory(UPGRADE_SIZE, "Pattern Crafting Upgrades", 20);
+    private final SimpleStackInventory pendingOutput = new SimpleStackInventory(
+            OUTPUT_SIZE,
+            "Pattern Crafting Pending Output",
+            64);
+    private final SimpleStackInventory upgrades = new SimpleStackInventory(
+            UPGRADE_SIZE,
+            "Pattern Crafting Upgrades",
+            20);
 
     private long craftStartedAt = -1;
     private long craftReadyAt = -1;
@@ -50,7 +58,8 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
     }
 
     static boolean isSpeedUpgrade(ItemStack stack) {
-        return stack != null && stack.getItem() == LogisticsPipes.UpgradeItem && stack.getItemDamage() == ItemUpgrade.SPEED;
+        return stack != null && stack.getItem() == LogisticsPipes.UpgradeItem
+                && stack.getItemDamage() == ItemUpgrade.SPEED;
     }
 
     public void onBlockBreak() {
@@ -123,12 +132,10 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
     }
 
     @Override
-    public void openInventory() {
-    }
+    public void openInventory() {}
 
     @Override
-    public void closeInventory() {
-    }
+    public void closeInventory() {}
 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
@@ -252,9 +259,9 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
     }
 
     /**
-     * Checks if the pattern pipe can insert into the slot.
-     * Returns true if the item stack can be inserted in the given slot, or is the same item.
-     * Returns false if the slot is out of bounds, the given stack is null or the item is different at the slot
+     * Checks if the pattern pipe can insert into the slot. Returns true if the item stack can be inserted in the given
+     * slot, or is the same item. Returns false if the slot is out of bounds, the given stack is null or the item is
+     * different at the slot
      *
      * @param slot  the slot to look at
      * @param stack the stack that is tested for the insert
@@ -399,7 +406,9 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
     }
 
     private void finishCraftIfReady() {
-        if (worldObj == null || MainProxy.isClient(worldObj) || craftReadyAt < 0 || worldObj.getTotalWorldTime() < craftReadyAt) {
+        if (worldObj == null || MainProxy.isClient(worldObj)
+                || craftReadyAt < 0
+                || worldObj.getTotalWorldTime() < craftReadyAt) {
             return;
         }
         craftReadyAt = -1;
@@ -412,12 +421,12 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
     }
 
     private boolean consumeCraftableInputsToPendingOutput() {
-        //try to find a recipe
+        // try to find a recipe
         AutoCraftingInventory craftingInventory = createSingleItemCraftingInventory();
         IRecipe recipe = findRecipe(craftingInventory);
         if (recipe == null) return false;
 
-        //if we have one, copy a single instance into
+        // if we have one, copy a single instance into
         ItemStack result = recipe.getCraftingResult(craftingInventory);
         if (!canFitPendingOutput(result)) return false;
 
@@ -491,7 +500,9 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
             if (existing == null) {
                 remaining -= Math.min(remaining, result.getMaxStackSize());
             } else if (ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(result))) {
-                remaining -= Math.min(remaining, Math.min(existing.getMaxStackSize(), inventory.getInventoryStackLimit()) - existing.stackSize);
+                remaining -= Math.min(
+                        remaining,
+                        Math.min(existing.getMaxStackSize(), inventory.getInventoryStackLimit()) - existing.stackSize);
             }
             if (remaining <= 0) {
                 return true;
@@ -513,7 +524,9 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
                 inventory.setInventorySlotContents(i, inserted);
                 remaining -= inserted.stackSize;
             } else if (ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(stack))) {
-                int moved = Math.min(remaining, Math.min(existing.getMaxStackSize(), inventory.getInventoryStackLimit()) - existing.stackSize);
+                int moved = Math.min(
+                        remaining,
+                        Math.min(existing.getMaxStackSize(), inventory.getInventoryStackLimit()) - existing.stackSize);
                 if (moved > 0) {
                     existing.stackSize += moved;
                     inventory.setInventorySlotContents(i, existing);
@@ -612,6 +625,10 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
         }
         NBTTagCompound payload = new NBTTagCompound();
         writeUpdatePayload(payload);
-        MainProxy.sendPacketToAllWatchingChunk(xCoord, zCoord, MainProxy.getDimensionForWorld(worldObj), PacketHandler.getPacket(PatternCraftingTableUpdate.class).setUpdatePayload(payload).setTilePos(this));
+        MainProxy.sendPacketToAllWatchingChunk(
+                xCoord,
+                zCoord,
+                MainProxy.getDimensionForWorld(worldObj),
+                PacketHandler.getPacket(PatternCraftingTableUpdate.class).setUpdatePayload(payload).setTilePos(this));
     }
 }

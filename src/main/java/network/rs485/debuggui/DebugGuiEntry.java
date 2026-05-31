@@ -1,5 +1,7 @@
 package network.rs485.debuggui;
 
+import static javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -45,8 +47,6 @@ import javax.swing.SwingUtilities;
 import network.rs485.debuggui.api.IDataConnection;
 import network.rs485.debuggui.api.IDebugGuiEntry;
 import network.rs485.debuggui.api.IObjectIdentification;
-
-import static javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT;
 
 public class DebugGuiEntry extends IDebugGuiEntry {
 
@@ -435,8 +435,13 @@ public class DebugGuiEntry extends IDebugGuiEntry {
             }
 
             if (visited.containsKey(value)) {
-                appendLine(depth, label + " = " + className(valueClass) + "@0x"
-                        + Integer.toHexString(System.identityHashCode(value)) + " (already shown)");
+                appendLine(
+                        depth,
+                        label + " = "
+                                + className(valueClass)
+                                + "@0x"
+                                + Integer.toHexString(System.identityHashCode(value))
+                                + " (already shown)");
                 return;
             }
 
@@ -513,8 +518,12 @@ public class DebugGuiEntry extends IDebugGuiEntry {
         }
 
         private void appendFields(String label, Object value, Class<?> valueClass, int depth) {
-            appendLine(depth, label + " = " + className(valueClass) + "@0x"
-                    + Integer.toHexString(System.identityHashCode(value)));
+            appendLine(
+                    depth,
+                    label + " = "
+                            + className(valueClass)
+                            + "@0x"
+                            + Integer.toHexString(System.identityHashCode(value)));
             if (depth >= MAX_DEPTH) {
                 appendLine(depth + 1, "(max depth reached)");
                 return;
@@ -573,8 +582,7 @@ public class DebugGuiEntry extends IDebugGuiEntry {
         }
 
         private static boolean isSimpleValue(Class<?> valueClass) {
-            return valueClass.isPrimitive()
-                    || valueClass == String.class
+            return valueClass.isPrimitive() || valueClass == String.class
                     || Number.class.isAssignableFrom(valueClass)
                     || valueClass == Boolean.class
                     || valueClass == Character.class

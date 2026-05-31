@@ -1,18 +1,18 @@
 package logisticspipes.crafting;
 
-import logisticspipes.network.packets.gui.PatternCraftingPipeMode;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Slot;
 
 import logisticspipes.network.PacketHandler;
+import logisticspipes.network.packets.gui.PatternCraftingPipeMode;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.renderer.PatternItemRenderer;
 import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
-import net.minecraft.inventory.Slot;
 
 public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
 
@@ -39,13 +39,15 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) {
         if (button.id == 0 && !pipe.isBlockingModeFixed()) {
-            PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode.values();
-            PipeItemsPatternCraftingLogistics.BlockingMode next = values[(pipe.getBlockingMode().ordinal() + 1) % values.length];
+            PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode
+                    .values();
+            PipeItemsPatternCraftingLogistics.BlockingMode next = values[(pipe.getBlockingMode().ordinal() + 1)
+                    % values.length];
             pipe.setBlockingMode(next);
             button.displayString = modeLabel();
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternCraftingPipeMode.class)
-                    .setMode(next.ordinal())
-                    .setTilePos(pipe.container));
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(PatternCraftingPipeMode.class).setMode(next.ordinal())
+                            .setTilePos(pipe.container));
         }
     }
 

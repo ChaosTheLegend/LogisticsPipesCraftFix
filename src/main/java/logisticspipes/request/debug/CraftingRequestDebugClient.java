@@ -1,5 +1,7 @@
 package logisticspipes.request.debug;
 
+import static javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -34,8 +36,6 @@ import cpw.mods.fml.common.gameevent.TickEvent.Phase;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.debug.CraftingRequestDebugRequest;
 import logisticspipes.proxy.MainProxy;
-
-import static javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT;
 
 public final class CraftingRequestDebugClient {
 

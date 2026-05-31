@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -50,9 +49,10 @@ public class RequestTableRefreshPacket extends IntegerCoordinatesPacket {
         }
         RequestTablePipe table = (RequestTablePipe) tile.pipe;
         List<RequestTableNetworkEntry> entries = buildEntries(table);
-        MainProxy.sendPacketToPlayer(PacketHandler.getPacket(RequestTableContentPacket.class)
-                .setEntries(entries)
-                .setTilePos(table.container), player);
+        MainProxy.sendPacketToPlayer(
+                PacketHandler.getPacket(RequestTableContentPacket.class).setEntries(entries)
+                        .setTilePos(table.container),
+                player);
     }
 
     /**
@@ -76,11 +76,12 @@ public class RequestTableRefreshPacket extends IntegerCoordinatesPacket {
             }
             int networkAmount = getAmount(availableItems, item);
             int internalAmount = getAmount(internalItems, item);
-            entries.add(new RequestTableNetworkEntry(
-                    item.makeStack(networkAmount + internalAmount),
-                    false,
-                    networkAmount,
-                    internalAmount));
+            entries.add(
+                    new RequestTableNetworkEntry(
+                            item.makeStack(networkAmount + internalAmount),
+                            false,
+                            networkAmount,
+                            internalAmount));
         }
         for (ItemIdentifier item : craftableItems) {
             if (!itemIds.contains(item) && !item.isFluidContainer()) {
@@ -103,11 +104,12 @@ public class RequestTableRefreshPacket extends IntegerCoordinatesPacket {
         for (ItemIdentifier fluid : fluidIds) {
             int networkAmount = getAmount(networkFluids, fluid);
             int internalAmount = getAmount(internalFluids, fluid);
-            entries.add(new RequestTableNetworkEntry(
-                    fluid.makeStack(networkAmount + internalAmount),
-                    true,
-                    networkAmount,
-                    internalAmount));
+            entries.add(
+                    new RequestTableNetworkEntry(
+                            fluid.makeStack(networkAmount + internalAmount),
+                            true,
+                            networkAmount,
+                            internalAmount));
         }
         for (ItemIdentifier item : craftableItems) {
             if (item.isFluidContainer() && !availableFluidIds.contains(item) && !internalFluids.containsKey(item)) {

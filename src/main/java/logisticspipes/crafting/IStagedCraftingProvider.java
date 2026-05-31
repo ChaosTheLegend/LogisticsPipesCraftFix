@@ -7,9 +7,6 @@ import logisticspipes.routing.order.IOrderInfoProvider;
 
 public interface IStagedCraftingProvider {
 
-    IOrderInfoProvider fullFillStagedCrafting(
-            IPromise promise,
-            IResource requestType,
-            IAdditionalTargetInformation info,
-            PatternCraftingBranch branch);
+    IOrderInfoProvider fullFillStagedCrafting(IPromise promise, IResource requestType,
+            IAdditionalTargetInformation info, PatternCraftingBranch branch);
 }

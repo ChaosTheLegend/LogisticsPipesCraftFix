@@ -22,19 +22,21 @@ public class PatternContainer extends DummyContainer {
 
     @Override
     public void handleDummyClick(Slot slot, int slotId, ItemStack currentlyEquippedStack, int mouseButton, int isShift,
-                                 EntityPlayer entityplayer) {
+            EntityPlayer entityplayer) {
         if (isPatternSlot(slotId)) {
             FluidStack fluid = getFluidFromItem(currentlyEquippedStack);
             if (fluid != null && fluid.amount > 0) {
                 // Handle fluid insertion
                 switch (mouseButton) {
                     case 0: // Left click
-                        slot.putStack(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
+                        slot.putStack(
+                                SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
                         syncSlot(slot, slotId, entityplayer);
                         return;
                     case 1: // Right click
                         // Maybe split or something, but for now, same as left
-                        slot.putStack(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
+                        slot.putStack(
+                                SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid).makeNormalStack());
                         syncSlot(slot, slotId, entityplayer);
                         return;
                 }
@@ -61,7 +63,8 @@ public class PatternContainer extends DummyContainer {
 
         if (fluid == null) {
             // Check if it's already a fluid container
-            fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+            fluid = SimpleServiceLocator.logisticsFluidManager
+                    .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
         }
 
         if (fluid != null) {

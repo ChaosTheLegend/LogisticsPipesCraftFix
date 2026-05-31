@@ -193,10 +193,8 @@ public class RequestTree extends RequestTreeNode {
         RequestTree tree = new RequestTree(req, null, requestFlags, info);
         if (!simulateOnly && (tree.isDone() || ((tree.getPromiseAmount() > 0) && acceptPartial))) {
             LinkedLogisticsOrderList list = tree.fullFillAll();
-            CraftingRequestDebugManager.record(
-                    "Item request fulfilled: " + item + " promised=" + tree.getPromiseAmount(),
-                    tree,
-                    list);
+            CraftingRequestDebugManager
+                    .record("Item request fulfilled: " + item + " promised=" + tree.getPromiseAmount(), tree, list);
             if (log != null) {
                 log.handleSucessfullRequestOf(req.copyForDisplayWith(item.getStackSize()), list);
             }
@@ -214,8 +212,13 @@ public class RequestTree extends RequestTreeNode {
                 }
             }
             CraftingRequestDebugManager.record(
-                    "Item request not fulfilled: " + item + " promised=" + tree.getPromiseAmount()
-                            + " simulateOnly=" + simulateOnly + " acceptPartial=" + acceptPartial,
+                    "Item request not fulfilled: " + item
+                            + " promised="
+                            + tree.getPromiseAmount()
+                            + " simulateOnly="
+                            + simulateOnly
+                            + " acceptPartial="
+                            + acceptPartial,
                     tree,
                     null);
             return tree.getPromiseAmount();
@@ -244,11 +247,7 @@ public class RequestTree extends RequestTreeNode {
         return RequestTree.requestFluid(liquid, amount, pipe, log, true, null);
     }
 
-    public static int requestFluidPartial(
-            FluidIdentifier liquid,
-            int amount,
-            IRequestFluid pipe,
-            RequestLog log,
+    public static int requestFluidPartial(FluidIdentifier liquid, int amount, IRequestFluid pipe, RequestLog log,
             IAdditionalTargetInformation info) {
         return RequestTree.requestFluid(liquid, amount, pipe, log, true, info);
     }
@@ -264,7 +263,10 @@ public class RequestTree extends RequestTreeNode {
         if (request.isDone() || acceptPartial) {
             LinkedLogisticsOrderList list = request.fullFill();
             CraftingRequestDebugManager.record(
-                    "Fluid request fulfilled: " + liquid + " amount=" + amount + " promised="
+                    "Fluid request fulfilled: " + liquid
+                            + " amount="
+                            + amount
+                            + " promised="
                             + request.getPromiseAmount(),
                     request,
                     list);
@@ -277,8 +279,7 @@ public class RequestTree extends RequestTreeNode {
                 request.sendMissingMessage(log);
             }
             CraftingRequestDebugManager.record(
-                    "Fluid request failed: " + liquid + " amount=" + amount + " promised="
-                            + request.getPromiseAmount(),
+                    "Fluid request failed: " + liquid + " amount=" + amount + " promised=" + request.getPromiseAmount(),
                     request,
                     null);
             return request.getPromiseAmount();

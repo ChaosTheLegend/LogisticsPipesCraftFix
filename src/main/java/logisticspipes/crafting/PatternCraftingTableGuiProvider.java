@@ -55,7 +55,11 @@ public class PatternCraftingTableGuiProvider extends CoordinatesGuiProvider {
     static void addInputSlots(DummyContainer dummy, PatternLogisticsCraftingTableTileEntity tile) {
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
-                dummy.addRestrictedSlot(y * 3 + x, tile.getInputInventory(), 26 + x * 18, 18 + y * 18,
+                dummy.addRestrictedSlot(
+                        y * 3 + x,
+                        tile.getInputInventory(),
+                        26 + x * 18,
+                        18 + y * 18,
                         tile::canPlayerInsertInput);
             }
         }
@@ -69,7 +73,11 @@ public class PatternCraftingTableGuiProvider extends CoordinatesGuiProvider {
 
     static void addUpgradeSlots(DummyContainer dummy, PatternLogisticsCraftingTableTileEntity tile) {
         for (int i = 0; i < 3; i++) {
-            dummy.addRestrictedSlot(i, tile.getUpgradeInventory(), 116 + i * 18, 69,
+            dummy.addRestrictedSlot(
+                    i,
+                    tile.getUpgradeInventory(),
+                    116 + i * 18,
+                    69,
                     stack -> stack != null && stack.getItem() == LogisticsPipes.UpgradeItem
                             && PatternLogisticsCraftingTableTileEntity.isSpeedUpgrade(stack));
         }

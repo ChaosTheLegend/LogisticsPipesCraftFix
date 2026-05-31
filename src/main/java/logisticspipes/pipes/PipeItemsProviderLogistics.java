@@ -251,9 +251,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         if (!isEnabled()) {
             return 0;
         }
-        return getTotalItemCount(item)
-                - _orderManager.totalItemsCountInOrders(item)
-                - getReservedStagedCrafting(item);
+        return getTotalItemCount(item) - _orderManager.totalItemsCountInOrders(item) - getReservedStagedCrafting(item);
     }
 
     @Override
@@ -401,8 +399,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
         // Reduce what has been reserved, add.
         for (Entry<ItemIdentifier, Integer> item : addedItems.entrySet()) {
-            int remaining = item.getValue()
-                    - _orderManager.totalItemsCountInOrders(item.getKey())
+            int remaining = item.getValue() - _orderManager.totalItemsCountInOrders(item.getKey())
                     - getReservedStagedCrafting(item.getKey());
             if (remaining < 1) {
                 continue;

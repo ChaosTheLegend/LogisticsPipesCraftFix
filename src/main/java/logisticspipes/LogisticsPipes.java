@@ -12,7 +12,6 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import logisticspipes.pipes.*;
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -42,10 +41,6 @@ import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
-import logisticspipes.crafting.Pattern;
-import logisticspipes.crafting.ItemMemoryChip;
-import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
-import logisticspipes.crafting.requesttable.RequestTablePipe;
 import logisticspipes.asm.LogisticsPipesClassInjector;
 import logisticspipes.asm.wrapper.LogisticsWrapperHandler;
 import logisticspipes.blocks.LogisticsSolidBlock;
@@ -53,6 +48,10 @@ import logisticspipes.commands.LogisticsPipesCommand;
 import logisticspipes.commands.chathelper.LPChatListener;
 import logisticspipes.config.Configs;
 import logisticspipes.config.PlayerConfig;
+import logisticspipes.crafting.ItemMemoryChip;
+import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
+import logisticspipes.crafting.requesttable.RequestTablePipe;
 import logisticspipes.items.ItemDisk;
 import logisticspipes.items.ItemHUDArmor;
 import logisticspipes.items.ItemLogisticsPipe;
@@ -512,7 +511,8 @@ public class LogisticsPipes {
 
         LogisticsPipes.LogisticsPattern = new Pattern();
         LogisticsPipes.LogisticsPattern.setUnlocalizedName("logisticsPattern");
-        GameRegistry.registerItem(LogisticsPipes.LogisticsPattern, LogisticsPipes.LogisticsPattern.getUnlocalizedName());
+        GameRegistry
+                .registerItem(LogisticsPipes.LogisticsPattern, LogisticsPipes.LogisticsPattern.getUnlocalizedName());
         if (isClient) {
             MinecraftForgeClient.registerItemRenderer(LogisticsPipes.LogisticsPattern, new PatternItemRenderer());
         }

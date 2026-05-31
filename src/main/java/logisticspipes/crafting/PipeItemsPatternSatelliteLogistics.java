@@ -19,8 +19,8 @@ import logisticspipes.security.SecuritySettings;
 
 public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogistics {
 
-    private static final Set<PipeItemsPatternSatelliteLogistics> ALL_PATTERN_SATELLITES =
-            Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Set<PipeItemsPatternSatelliteLogistics> ALL_PATTERN_SATELLITES = Collections
+            .newSetFromMap(new WeakHashMap<>());
 
     public PipeItemsPatternSatelliteLogistics(Item item) {
         super(item);
@@ -98,11 +98,14 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
                 if (settings == null || settings.openGui) {
                     ensureAllSatelliteStatus();
                     boolean added = ItemMemoryChip.addPatternSatelliteId(held, satelliteId);
-                    player.addChatComponentMessage(new ChatComponentText(
-                            (added ? "Stored" : "Already stored")
-                                    + " pattern satellite " + satelliteId + " on memory chip"));
+                    player.addChatComponentMessage(
+                            new ChatComponentText(
+                                    (added ? "Stored" : "Already stored") + " pattern satellite "
+                                            + satelliteId
+                                            + " on memory chip"));
                 } else {
-                    player.addChatComponentMessage(new net.minecraft.util.ChatComponentTranslation("lp.chat.permissiondenied"));
+                    player.addChatComponentMessage(
+                            new net.minecraft.util.ChatComponentTranslation("lp.chat.permissiondenied"));
                 }
             }
             return true;

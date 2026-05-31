@@ -44,6 +44,7 @@ import logisticspipes.network.packets.pipe.PipeContentPacket;
 import logisticspipes.network.packets.pipe.PipeContentRequest;
 import logisticspipes.network.packets.pipe.PipePositionPacket;
 import logisticspipes.pipes.PipeItemsFluidSupplier;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.PipeLogisticsChassi;
 import logisticspipes.pipes.PipeLogisticsChassi.ChassiTargetInformation;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
@@ -524,6 +525,12 @@ public class PipeTransportLogistics {
                         return;
                     }
                 }
+
+                if (getPipe() instanceof PipeItemsPatternCraftingLogistics) {
+                    reverseItem(arrivingItem);
+                    return;
+                }
+
                 ISlotUpgradeManager slotManager;
                 {
                     ModulePositionType slot = null;

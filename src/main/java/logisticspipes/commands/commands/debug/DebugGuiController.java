@@ -93,8 +93,7 @@ public class DebugGuiController {
             }
             debugIds.add(identification);
             MainProxy.sendPacketToPlayer(
-                    PacketHandler.getPacket(DebugPanelOpen.class)
-                            .setName(object.getClass().getSimpleName())
+                    PacketHandler.getPacket(DebugPanelOpen.class).setName(object.getClass().getSimpleName())
                             .setIdentification(identification),
                     player);
             serverList.set(identification, entry.startServerDebugging(object, conIn, new ObjectIdentification()));

@@ -2,13 +2,13 @@ package logisticspipes.network.packets.gui;
 
 import java.io.IOException;
 
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import net.minecraft.entity.player.EntityPlayer;
 
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 
 public class PatternCraftingPipeMode extends CoordinatesPacket {
@@ -42,8 +42,10 @@ public class PatternCraftingPipeMode extends CoordinatesPacket {
         if (tile == null || !(tile.pipe instanceof PipeItemsPatternCraftingLogistics)) {
             return;
         }
-        PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode.values();
-        ((PipeItemsPatternCraftingLogistics) tile.pipe).setBlockingMode(values[Math.max(0, Math.min(values.length - 1, mode))]);
+        PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode
+                .values();
+        ((PipeItemsPatternCraftingLogistics) tile.pipe)
+                .setBlockingMode(values[Math.max(0, Math.min(values.length - 1, mode))]);
     }
 
     @Override

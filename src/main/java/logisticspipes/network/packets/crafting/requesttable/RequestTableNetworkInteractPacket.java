@@ -61,12 +61,7 @@ public class RequestTableNetworkInteractPacket extends RequestPacket {
         if (tile == null || !(tile.pipe instanceof RequestTablePipe)) {
             return;
         }
-        ((RequestTablePipe) tile.pipe).handleNetworkEntryInteraction(
-                player,
-                getStack(),
-                fluid,
-                mouseButton,
-                shift);
+        ((RequestTablePipe) tile.pipe).handleNetworkEntryInteraction(player, getStack(), fluid, mouseButton, shift);
     }
 
     @Override

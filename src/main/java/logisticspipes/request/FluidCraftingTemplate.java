@@ -55,15 +55,16 @@ public class FluidCraftingTemplate extends BaseCraftingTemplate {
         for (int i = 0; i < byproductFluids.size(); i++) {
             FluidIdentifierStack existing = byproductFluids.get(i);
             if (existing.getFluidIdentifier().equals(byproductFluid.getFluidIdentifier())) {
-                byproductFluids.set(i, new FluidIdentifierStack(
-                        existing.getFluidIdentifier(),
-                        existing.getStackSize() + byproductFluid.getStackSize()));
+                byproductFluids.set(
+                        i,
+                        new FluidIdentifierStack(
+                                existing.getFluidIdentifier(),
+                                existing.getStackSize() + byproductFluid.getStackSize()));
                 return;
             }
         }
-        byproductFluids.add(new FluidIdentifierStack(
-                byproductFluid.getFluidIdentifier(),
-                byproductFluid.getStackSize()));
+        byproductFluids
+                .add(new FluidIdentifierStack(byproductFluid.getFluidIdentifier(), byproductFluid.getStackSize()));
     }
 
     @Override
@@ -71,19 +72,17 @@ public class FluidCraftingTemplate extends BaseCraftingTemplate {
         List<IExtraPromise> list = new ArrayList<>();
         if (crafter instanceof IProvideItems) {
             for (ItemIdentifierStack stack : byproductItems) {
-                list.add(new LogisticsExtraPromise(
-                        stack.getItem(),
-                        stack.getStackSize() * workSets,
-                        (IProvideItems) crafter,
-                        false));
+                list.add(
+                        new LogisticsExtraPromise(
+                                stack.getItem(),
+                                stack.getStackSize() * workSets,
+                                (IProvideItems) crafter,
+                                false));
             }
         }
         for (FluidIdentifierStack stack : byproductFluids) {
-            list.add(new FluidExtraPromise(
-                    stack.getFluidIdentifier(),
-                    stack.getStackSize() * workSets,
-                    crafter,
-                    false));
+            list.add(
+                    new FluidExtraPromise(stack.getFluidIdentifier(), stack.getStackSize() * workSets, crafter, false));
         }
         return list;
     }

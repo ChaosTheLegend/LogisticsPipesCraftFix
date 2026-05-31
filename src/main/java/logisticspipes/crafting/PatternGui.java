@@ -82,28 +82,31 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         switch (button.id) {
             case CLEAR_BUTTON_ID:
                 Pattern.fromStack(patternInventory.getPatternStack()).clear();
-                MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSlotActionPacket.class)
-                        .setInventorySlot(patternInventory.getInventorySlot())
-                        .setAction(PatternSlotActionPacket.Action.CLEAR.ordinal()));
+                MainProxy.sendPacketToServer(
+                        PacketHandler.getPacket(PatternSlotActionPacket.class)
+                                .setInventorySlot(patternInventory.getInventorySlot())
+                                .setAction(PatternSlotActionPacket.Action.CLEAR.ordinal()));
                 break;
             case MULTIPLE_BUTTON_ID:
                 Pattern.fromStack(patternInventory.getPatternStack()).multiply(2);
-                MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSlotActionPacket.class)
-                        .setInventorySlot(patternInventory.getInventorySlot())
-                        .setAction(PatternSlotActionPacket.Action.MULTIPLY_TWO.ordinal()));
+                MainProxy.sendPacketToServer(
+                        PacketHandler.getPacket(PatternSlotActionPacket.class)
+                                .setInventorySlot(patternInventory.getInventorySlot())
+                                .setAction(PatternSlotActionPacket.Action.MULTIPLY_TWO.ordinal()));
                 break;
 
         }
         if (button.id >= SATELLITE_BUTTON_OFFSET && button.id < SATELLITE_BUTTON_OFFSET + getInputSize()) {
             int inputSlot = button.id - SATELLITE_BUTTON_OFFSET;
-            int nextSatelliteId = nextSatelliteId(Pattern.fromStack(patternInventory.getPatternStack())
-                    .getSatelliteIdForInputSlot(inputSlot));
-            Pattern.fromStack(patternInventory.getPatternStack()).setSatelliteIdForInputSlot(inputSlot, nextSatelliteId);
+            int nextSatelliteId = nextSatelliteId(
+                    Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot));
+            Pattern.fromStack(patternInventory.getPatternStack())
+                    .setSatelliteIdForInputSlot(inputSlot, nextSatelliteId);
             button.displayString = satelliteButtonLabel(inputSlot);
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
-                    .setInventorySlot(patternInventory.getInventorySlot())
-                    .setInputSlot(inputSlot)
-                    .setSatelliteId(nextSatelliteId));
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
+                            .setInventorySlot(patternInventory.getInventorySlot()).setInputSlot(inputSlot)
+                            .setSatelliteId(nextSatelliteId));
         }
     }
 

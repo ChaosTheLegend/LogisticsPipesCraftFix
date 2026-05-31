@@ -9,14 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.ItemMemoryChip;
-import logisticspipes.crafting.ModuleItemCrafting;
-import logisticspipes.crafting.PatternCraftingTargetSelector;
-import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
-import logisticspipes.gui.hud.HUDPatternCrafting;
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -28,17 +20,25 @@ import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidHandler;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.ItemMemoryChip;
+import logisticspipes.crafting.ModuleItemCrafting;
+import logisticspipes.crafting.PatternCraftingTargetSelector;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
+import logisticspipes.gui.hud.HUDPatternCrafting;
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IHeadUpDisplayRenderer;
 import logisticspipes.interfaces.IHeadUpDisplayRendererProvider;
 import logisticspipes.interfaces.IOrderManagerContentReceiver;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.ICraftItems;
-import logisticspipes.interfaces.routing.IFluidSink;
 import logisticspipes.interfaces.routing.IFilter;
+import logisticspipes.interfaces.routing.IFluidSink;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.interfaces.routing.IRequireReliableTransport;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
@@ -54,8 +54,8 @@ import logisticspipes.request.RequestTree;
 import logisticspipes.request.RequestTreeNode;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.LogisticsPromise;
-import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.routing.order.LogisticsFluidOrderManager;
+import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.routing.order.LogisticsOrderManager;
 import logisticspipes.security.SecuritySettings;
 import logisticspipes.textures.Textures;
@@ -75,8 +75,9 @@ import logisticspipes.utils.item.ItemIdentifierStack;
  * insertion is disabled. Fluid ingredients are accepted through the reliable item-arrival path and buffered by the
  * crafting module as pattern ingredients.
  */
-public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implements ICraftItems, IRequireReliableTransport,
-        IFluidSink, IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver {
+public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
+        implements ICraftItems, IRequireReliableTransport, IFluidSink, IHeadUpDisplayRendererProvider, IChangeListener,
+        IOrderManagerContentReceiver {
 
     public enum BlockingMode {
         OFF,
@@ -148,25 +149,23 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
 
     @Override
     protected boolean handleClick(EntityPlayer entityplayer, SecuritySettings settings) {
-        if (entityplayer.isSneaking()
-                && entityplayer.getCurrentEquippedItem() != null
+        if (entityplayer.isSneaking() && entityplayer.getCurrentEquippedItem() != null
                 && entityplayer.getCurrentEquippedItem().getItem() == LogisticsPipes.LogisticsMemoryChip) {
             if (MainProxy.isServer(entityplayer.worldObj)) {
                 if (settings == null || settings.openGui) {
                     int added = addLinkedPatternSatelliteIds(
                             ItemMemoryChip.getPatternSatelliteIds(entityplayer.getCurrentEquippedItem()));
-                    entityplayer.addChatComponentMessage(new ChatComponentText(
-                            added == 0
-                                    ? "No new pattern satellites linked"
-                                    : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
+                    entityplayer.addChatComponentMessage(
+                            new ChatComponentText(
+                                    added == 0 ? "No new pattern satellites linked"
+                                            : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
                 } else {
                     entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
                 }
             }
             return true;
         }
-        if (!entityplayer.isSneaking()
-                || !SimpleServiceLocator.toolWrenchHandler.isWrenchEquipped(entityplayer)
+        if (!entityplayer.isSneaking() || !SimpleServiceLocator.toolWrenchHandler.isWrenchEquipped(entityplayer)
                 || !SimpleServiceLocator.toolWrenchHandler.canWrench(entityplayer, getX(), getY(), getZ())) {
             return false;
         }
@@ -254,8 +253,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     /**
      * Prevents routed fluid ingredients from being stored in the inherited internal fluid tanks.
      * <p>
-     * Pattern crafting needs the LogisticsFluidContainer item to arrive so the module can match it to a pattern slot and
-     * record buffered ingredient state.
+     * Pattern crafting needs the LogisticsFluidContainer item to arrive so the module can match it to a pattern slot
+     * and record buffered ingredient state.
      */
     @Override
     public boolean canInsertToTanks() {
@@ -275,8 +274,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     /**
      * Rejects direct fluid-handler fills into this pipe.
      * <p>
-     * Fluid ingredients must enter as routed fluid container items so request tracking and staged buffer accounting stay
-     * consistent with item ingredients.
+     * Fluid ingredients must enter as routed fluid container items so request tracking and staged buffer accounting
+     * stay consistent with item ingredients.
      */
     @Override
     public boolean canReceiveFluid() {
@@ -286,8 +285,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     /**
      * Returns the pattern-specific fluid order manager.
      * <p>
-     * This manager tracks crafted fluid outputs and fluid extra orders; it is separate from the lazy manager provided by
-     * the generic fluid pipe base class.
+     * This manager tracks crafted fluid outputs and fluid extra orders; it is separate from the lazy manager provided
+     * by the generic fluid pipe base class.
      */
     @Override
     public LogisticsFluidOrderManager getFluidOrderManager() {
@@ -297,8 +296,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
     /**
      * Keeps generic order-manager watching on the item manager.
      * <p>
-     * Pattern crafting exposes both item and fluid orders in its custom HUD content, but callers expecting CoreRoutedPipe
-     * behavior should still see the item order manager here.
+     * Pattern crafting exposes both item and fluid orders in its custom HUD content, but callers expecting
+     * CoreRoutedPipe behavior should still see the item order manager here.
      */
     @Override
     public LogisticsOrderManager<?, ?> getOrderManager() {
@@ -399,7 +398,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe implement
 
     @Override
     public double getLoadFactor() {
-        return (_orderItemManager.totalAmountCountInAllOrders() + fluidOrderManager.totalAmountCountInAllOrders() + 63.0) / 64.0;
+        return (_orderItemManager.totalAmountCountInAllOrders() + fluidOrderManager.totalAmountCountInAllOrders()
+                + 63.0) / 64.0;
     }
 
     @Override

@@ -1,26 +1,24 @@
 package logisticspipes.network.packets.crafting;
 
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.glodblock.github.util.FluidPatternDetails;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.AbstractPattern;
 import logisticspipes.crafting.IPatternStack;
 import logisticspipes.crafting.Pattern;
 import logisticspipes.crafting.PatternContainer;
-import lombok.NonNull;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
@@ -48,27 +46,28 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
             return;
         }
 
-//        TileEntity tile = getTile(player.worldObj, TileEntity.class);
-//        if (tile instanceof LogisticsCraftingTableTileEntity) {
-//            ((LogisticsCraftingTableTileEntity) tile).handleNEIRecipePacket(getInputs());
-//        } else if (tile instanceof LogisticsTileGenericPipe
-//                && ((LogisticsTileGenericPipe) tile).pipe instanceof PipeBlockRequestTable) {
-//                    ((PipeBlockRequestTable) ((LogisticsTileGenericPipe) tile).pipe)
-//                            .handleNEIRecipePacket(getInputs());
-//                }
+        // TileEntity tile = getTile(player.worldObj, TileEntity.class);
+        // if (tile instanceof LogisticsCraftingTableTileEntity) {
+        // ((LogisticsCraftingTableTileEntity) tile).handleNEIRecipePacket(getInputs());
+        // } else if (tile instanceof LogisticsTileGenericPipe
+        // && ((LogisticsTileGenericPipe) tile).pipe instanceof PipeBlockRequestTable) {
+        // ((PipeBlockRequestTable) ((LogisticsTileGenericPipe) tile).pipe)
+        // .handleNEIRecipePacket(getInputs());
+        // }
     }
 
-    public void importRecipe(EntityPlayer player, int patternInventorySlot, @NonNull List<IPatternStack> inputs, @NonNull List<Integer> indices, @NonNull List<IPatternStack> outputs) {
+    public void importRecipe(EntityPlayer player, int patternInventorySlot, @NonNull List<IPatternStack> inputs,
+            @NonNull List<Integer> indices, @NonNull List<IPatternStack> outputs) {
         if (patternInventorySlot < 0 || patternInventorySlot >= player.inventory.mainInventory.length) return;
 
         ItemStack patternStack = player.inventory.mainInventory[patternInventorySlot];
         if (patternStack == null || patternStack.getItem() != LogisticsPipes.LogisticsPattern) return;
 
-        //clear pattern
+        // clear pattern
         AbstractPattern pattern = Pattern.fromStack(patternStack);
         pattern.setInputsAndOutputs(inputs, indices, outputs);
 
-        //reload the gui from the new pattern
+        // reload the gui from the new pattern
         if (!(player.openContainer instanceof PatternContainer container)) return;
         container.reloadFromPattern(pattern);
     }
@@ -115,4 +114,3 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
         outputs = data.readList(data1 -> IPatternStack.readFromNBT(data1.readNBTTagCompound()));
     }
 }
-

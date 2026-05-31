@@ -1,15 +1,16 @@
 package logisticspipes.crafting;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifier;
-import logisticspipes.utils.item.SimpleStackInventory;
-import net.minecraft.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+
+import net.minecraft.item.ItemStack;
+
+import logisticspipes.LogisticsPipes;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.SimpleStackInventory;
 
 class PatternHandler {
 
@@ -28,7 +29,8 @@ class PatternHandler {
             return null;
         }
         ItemStack stack = patternInventory.getStackInSlot(slot);
-        if (stack == null || stack.getItem() != LogisticsPipes.LogisticsPattern || !Pattern.fromStack(stack).isConfigured()) {
+        if (stack == null || stack.getItem() != LogisticsPipes.LogisticsPattern
+                || !Pattern.fromStack(stack).isConfigured()) {
             return null;
         }
         return stack;

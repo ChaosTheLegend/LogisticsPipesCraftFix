@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
-import logisticspipes.network.packets.pipe.*;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -68,6 +67,7 @@ import logisticspipes.network.packets.cpipe.CraftingAdvancedSatelliteId;
 import logisticspipes.network.packets.cpipe.CraftingPipeOpenConnectedGuiPacket;
 import logisticspipes.network.packets.hud.HUDStartModuleWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopModuleWatchingPacket;
+import logisticspipes.network.packets.pipe.*;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeFluidSatellite;
 import logisticspipes.pipes.PipeItemsCraftingLogistics;
@@ -234,7 +234,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                 dir = getUpgradeManager().getSneakyOrientation();
             }
             IInventoryUtil inv = SimpleServiceLocator.inventoryUtilFactory.getInventoryUtil(base, dir);
-                count += inv.roomForItem(item, 9999);
+            count += inv.roomForItem(item, 9999);
         }
         _service.getCacheHolder().setCache(CacheTypes.Inventory, key, count);
         if (includeInTransit) {
@@ -1268,8 +1268,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                     _service.getItemOrderManager().setMachineProgress((byte) 0);
                 }
             }
-        }
-        else {
+        } else {
             cachedAreAllOrderesToBuffer = false;
         }
 
@@ -1283,18 +1282,18 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
             ItemStack extracted = null;
             for (AdjacentTile crafter : locateCrafters()) {
                 extracted = extractFiltered(
-                    crafter,
-                    _cleanupInventory,
-                    cleanupModeIsExclude,
-                    getUpgradeManager().getCrafterCleanup() * 3);
+                        crafter,
+                        _cleanupInventory,
+                        cleanupModeIsExclude,
+                        getUpgradeManager().getCrafterCleanup() * 3);
 
                 if (extracted != null && extracted.stackSize > 0) break;
             }
 
             if (extracted != null && extracted.stackSize > 0) {
                 _service.queueRoutedItem(
-                    SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted),
-                    ForgeDirection.UP);
+                        SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted),
+                        ForgeDirection.UP);
                 _service.getCacheHolder().trigger(CacheTypes.Inventory);
             }
 
@@ -1687,9 +1686,11 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
 
     public void setBlockingMode(boolean blockingMode) {
         this.blockingMode = blockingMode;
-        if (_service instanceof PipeItemsCraftingLogistics craftingPipe){
+        if (_service instanceof PipeItemsCraftingLogistics craftingPipe) {
             craftingPipe.setBlockingMode(this.blockingMode);
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(CraftingBlockingModePacket.class).setBlockingMode(blockingMode).setLPPos(craftingPipe.getLPPosition()));
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(CraftingBlockingModePacket.class).setBlockingMode(blockingMode)
+                            .setLPPos(craftingPipe.getLPPosition()));
         }
     }
 

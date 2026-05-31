@@ -276,29 +276,27 @@ public class RequestHandler {
             return;
         }
 
-        RequestTree
-                .requestFluid(fluid, stack.getStackSize(), requester, new RequestLog() {
+        RequestTree.requestFluid(fluid, stack.getStackSize(), requester, new RequestLog() {
 
-                    @Override
-                    public void handleMissingItems(List<IResource> resources) {
-                        MainProxy.sendPacketToPlayer(
-                                PacketHandler.getPacket(MissingItems.class).setItems(resources).setFlag(true),
-                                player);
-                    }
+            @Override
+            public void handleMissingItems(List<IResource> resources) {
+                MainProxy.sendPacketToPlayer(
+                        PacketHandler.getPacket(MissingItems.class).setItems(resources).setFlag(true),
+                        player);
+            }
 
-                    @Override
-                    public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
-                        Collection<IResource> coll = new ArrayList<>(1);
-                        coll.add(item);
-                        MainProxy.sendPacketToPlayer(
-                                PacketHandler.getPacket(MissingItems.class).setItems(coll).setFlag(false),
-                                player);
-                    }
+            @Override
+            public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
+                Collection<IResource> coll = new ArrayList<>(1);
+                coll.add(item);
+                MainProxy.sendPacketToPlayer(
+                        PacketHandler.getPacket(MissingItems.class).setItems(coll).setFlag(false),
+                        player);
+            }
 
-                    @Override
-                    public void handleSucessfullRequestOfList(List<IResource> resources,
-                            LinkedLogisticsOrderList parts) {}
-                });
+            @Override
+            public void handleSucessfullRequestOfList(List<IResource> resources, LinkedLogisticsOrderList parts) {}
+        });
     }
 
     public static void simulateFluid(final EntityPlayer player, final ItemIdentifierStack stack, CoreRoutedPipe pipe,

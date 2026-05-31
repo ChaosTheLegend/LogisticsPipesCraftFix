@@ -1,20 +1,17 @@
 package logisticspipes.network.packets.pipe;
 
-import logisticspipes.interfaces.routing.ICraftItems;
+import java.io.IOException;
+
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
-import logisticspipes.network.abstractpackets.BooleanModuleCoordinatesPacket;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
-import logisticspipes.network.abstractpackets.ModuleCoordinatesPacket;
 import logisticspipes.pipes.PipeItemsCraftingLogistics;
-import logisticspipes.pipes.basic.CoreRoutedPipe;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.entity.player.EntityPlayer;
-
-import java.io.IOException;
 
 @Accessors(chain = true)
 public class CraftingBlockingModePacket extends CoordinatesPacket {

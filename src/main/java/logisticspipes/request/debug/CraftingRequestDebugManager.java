@@ -25,19 +25,20 @@ public final class CraftingRequestDebugManager {
     private static final int MAX_SNAPSHOTS = 24;
     private static final int MAX_EVENTS = 600;
     private static final Pattern PIPE_MESSAGE_PATTERN = Pattern.compile("^(pipe=\\([^)]*\\))\\s+(.*)$");
-    private static final Pattern TARGET_SLOT_PATTERN = Pattern.compile("PatternTargetInformation\\[patternSlot=(\\d+)]");
-    private static final Pattern STAGED_START_PATTERN = Pattern.compile(
-            "^staged craft start promise=(.*?) amount=(\\d+) request=.* info=(.*?) branch=.*$");
-    private static final Pattern STAGED_REGISTERED_PATTERN = Pattern.compile(
-            "^staged craft registered slot=(\\d+) remainingSets=(\\d+) ingredientBranches=(\\d+)$");
-    private static final Pattern ORDER_CREATED_PATTERN = Pattern.compile(
-            "^create (item|fluid) output order (?:item|fluid)=(.*?) amount=(\\d+) destination=(.*?) info=.*$");
+    private static final Pattern TARGET_SLOT_PATTERN = Pattern
+            .compile("PatternTargetInformation\\[patternSlot=(\\d+)]");
+    private static final Pattern STAGED_START_PATTERN = Pattern
+            .compile("^staged craft start promise=(.*?) amount=(\\d+) request=.* info=(.*?) branch=.*$");
+    private static final Pattern STAGED_REGISTERED_PATTERN = Pattern
+            .compile("^staged craft registered slot=(\\d+) remainingSets=(\\d+) ingredientBranches=(\\d+)$");
+    private static final Pattern ORDER_CREATED_PATTERN = Pattern
+            .compile("^create (item|fluid) output order (?:item|fluid)=(.*?) amount=(\\d+) destination=(.*?) info=.*$");
     private static final Pattern SETS_REQUEST_PATTERN = Pattern.compile(
             "^request ingredients slot=(\\d+) remainingSets=(\\d+) orderableSets=(\\d+) branchSets=(\\d+) selectedSets=(\\d+)$");
     private static final Pattern INGREDIENT_REQUEST_PATTERN = Pattern.compile(
             "^order requested ingredient slot=(\\d+) ingredient=(.*?) target=(.*?) requested=(\\d+) amountPerSet=(\\d+)$");
-    private static final Pattern COMPLETED_SLOT_PATTERN = Pattern.compile(
-            "^request ingredients slot=(\\d+) completed staged order after request$");
+    private static final Pattern COMPLETED_SLOT_PATTERN = Pattern
+            .compile("^request ingredients slot=(\\d+) completed staged order after request$");
     private static final Pattern COORDINATES_PATTERN = Pattern.compile("(\\(-?\\d+,\\s*-?\\d+,\\s*-?\\d+\\))");
     private static final Deque<RequestSnapshot> SNAPSHOTS = new ArrayDeque<>();
     private static final Deque<DebugEvent> EVENTS = new ArrayDeque<>();
@@ -88,10 +89,7 @@ public final class CraftingRequestDebugManager {
         recordEvent(category, describePipe(pipe) + " " + message);
     }
 
-    public static void recordPipeEvent(
-            PipeItemsPatternCraftingLogistics pipe,
-            String category,
-            String message,
+    public static void recordPipeEvent(PipeItemsPatternCraftingLogistics pipe, String category, String message,
             Object... args) {
         recordPipeEvent(pipe, category, safeFormat(message, args));
     }
@@ -122,18 +120,14 @@ public final class CraftingRequestDebugManager {
             events = new ArrayList<>(EVENTS);
         }
         out.append("== Summary ==\n");
-        out.append("Recorded request snapshots: ").append(snapshots.size()).append("/").append(MAX_SNAPSHOTS).append("\n");
+        out.append("Recorded request snapshots: ").append(snapshots.size()).append("/").append(MAX_SNAPSHOTS)
+                .append("\n");
         out.append("Timeline events: ").append(events.size()).append("/").append(MAX_EVENTS).append("\n");
         out.append("Active pattern crafting pipes: ").append(countActivePatternPipes()).append("\n");
         if (!events.isEmpty()) {
             DebugEvent newest = events.get(0);
-            out.append("Latest event: #")
-                    .append(newest.id)
-                    .append(" ")
-                    .append(newest.category)
-                    .append(" ")
-                    .append(newest.message)
-                    .append("\n");
+            out.append("Latest event: #").append(newest.id).append(" ").append(newest.category).append(" ")
+                    .append(newest.message).append("\n");
         }
         out.append("\n");
     }
@@ -192,30 +186,19 @@ public final class CraftingRequestDebugManager {
     }
 
     private static void appendEventLine(StringBuilder out, DebugEvent event) {
-        out.append("#")
-                .append(event.id)
-                .append(" tick=")
-                .append(event.tick)
-                .append(" ")
-                .append(formatTime(event.time))
-                .append(" [")
-                .append(event.category)
-                .append("] ")
-                .append(event.message)
-                .append("\n");
+        out.append("#").append(event.id).append(" tick=").append(event.tick).append(" ").append(formatTime(event.time))
+                .append(" [").append(event.category).append("] ").append(event.message).append("\n");
     }
 
     private static boolean isCompactTimelineEvent(DebugEvent event) {
         PipeMessage pipeMessage = splitPipeMessage(event.message);
         String message = pipeMessage.body;
         if ("REQUEST".equals(event.category)) {
-            return message.startsWith("request#")
-                    || message.contains("selectedSets=0")
+            return message.startsWith("request#") || message.contains("selectedSets=0")
                     || message.startsWith("lost retry");
         }
         if ("STAGED".equals(event.category)) {
-            return message.startsWith("staged craft start")
-                    || message.startsWith("staged craft rejected");
+            return message.startsWith("staged craft start") || message.startsWith("staged craft rejected");
         }
         return "FLOW".equals(event.category) || "EXTRA".equals(event.category);
     }
@@ -232,13 +215,8 @@ public final class CraftingRequestDebugManager {
         }
         for (int i = 0; i < snapshots.size(); i++) {
             RequestSnapshot snapshot = snapshots.get(i);
-            out.append("-- Request #")
-                    .append(snapshot.id)
-                    .append(" / snapshot ")
-                    .append(i)
-                    .append(" (")
-                    .append(i == 0 ? "newest" : "history")
-                    .append(") --\n");
+            out.append("-- Request #").append(snapshot.id).append(" / snapshot ").append(i).append(" (")
+                    .append(i == 0 ? "newest" : "history").append(") --\n");
             out.append("Title: ").append(snapshot.title).append("\n");
             out.append("Captured: ").append(formatTime(snapshot.time)).append("\n\n");
             out.append("Request tree:\n");
@@ -283,13 +261,9 @@ public final class CraftingRequestDebugManager {
             try {
                 ((PipeItemsPatternCraftingLogistics) pipe).getPatternModule().appendDebugState(out);
             } catch (RuntimeException e) {
-                out.append("Pattern crafting pipe at router ")
-                        .append(router.getSimpleID())
-                        .append(" could not be dumped: ")
-                        .append(e.getClass().getName())
-                        .append(": ")
-                        .append(e.getMessage())
-                        .append("\n");
+                out.append("Pattern crafting pipe at router ").append(router.getSimpleID())
+                        .append(" could not be dumped: ").append(e.getClass().getName()).append(": ")
+                        .append(e.getMessage()).append("\n");
             }
             out.append("\n");
         }
@@ -307,15 +281,10 @@ public final class CraftingRequestDebugManager {
         return out.toString();
     }
 
-    private static void appendOrderList(StringBuilder out, LinkedLogisticsOrderList orders, String prefix, String label) {
-        out.append(prefix)
-                .append(label)
-                .append(" orders=")
-                .append(orders.size())
-                .append(" subtrees=")
-                .append(orders.getSubOrders().size())
-                .append(" rootSize=")
-                .append(orders.getTreeRootSize())
+    private static void appendOrderList(StringBuilder out, LinkedLogisticsOrderList orders, String prefix,
+            String label) {
+        out.append(prefix).append(label).append(" orders=").append(orders.size()).append(" subtrees=")
+                .append(orders.getSubOrders().size()).append(" rootSize=").append(orders.getTreeRootSize())
                 .append("\n");
         for (IOrderInfoProvider order : orders) {
             appendOrder(out, order, prefix + "  ");
@@ -330,13 +299,8 @@ public final class CraftingRequestDebugManager {
             out.append(prefix).append("- <null order>\n");
             return;
         }
-        out.append(prefix)
-                .append("- ")
-                .append(order.getType())
-                .append(" ")
-                .append(order.getAsDisplayItem())
-                .append(" -> router ")
-                .append(order.getRouterId());
+        out.append(prefix).append("- ").append(order.getType()).append(" ").append(order.getAsDisplayItem())
+                .append(" -> router ").append(order.getRouterId());
         if (order.isInProgress()) {
             out.append(" in-progress");
         }
@@ -350,8 +314,8 @@ public final class CraftingRequestDebugManager {
         if (orders == null) {
             return "orders=<none>";
         }
-        return "orders=" + orders.size() + " subtrees=" + orders.getSubOrders().size()
-                + " rootSize=" + orders.getTreeRootSize();
+        return "orders=" + orders
+                .size() + " subtrees=" + orders.getSubOrders().size() + " rootSize=" + orders.getTreeRootSize();
     }
 
     private static String describePipe(PipeItemsPatternCraftingLogistics pipe) {
@@ -486,7 +450,8 @@ public final class CraftingRequestDebugManager {
             if (start.matches()) {
                 int amount = parseInt(start.group(2), 0);
                 int parentSlot = parseTargetSlot(start.group(3));
-                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot, true) : null;
+                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot, true)
+                        : null;
                 FlowCraft craft = new FlowCraft(pipeMessage.pipeKey, event.tick, start.group(1), amount, parentSlot);
                 if (parent == null) {
                     roots.add(craft);
@@ -535,11 +500,12 @@ public final class CraftingRequestDebugManager {
                 if (craft == null) {
                     return false;
                 }
-                craft.setRequests.add(new FlowSetRequest(
-                        parseInt(sets.group(2), 0),
-                        parseInt(sets.group(3), 0),
-                        parseInt(sets.group(4), 0),
-                        parseInt(sets.group(5), 0)));
+                craft.setRequests.add(
+                        new FlowSetRequest(
+                                parseInt(sets.group(2), 0),
+                                parseInt(sets.group(3), 0),
+                                parseInt(sets.group(4), 0),
+                                parseInt(sets.group(5), 0)));
                 return true;
             }
             Matcher ingredient = INGREDIENT_REQUEST_PATTERN.matcher(message);
@@ -553,11 +519,12 @@ public final class CraftingRequestDebugManager {
                     return false;
                 }
                 String target = ingredient.group(3);
-                craft.ingredients.add(new FlowIngredientRequest(
-                        ingredient.group(2),
-                        target == null || target.equals("null") ? "local buffer" : simplifyTarget(target),
-                        requested,
-                        parseInt(ingredient.group(5), 0)));
+                craft.ingredients.add(
+                        new FlowIngredientRequest(
+                                ingredient.group(2),
+                                target == null || target.equals("null") ? "local buffer" : simplifyTarget(target),
+                                requested,
+                                parseInt(ingredient.group(5), 0)));
                 return true;
             }
             Matcher completed = COMPLETED_SLOT_PATTERN.matcher(message);
@@ -584,8 +551,7 @@ public final class CraftingRequestDebugManager {
         private FlowCraft findLatestCraftBySlot(String pipeKey, int patternSlot, boolean openOnly) {
             for (int i = crafts.size() - 1; i >= 0; i--) {
                 FlowCraft craft = crafts.get(i);
-                if (samePipe(pipeKey, craft.pipeKey)
-                        && craft.patternSlot == patternSlot
+                if (samePipe(pipeKey, craft.pipeKey) && craft.patternSlot == patternSlot
                         && (!openOnly || !craft.ingredientsComplete)) {
                     return craft;
                 }
@@ -650,11 +616,7 @@ public final class CraftingRequestDebugManager {
         }
 
         private void append(StringBuilder out, String prefix) {
-            out.append(prefix)
-                    .append("- ")
-                    .append(amount)
-                    .append("x ")
-                    .append(output);
+            out.append(prefix).append("- ").append(amount).append("x ").append(output);
             if (patternSlot >= 0) {
                 out.append(" [slot ").append(patternSlot).append("]");
             }
@@ -677,25 +639,14 @@ public final class CraftingRequestDebugManager {
 
         private void appendSetSummary(StringBuilder out, String prefix) {
             if (remainingSets >= 0 || ingredientBranches >= 0) {
-                out.append(prefix)
-                        .append("pattern sets: remaining=")
-                        .append(remainingSets)
-                        .append(", branches=")
-                        .append(ingredientBranches)
-                        .append(ingredientsComplete ? ", ingredient requests complete" : "")
+                out.append(prefix).append("pattern sets: remaining=").append(remainingSets).append(", branches=")
+                        .append(ingredientBranches).append(ingredientsComplete ? ", ingredient requests complete" : "")
                         .append("\n");
             }
             for (FlowSetRequest request : setRequests) {
-                out.append(prefix)
-                        .append("requested sets: selected=")
-                        .append(request.selectedSets)
-                        .append("/")
-                        .append(request.remainingSets)
-                        .append(" capacity=")
-                        .append(request.orderableSets)
-                        .append(" branch=")
-                        .append(request.branchSets)
-                        .append("\n");
+                out.append(prefix).append("requested sets: selected=").append(request.selectedSets).append("/")
+                        .append(request.remainingSets).append(" capacity=").append(request.orderableSets)
+                        .append(" branch=").append(request.branchSets).append("\n");
             }
         }
 
@@ -715,16 +666,9 @@ public final class CraftingRequestDebugManager {
             }
             out.append(prefix).append("ingredients requested:\n");
             for (FlowIngredientRequest ingredient : merged.values()) {
-                out.append(prefix)
-                        .append("  - ")
-                        .append(ingredient.ingredient)
-                        .append(": requested=")
-                        .append(ingredient.requested)
-                        .append(" amountPerSet=")
-                        .append(ingredient.amountPerSet)
-                        .append(" -> ")
-                        .append(ingredient.target)
-                        .append("\n");
+                out.append(prefix).append("  - ").append(ingredient.ingredient).append(": requested=")
+                        .append(ingredient.requested).append(" amountPerSet=").append(ingredient.amountPerSet)
+                        .append(" -> ").append(ingredient.target).append("\n");
             }
         }
     }

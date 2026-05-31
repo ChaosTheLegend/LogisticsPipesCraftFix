@@ -13,10 +13,10 @@ import net.minecraftforge.fluids.IFluidContainerItem;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.gui.DummySlot;
 import logisticspipes.utils.gui.HandelableSlot;
 import logisticspipes.utils.gui.UnmodifiableSlot;
-import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 /**
@@ -213,8 +213,7 @@ public class RequestTableContainer extends DummyContainer {
             if (held == null) {
                 result = fillContainerFromSlot(fluidSlot, cursor, stored);
             } else if (sameFluid(stored, held)) {
-                result = isContainerFull(cursor, held)
-                        ? emptyContainerIntoSlot(fluidSlot, cursor, held)
+                result = isContainerFull(cursor, held) ? emptyContainerIntoSlot(fluidSlot, cursor, held)
                         : fillContainerFromSlot(fluidSlot, cursor, stored);
             }
         } else if (held != null) {
@@ -255,7 +254,8 @@ public class RequestTableContainer extends DummyContainer {
         }
         ItemStack filled = FluidContainerRegistry.fillFluidContainer(stored, cursor);
         FluidStack filledFluid = getContainedFluid(filled);
-        if (filled == null || filledFluid == null || !sameFluid(stored, filledFluid)
+        if (filled == null || filledFluid == null
+                || !sameFluid(stored, filledFluid)
                 || filledFluid.amount > stored.amount) {
             return cursor;
         }
@@ -317,7 +317,8 @@ public class RequestTableContainer extends DummyContainer {
         if (fluid != null) {
             return fluid;
         }
-        return SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+        return SimpleServiceLocator.logisticsFluidManager
+                .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
     }
 
     private boolean isContainerFull(ItemStack stack, FluidStack held) {

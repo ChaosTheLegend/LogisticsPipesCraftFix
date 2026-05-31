@@ -44,7 +44,8 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
      * Registers a fluid output from the same pattern that is not the requested item result.
      * <p>
      * Pattern item crafts may still produce fluid byproducts. They are tracked separately from item byproducts because
-     * the request tree must create {@link FluidExtraPromise}s and the pipe must drain those fluids from a fluid handler.
+     * the request tree must create {@link FluidExtraPromise}s and the pipe must drain those fluids from a fluid
+     * handler.
      */
     public void addFluidByproduct(FluidIdentifierStack stack) {
         if (stack == null || stack.getStackSize() <= 0) {
@@ -53,9 +54,11 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
         for (int i = 0; i < fluidByproducts.size(); i++) {
             FluidIdentifierStack existing = fluidByproducts.get(i);
             if (existing.getFluidIdentifier().equals(stack.getFluidIdentifier())) {
-                fluidByproducts.set(i, new FluidIdentifierStack(
-                        existing.getFluidIdentifier(),
-                        existing.getStackSize() + stack.getStackSize()));
+                fluidByproducts.set(
+                        i,
+                        new FluidIdentifierStack(
+                                existing.getFluidIdentifier(),
+                                existing.getStackSize() + stack.getStackSize()));
                 return;
             }
         }
@@ -72,19 +75,21 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
     public List<IExtraPromise> getByproducts(int workSets) {
         List<IExtraPromise> result = new ArrayList<>();
         for (ItemIdentifierStack byproduct : byproducts) {
-            result.add(new LogisticsExtraPromise(
-                    byproduct.getItem(),
-                    byproduct.getStackSize() * workSets,
-                    crafter,
-                    false));
+            result.add(
+                    new LogisticsExtraPromise(
+                            byproduct.getItem(),
+                            byproduct.getStackSize() * workSets,
+                            crafter,
+                            false));
         }
         if (crafter instanceof ICraftFluids) {
             for (FluidIdentifierStack byproduct : fluidByproducts) {
-                result.add(new FluidExtraPromise(
-                        byproduct.getFluidIdentifier(),
-                        byproduct.getStackSize() * workSets,
-                        (ICraftFluids) crafter,
-                        false));
+                result.add(
+                        new FluidExtraPromise(
+                                byproduct.getFluidIdentifier(),
+                                byproduct.getStackSize() * workSets,
+                                (ICraftFluids) crafter,
+                                false));
             }
         }
         return result;

@@ -1,15 +1,17 @@
 package logisticspipes.gui.hud;
 
+import java.util.List;
+
+import net.minecraft.client.Minecraft;
+
+import org.lwjgl.opengl.GL11;
+
 import logisticspipes.interfaces.IHUDConfig;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.ItemStackRenderer;
 import logisticspipes.utils.item.ItemStackRenderer.DisplayAmount;
-import net.minecraft.client.Minecraft;
-import org.lwjgl.opengl.GL11;
-
-import java.util.List;
 
 public class HUDPatternCrafting extends BasicHUDGui {
 
@@ -90,8 +92,7 @@ public class HUDPatternCrafting extends BasicHUDGui {
 
     @Override
     public boolean display(IHUDConfig config) {
-        return config.isHUDCrafting()
-                && (!pipe.getHudCraftResults().isEmpty() || !pipe.displayList.isEmpty());
+        return config.isHUDCrafting() && (!pipe.getHudCraftResults().isEmpty() || !pipe.displayList.isEmpty());
     }
 
     @Override

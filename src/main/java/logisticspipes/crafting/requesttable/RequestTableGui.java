@@ -70,11 +70,21 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
         super.initGui();
         updateLayout();
         buttonList.clear();
-        sendButton = new GuiButton(SEND_BUTTON, layout.sendButtonX, layout.sendButtonY, layout.sendButtonWidth,
-                layout.sendButtonHeight, "Send all");
+        sendButton = new GuiButton(
+                SEND_BUTTON,
+                layout.sendButtonX,
+                layout.sendButtonY,
+                layout.sendButtonWidth,
+                layout.sendButtonHeight,
+                "Send all");
         buttonList.add(sendButton);
-        requestIngredientsButton = new GuiButton(REQUEST_INGREDIENTS_BUTTON, layout.craftingRequestX,
-                layout.craftingRequestY, layout.craftingRequestWidth, layout.craftingRequestHeight, "Req");
+        requestIngredientsButton = new GuiButton(
+                REQUEST_INGREDIENTS_BUTTON,
+                layout.craftingRequestX,
+                layout.craftingRequestY,
+                layout.craftingRequestWidth,
+                layout.craftingRequestHeight,
+                "Req");
         buttonList.add(requestIngredientsButton);
         if (search == null) {
             search = new GuiSearchBar("new_request_table_search");
@@ -128,10 +138,18 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
             search.reposition(layout.searchX, layout.searchY, layout.searchWidth, layout.searchHeight);
             search.renderSearchBar();
         }
-        drawStorageButton(layout.itemButtonX, layout.storageButtonY, table.getItemStorageFillLevel(),
-                view == RequestTableView.ITEM_STORAGE, false);
-        drawStorageButton(layout.fluidButtonX, layout.storageButtonY, table.getFluidStorageFillLevel(),
-                view == RequestTableView.FLUID_STORAGE, true);
+        drawStorageButton(
+                layout.itemButtonX,
+                layout.storageButtonY,
+                table.getItemStorageFillLevel(),
+                view == RequestTableView.ITEM_STORAGE,
+                false);
+        drawStorageButton(
+                layout.fluidButtonX,
+                layout.storageButtonY,
+                table.getFluidStorageFillLevel(),
+                view == RequestTableView.FLUID_STORAGE,
+                true);
     }
 
     private void drawMainPanel(int mouseX, int mouseY) {
@@ -143,8 +161,12 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     }
 
     private void drawStoragePanel() {
-        drawRect(layout.panelLeft, layout.panelTop, layout.panelLeft + layout.panelWidth,
-                layout.panelTop + layout.panelHeight, Color.GREY);
+        drawRect(
+                layout.panelLeft,
+                layout.panelTop,
+                layout.panelLeft + layout.panelWidth,
+                layout.panelTop + layout.panelHeight,
+                Color.GREY);
         int columns = 9;
         int size = view == RequestTableView.ITEM_STORAGE ? table.inv.getSizeInventory()
                 : table.getFluidStorage().getSizeInventory();
@@ -165,28 +187,43 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     }
 
     private void drawStorageScrollbar(int maxScroll) {
-        Gui.drawRect(layout.scrollbarX, layout.panelTop + 1, layout.scrollbarX + 5,
-                layout.panelTop + layout.panelHeight - 1, Color.getValue(Color.DARKER_GREY));
+        Gui.drawRect(
+                layout.scrollbarX,
+                layout.panelTop + 1,
+                layout.scrollbarX + 5,
+                layout.panelTop + layout.panelHeight - 1,
+                Color.getValue(Color.DARKER_GREY));
         int barHeight = Math.max(10, layout.panelHeight / Math.max(1, maxScroll + 1));
         int travel = Math.max(1, layout.panelHeight - 2 - barHeight);
         int barTop = layout.panelTop + 1 + (maxScroll == 0 ? 0 : travel * storageScrollRow / maxScroll);
-        Gui.drawRect(layout.scrollbarX + 1, barTop, layout.scrollbarX + 4, barTop + barHeight,
+        Gui.drawRect(
+                layout.scrollbarX + 1,
+                barTop,
+                layout.scrollbarX + 4,
+                barTop + barHeight,
                 Color.getValue(Color.LIGHTER_GREY));
     }
 
     private void drawCraftingArea() {
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
-                GuiGraphics.drawSlotBackground(mc, layout.craftingLeft + x * 18 - 1,
-                        layout.craftingTop + 6 + y * 18);
+                GuiGraphics.drawSlotBackground(mc, layout.craftingLeft + x * 18 - 1, layout.craftingTop + 6 + y * 18);
             }
         }
         GuiGraphics.drawSlotBackground(mc, layout.craftingResultX - 1, layout.craftingResultY - 1);
-        Gui.drawRect(layout.craftingLeft + 63, layout.craftingTop + 31, layout.craftingLeft + 84,
-                layout.craftingTop + 36, Color.getValue(Color.DARKER_GREY));
+        Gui.drawRect(
+                layout.craftingLeft + 63,
+                layout.craftingTop + 31,
+                layout.craftingLeft + 84,
+                layout.craftingTop + 36,
+                Color.getValue(Color.DARKER_GREY));
         for (int i = 0; i < 7; i++) {
-            Gui.drawRect(layout.craftingLeft + 80 + i, layout.craftingTop + 27 + i,
-                    layout.craftingLeft + 82 + i, layout.craftingTop + 41 - i, Color.getValue(Color.DARKER_GREY));
+            Gui.drawRect(
+                    layout.craftingLeft + 80 + i,
+                    layout.craftingTop + 27 + i,
+                    layout.craftingLeft + 82 + i,
+                    layout.craftingTop + 41 - i,
+                    Color.getValue(Color.DARKER_GREY));
         }
         drawClearCraftingButton();
         if (ingredientAmountField != null) {
@@ -255,9 +292,9 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     protected void actionPerformed(GuiButton button) {
         if (button.id == SEND_BUTTON) {
             int mode = view == RequestTableView.FLUID_STORAGE ? 1 : 0;
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableSendStoragePacket.class)
-                    .setInteger(mode)
-                    .setTilePos(table.container));
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(RequestTableSendStoragePacket.class).setInteger(mode)
+                            .setTilePos(table.container));
         } else if (button.id == REQUEST_INGREDIENTS_BUTTON) {
             requestCraftingIngredients();
         }
@@ -268,27 +305,47 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
         if (requestOverlay.mouseClicked(mouseX, mouseY, button, this::submitOverlayRequest)) {
             return;
         }
-        if (button == 0 && inside(mouseX, mouseY, layout.craftingClearX, layout.craftingClearY,
-                layout.craftingClearSize, layout.craftingClearSize)) {
+        if (button == 0 && inside(
+                mouseX,
+                mouseY,
+                layout.craftingClearX,
+                layout.craftingClearY,
+                layout.craftingClearSize,
+                layout.craftingClearSize)) {
             table.clearCraftingGrid();
-            MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableClearCraftingPacket.class)
-                    .setTilePos(table.container));
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(RequestTableClearCraftingPacket.class).setTilePos(table.container));
             return;
         }
         if (ingredientAmountField != null) {
             ingredientAmountField.mouseClicked(mouseX, mouseY, button);
-            if (inside(mouseX, mouseY, layout.craftingAmountX, layout.craftingAmountY,
-                    layout.craftingAmountWidth, layout.craftingAmountHeight)) {
+            if (inside(
+                    mouseX,
+                    mouseY,
+                    layout.craftingAmountX,
+                    layout.craftingAmountY,
+                    layout.craftingAmountWidth,
+                    layout.craftingAmountHeight)) {
                 return;
             }
         }
-        if (button == 0 && inside(mouseX, mouseY, layout.itemButtonX, layout.storageButtonY,
-                layout.storageButtonSize, layout.storageButtonSize)) {
+        if (button == 0 && inside(
+                mouseX,
+                mouseY,
+                layout.itemButtonX,
+                layout.storageButtonY,
+                layout.storageButtonSize,
+                layout.storageButtonSize)) {
             setView(view == RequestTableView.ITEM_STORAGE ? RequestTableView.NETWORK : RequestTableView.ITEM_STORAGE);
             return;
         }
-        if (button == 0 && inside(mouseX, mouseY, layout.fluidButtonX, layout.storageButtonY,
-                layout.storageButtonSize, layout.storageButtonSize)) {
+        if (button == 0 && inside(
+                mouseX,
+                mouseY,
+                layout.fluidButtonX,
+                layout.storageButtonY,
+                layout.storageButtonSize,
+                layout.storageButtonSize)) {
             setView(view == RequestTableView.FLUID_STORAGE ? RequestTableView.NETWORK : RequestTableView.FLUID_STORAGE);
             return;
         }
@@ -299,13 +356,10 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
                 if (shouldOpenRequestOverlay(button)) {
                     requestOverlay.open(entry, mc.fontRenderer, width, height, button == 0 ? 64 : 1);
                 } else if (button == 0 || button == 1) {
-                    MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableNetworkInteractPacket.class)
-                            .setFluid(entry.isFluid())
-                            .setMouseButton(button)
-                            .setShift(isShiftDown())
-                            .setDimension(dimension)
-                            .setStack(entry.getStack())
-                            .setTilePos(table.container));
+                    MainProxy.sendPacketToServer(
+                            PacketHandler.getPacket(RequestTableNetworkInteractPacket.class).setFluid(entry.isFluid())
+                                    .setMouseButton(button).setShift(isShiftDown()).setDimension(dimension)
+                                    .setStack(entry.getStack()).setTilePos(table.container));
                 }
                 return;
             }
@@ -382,11 +436,11 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
             return;
         }
         RequestTableNetworkEntry entry = requestOverlay.getEntry();
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableSubmitPacket.class)
-                .setFluid(entry.isFluid())
-                .setDimension(dimension)
-                .setStack(entry.getStack().getItem().makeStack(requestOverlay.getAmount()))
-                .setTilePos(table.container));
+        MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(RequestTableSubmitPacket.class).setFluid(entry.isFluid())
+                        .setDimension(dimension)
+                        .setStack(entry.getStack().getItem().makeStack(requestOverlay.getAmount()))
+                        .setTilePos(table.container));
         requestOverlay.close();
         refreshNetwork();
     }
@@ -401,16 +455,20 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     }
 
     private void refreshNetwork() {
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableRefreshPacket.class)
-                .setInteger(dimension)
-                .setTilePos(table.container));
+        MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(RequestTableRefreshPacket.class).setInteger(dimension)
+                        .setTilePos(table.container));
     }
 
     private void initIngredientAmountField() {
         String text = ingredientAmountField == null ? "1" : ingredientAmountField.getText();
         boolean focused = ingredientAmountField != null && ingredientAmountField.isFocused();
-        ingredientAmountField = new GuiTextField(mc.fontRenderer, layout.craftingAmountX, layout.craftingAmountY,
-                layout.craftingAmountWidth, layout.craftingAmountHeight);
+        ingredientAmountField = new GuiTextField(
+                mc.fontRenderer,
+                layout.craftingAmountX,
+                layout.craftingAmountY,
+                layout.craftingAmountWidth,
+                layout.craftingAmountHeight);
         ingredientAmountField.setMaxStringLength(5);
         ingredientAmountField.setText(text);
         ingredientAmountField.setFocused(focused);
@@ -445,9 +503,9 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     }
 
     private void requestCraftingIngredients() {
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(RequestTableRequestIngredientsPacket.class)
-                .setInteger(getIngredientRequestAmount())
-                .setTilePos(table.container));
+        MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(RequestTableRequestIngredientsPacket.class)
+                        .setInteger(getIngredientRequestAmount()).setTilePos(table.container));
         refreshNetwork();
     }
 

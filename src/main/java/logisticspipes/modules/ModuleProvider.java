@@ -17,8 +17,8 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import logisticspipes.gui.hud.modules.HUDProviderModule;
 import logisticspipes.crafting.IStagedProviderReservation;
+import logisticspipes.gui.hud.modules.HUDProviderModule;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -68,9 +68,9 @@ import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 @CCType(name = "Provider Module")
-public class ModuleProvider extends LogisticsSneakyDirectionModule implements ILegacyActiveModule,
-        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive,
-        IStagedProviderReservation {
+public class ModuleProvider extends LogisticsSneakyDirectionModule
+        implements ILegacyActiveModule, IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver,
+        IModuleInventoryReceive, IStagedProviderReservation {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -284,8 +284,7 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     }
 
     private int getAvailableItemCount(ItemIdentifier item) {
-        return getTotalItemCount(item)
-                - _service.getItemOrderManager().totalItemsCountInOrders(item)
+        return getTotalItemCount(item) - _service.getItemOrderManager().totalItemsCountInOrders(item)
                 - getReservedStagedCrafting(item);
     }
 

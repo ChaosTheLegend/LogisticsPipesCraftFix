@@ -121,10 +121,8 @@ public class RequestTableRequestOverlay {
             drawDeltaButton(screen, i, false);
         }
 
-        new ItemStackRenderer(left + 29, top + 35, 250.0F, true, true, true)
-                .setItemIdentifierStack(entry.getStack())
-                .setDisplayAmount(DisplayAmount.NEVER)
-                .renderInGui();
+        new ItemStackRenderer(left + 29, top + 35, 250.0F, true, true, true).setItemIdentifierStack(entry.getStack())
+                .setDisplayAmount(DisplayAmount.NEVER).renderInGui();
 
         amountField.drawTextBox();
         drawMinecraftButton(screen, left + 124, top + 34, 28, 18, hasValidAmount());
@@ -136,11 +134,12 @@ public class RequestTableRequestOverlay {
         int y = plus ? top + 17 : top + 61;
         drawMinecraftButton(screen, x, y, 34, 14, true);
         String label = (plus ? "+" : "-") + DELTAS[index];
-        screen.getMC().fontRenderer.drawString(label, x + 17 - screen.getMC().fontRenderer.getStringWidth(label) / 2,
-                y + 3, 0xffffff);
+        screen.getMC().fontRenderer
+                .drawString(label, x + 17 - screen.getMC().fontRenderer.getStringWidth(label) / 2, y + 3, 0xffffff);
     }
 
-    private void drawMinecraftButton(LogisticsBaseGuiScreen screen, int x, int y, int width, int height, boolean enabled) {
+    private void drawMinecraftButton(LogisticsBaseGuiScreen screen, int x, int y, int width, int height,
+            boolean enabled) {
         int fill = enabled ? 0xffc6c6c6 : 0xff7f7f7f;
         screen.drawRect(x, y, x + width, y + height, Color.BLACK);
         screen.drawRect(x + 1, y + 1, x + width - 1, y + height - 1, fill);
@@ -216,8 +215,10 @@ public class RequestTableRequestOverlay {
             submit.run();
             return true;
         }
-        if (Character.isDigit(typed) || keyCode == Keyboard.KEY_BACK || keyCode == Keyboard.KEY_DELETE
-                || keyCode == Keyboard.KEY_LEFT || keyCode == Keyboard.KEY_RIGHT) {
+        if (Character.isDigit(typed) || keyCode == Keyboard.KEY_BACK
+                || keyCode == Keyboard.KEY_DELETE
+                || keyCode == Keyboard.KEY_LEFT
+                || keyCode == Keyboard.KEY_RIGHT) {
             amountField.textboxKeyTyped(typed, keyCode);
             sanitizeAmount();
         }

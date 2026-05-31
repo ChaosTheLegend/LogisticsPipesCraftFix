@@ -1,15 +1,17 @@
 package logisticspipes.nei;
 
-import codechicken.nei.VisiblityData;
-import codechicken.nei.api.INEIGuiHandler;
-import codechicken.nei.api.TaggedInventoryArea;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+
+import codechicken.nei.VisiblityData;
+import codechicken.nei.api.INEIGuiHandler;
+import codechicken.nei.api.TaggedInventoryArea;
+
 public class LogisticsPattern_NEIGuiHandler implements INEIGuiHandler {
+
     @Override
     public VisiblityData modifyVisiblity(GuiContainer gui, VisiblityData currentVisibility) {
         return currentVisibility;

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import journeymap.server.oldservercode.network.PacketManager;
 import net.minecraft.entity.player.EntityPlayer;
 
 import org.apache.logging.log4j.Level;

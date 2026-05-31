@@ -1,7 +1,7 @@
 package logisticspipes.routing;
 
-import logisticspipes.interfaces.routing.IProvideFluids;
 import logisticspipes.interfaces.routing.ICraftFluids;
+import logisticspipes.interfaces.routing.IProvideFluids;
 import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.order.IOrderInfoProvider;

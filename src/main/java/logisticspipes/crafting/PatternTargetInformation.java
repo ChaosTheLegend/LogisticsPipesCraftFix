@@ -1,6 +1,7 @@
 package logisticspipes.crafting;
 
 import com.github.bsideup.jabel.Desugar;
+
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 
 @Desugar

@@ -1,15 +1,16 @@
 package logisticspipes.crafting;
 
-import gregtech.common.items.ItemFluidDisplay;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
+
+import gregtech.common.items.ItemFluidDisplay;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PatternFluidStack implements IPatternStack {
 
@@ -37,14 +38,14 @@ public class PatternFluidStack implements IPatternStack {
         }
 
         if (fluid == null) {
-            fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+            fluid = SimpleServiceLocator.logisticsFluidManager
+                    .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
         }
 
         if (fluid == null) return null;
 
         fluid = fluid.copy();
         fluid.amount *= stack.stackSize;
-
 
         return new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount);
     }

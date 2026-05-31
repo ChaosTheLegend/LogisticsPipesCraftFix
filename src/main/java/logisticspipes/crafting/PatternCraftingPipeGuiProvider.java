@@ -2,7 +2,6 @@ package logisticspipes.crafting;
 
 import java.io.IOException;
 
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import net.minecraft.entity.player.EntityPlayer;
 
 import logisticspipes.LogisticsPipes;
@@ -10,6 +9,7 @@ import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractguis.GuiProvider;
 import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.utils.gui.DummyContainer;
 
@@ -32,7 +32,8 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
         if (pipe == null) {
             return null;
         }
-        PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode.values();
+        PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode
+                .values();
         pipe.setBlockingMode(values[Math.max(0, Math.min(values.length - 1, blockingMode))]);
         return new PatternCraftingPipeGui(player, pipe);
     }
@@ -51,7 +52,11 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
 
     static void addPatternSlots(DummyContainer dummy, PipeItemsPatternCraftingLogistics pipe) {
         for (int i = 0; i < 9; i++) {
-            dummy.addRestrictedSlot(i, pipe.getPatternModule().getPatternInventory(), 8 + i * 18, 28,
+            dummy.addRestrictedSlot(
+                    i,
+                    pipe.getPatternModule().getPatternInventory(),
+                    8 + i * 18,
+                    28,
                     stack -> stack != null && stack.getItem() == LogisticsPipes.LogisticsPattern);
         }
     }

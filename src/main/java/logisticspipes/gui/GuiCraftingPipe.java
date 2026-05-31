@@ -4,6 +4,18 @@
  */
 package logisticspipes.gui;
 
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.gui.modules.ModuleBaseGui;
 import logisticspipes.items.ItemUpgrade;
@@ -18,16 +30,6 @@ import logisticspipes.utils.gui.SmallGuiButton;
 import logisticspipes.utils.gui.extention.GuiExtention;
 import logisticspipes.utils.string.StringUtils;
 import lombok.Getter;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
 
 public class GuiCraftingPipe extends ModuleBaseGui {
 
@@ -51,8 +53,8 @@ public class GuiCraftingPipe extends ModuleBaseGui {
     private GuiButton cleanupModeButton;
 
     public GuiCraftingPipe(EntityPlayer player, IInventory dummyInventory, ModuleCrafter module, boolean isAdvancedSat,
-                           int liquidCrafter, int[] amount, boolean hasByproductExtractor, boolean isFuzzy, int cleanupSize,
-                           boolean cleanupExclude) {
+            int liquidCrafter, int[] amount, boolean hasByproductExtractor, boolean isFuzzy, int cleanupSize,
+            boolean cleanupExclude) {
         super(null, module);
         _player = player;
         this.isAdvancedSat = isAdvancedSat;
@@ -105,7 +107,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 liquidLeft = -(liquidCrafter * 40) + (i * 40);
             }
             fluidSlotIDs[i] = extentionControllerLeft
-                .registerControlledSlot(dummy.addFluidSlot(i, module.getFluidInventory(), liquidLeft + 11, 24));
+                    .registerControlledSlot(dummy.addFluidSlot(i, module.getFluidInventory(), liquidLeft + 11, 24));
         }
 
         if (hasByproductExtractor) {
@@ -118,7 +120,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
         for (int y = 0; y < cleanupSize; y++) {
             for (int x = 0; x < 3; x++) {
                 cleanupSlotIDs[y * 3 + x] = extentionControllerLeft.registerControlledSlot(
-                    dummy.addDummySlot(y * 3 + x, module.getCleanupInventory(), x * 18 - 57, y * 18 + 13));
+                        dummy.addDummySlot(y * 3 + x, module.getCleanupInventory(), x * 18 - 57, y * 18 + 13));
             }
         }
 
@@ -143,135 +145,134 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 extention = new FluidCraftingExtention(0);
             }
             addButton(
-                normalButtonArray[0] = new SmallGuiButton(
-                    0,
-                    (width - xSize) / 2 + 155,
-                    (height - ySize) / 2 + 50,
-                    10,
-                    10,
-                    ">"));
+                    normalButtonArray[0] = new SmallGuiButton(
+                            0,
+                            (width - xSize) / 2 + 155,
+                            (height - ySize) / 2 + 50,
+                            10,
+                            10,
+                            ">"));
             addButton(
-                normalButtonArray[1] = new SmallGuiButton(
-                    1,
-                    (width - xSize) / 2 + 120,
-                    (height - ySize) / 2 + 50,
-                    10,
-                    10,
-                    "<"));
+                    normalButtonArray[1] = new SmallGuiButton(
+                            1,
+                            (width - xSize) / 2 + 120,
+                            (height - ySize) / 2 + 50,
+                            10,
+                            10,
+                            "<"));
             addButton(
-                normalButtonArray[2] = new SmallGuiButton(
-                    3,
-                    (width - xSize) / 2 + 39,
-                    (height - ySize) / 2 + 50,
-                    37,
-                    10,
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")));
+                    normalButtonArray[2] = new SmallGuiButton(
+                            3,
+                            (width - xSize) / 2 + 39,
+                            (height - ySize) / 2 + 50,
+                            37,
+                            10,
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")));
             addButton(
-                normalButtonArray[3] = new SmallGuiButton(
-                    4,
-                    (width - xSize) / 2 + 6,
-                    (height - ySize) / 2 + 50,
-                    28,
-                    10,
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Open")));
-            addButton(normalButtonArray[8] = new SmallGuiButton(
-                    5,
-                    (width - xSize) / 2 + 6,
-                    (height - ySize) / 2 + 62,
-                    28,
-                    10,
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Blocking")
-                )
-            );
+                    normalButtonArray[3] = new SmallGuiButton(
+                            4,
+                            (width - xSize) / 2 + 6,
+                            (height - ySize) / 2 + 50,
+                            28,
+                            10,
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Open")));
             addButton(
-                normalButtonArray[4] = new SmallGuiButton(
-                    20,
-                    (width - xSize) / 2 + 155,
-                    (height - ySize) / 2 + 85,
-                    10,
-                    10,
-                    ">"));
+                    normalButtonArray[8] = new SmallGuiButton(
+                            5,
+                            (width - xSize) / 2 + 6,
+                            (height - ySize) / 2 + 62,
+                            28,
+                            10,
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Blocking")));
             addButton(
-                normalButtonArray[5] = new SmallGuiButton(
-                    21,
-                    (width - xSize) / 2 + 120,
-                    (height - ySize) / 2 + 85,
-                    10,
-                    10,
-                    "<"));
+                    normalButtonArray[4] = new SmallGuiButton(
+                            20,
+                            (width - xSize) / 2 + 155,
+                            (height - ySize) / 2 + 85,
+                            10,
+                            10,
+                            ">"));
+            addButton(
+                    normalButtonArray[5] = new SmallGuiButton(
+                            21,
+                            (width - xSize) / 2 + 120,
+                            (height - ySize) / 2 + 85,
+                            10,
+                            10,
+                            "<"));
             if (liquidCrafter != 0) {
                 extention.registerButton(
-                    extentionControllerLeft.registerControlledButton(
-                        addButton(
-                            normalButtonArray[6] = new SmallGuiButton(
-                                22,
-                                guiLeft - (liquidCrafter * 40) / 2 + 5,
-                                guiTop + 158,
-                                10,
-                                10,
-                                ">"))));
+                        extentionControllerLeft.registerControlledButton(
+                                addButton(
+                                        normalButtonArray[6] = new SmallGuiButton(
+                                                22,
+                                                guiLeft - (liquidCrafter * 40) / 2 + 5,
+                                                guiTop + 158,
+                                                10,
+                                                10,
+                                                ">"))));
                 extention.registerButton(
-                    extentionControllerLeft.registerControlledButton(
-                        addButton(
-                            normalButtonArray[7] = new SmallGuiButton(
-                                23,
-                                guiLeft - (liquidCrafter * 40) / 2 - 15,
-                                guiTop + 158,
-                                10,
-                                10,
-                                "<"))));
+                        extentionControllerLeft.registerControlledButton(
+                                addButton(
+                                        normalButtonArray[7] = new SmallGuiButton(
+                                                23,
+                                                guiLeft - (liquidCrafter * 40) / 2 - 15,
+                                                guiTop + 158,
+                                                10,
+                                                10,
+                                                "<"))));
             }
         } else {
             for (int i = 0; i < 9; i++) {
                 addButton(
-                    advancedSatButtonArray[i][0] = new SmallGuiButton(
-                        30 + i,
-                        (width - xSize) / 2 + 10 + 18 * i,
-                        (height - ySize) / 2 + 40,
-                        15,
-                        10,
-                        "/\\"));
+                        advancedSatButtonArray[i][0] = new SmallGuiButton(
+                                30 + i,
+                                (width - xSize) / 2 + 10 + 18 * i,
+                                (height - ySize) / 2 + 40,
+                                15,
+                                10,
+                                "/\\"));
                 addButton(
-                    advancedSatButtonArray[i][1] = new SmallGuiButton(
-                        40 + i,
-                        (width - xSize) / 2 + 10 + 18 * i,
-                        (height - ySize) / 2 + 70,
-                        15,
-                        10,
-                        "\\/"));
+                        advancedSatButtonArray[i][1] = new SmallGuiButton(
+                                40 + i,
+                                (width - xSize) / 2 + 10 + 18 * i,
+                                (height - ySize) / 2 + 70,
+                                15,
+                                10,
+                                "\\/"));
             }
             addButton(
-                normalButtonArray[2] = new SmallGuiButton(
-                    3,
-                    (width - xSize) / 2 + 39,
-                    (height - ySize) / 2 + 100,
-                    37,
-                    10,
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")));
+                    normalButtonArray[2] = new SmallGuiButton(
+                            3,
+                            (width - xSize) / 2 + 39,
+                            (height - ySize) / 2 + 100,
+                            37,
+                            10,
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")));
             addButton(
-                normalButtonArray[3] = new SmallGuiButton(
-                    4,
-                    (width - xSize) / 2 + 6,
-                    (height - ySize) / 2 + 100,
-                    28,
-                    10,
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Open")));
+                    normalButtonArray[3] = new SmallGuiButton(
+                            4,
+                            (width - xSize) / 2 + 6,
+                            (height - ySize) / 2 + 100,
+                            28,
+                            10,
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Open")));
             addButton(
-                normalButtonArray[4] = new SmallGuiButton(
-                    20,
-                    (width - xSize) / 2 + 155,
-                    (height - ySize) / 2 + 105,
-                    10,
-                    10,
-                    ">"));
+                    normalButtonArray[4] = new SmallGuiButton(
+                            20,
+                            (width - xSize) / 2 + 155,
+                            (height - ySize) / 2 + 105,
+                            10,
+                            10,
+                            ">"));
             addButton(
-                normalButtonArray[5] = new SmallGuiButton(
-                    21,
-                    (width - xSize) / 2 + 120,
-                    (height - ySize) / 2 + 105,
-                    10,
-                    10,
-                    "<"));
+                    normalButtonArray[5] = new SmallGuiButton(
+                            21,
+                            (width - xSize) / 2 + 120,
+                            (height - ySize) / 2 + 105,
+                            10,
+                            10,
+                            "<"));
         }
         for (int i = 0; i < liquidCrafter; i++) {
             if (isAdvancedSat) {
@@ -285,106 +286,106 @@ public class GuiCraftingPipe extends ModuleBaseGui {
             }
             liquidGuiParts[i] = new GuiButton[10];
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][0] = new SmallGuiButton(
-                            100 + 10 * i,
-                            liquidLeft + 22,
-                            guiTop + 65,
-                            10,
-                            10,
-                            "+"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][0] = new SmallGuiButton(
+                                            100 + 10 * i,
+                                            liquidLeft + 22,
+                                            guiTop + 65,
+                                            10,
+                                            10,
+                                            "+"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][1] = new SmallGuiButton(
-                            100 + 10 * i + 1,
-                            liquidLeft + 22,
-                            guiTop + 85,
-                            10,
-                            10,
-                            "+"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][1] = new SmallGuiButton(
+                                            100 + 10 * i + 1,
+                                            liquidLeft + 22,
+                                            guiTop + 85,
+                                            10,
+                                            10,
+                                            "+"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][2] = new SmallGuiButton(
-                            100 + 10 * i + 2,
-                            liquidLeft + 22,
-                            guiTop + 105,
-                            10,
-                            10,
-                            "+"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][2] = new SmallGuiButton(
+                                            100 + 10 * i + 2,
+                                            liquidLeft + 22,
+                                            guiTop + 105,
+                                            10,
+                                            10,
+                                            "+"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][3] = new SmallGuiButton(
-                            100 + 10 * i + 3,
-                            liquidLeft + 22,
-                            guiTop + 125,
-                            10,
-                            10,
-                            "+"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][3] = new SmallGuiButton(
+                                            100 + 10 * i + 3,
+                                            liquidLeft + 22,
+                                            guiTop + 125,
+                                            10,
+                                            10,
+                                            "+"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][4] = new SmallGuiButton(
-                            100 + 10 * i + 4,
-                            liquidLeft + 8,
-                            guiTop + 65,
-                            10,
-                            10,
-                            "-"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][4] = new SmallGuiButton(
+                                            100 + 10 * i + 4,
+                                            liquidLeft + 8,
+                                            guiTop + 65,
+                                            10,
+                                            10,
+                                            "-"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][5] = new SmallGuiButton(
-                            100 + 10 * i + 5,
-                            liquidLeft + 8,
-                            guiTop + 85,
-                            10,
-                            10,
-                            "-"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][5] = new SmallGuiButton(
+                                            100 + 10 * i + 5,
+                                            liquidLeft + 8,
+                                            guiTop + 85,
+                                            10,
+                                            10,
+                                            "-"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][6] = new SmallGuiButton(
-                            100 + 10 * i + 6,
-                            liquidLeft + 8,
-                            guiTop + 105,
-                            10,
-                            10,
-                            "-"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][6] = new SmallGuiButton(
+                                            100 + 10 * i + 6,
+                                            liquidLeft + 8,
+                                            guiTop + 105,
+                                            10,
+                                            10,
+                                            "-"))));
             extention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        liquidGuiParts[i][7] = new SmallGuiButton(
-                            100 + 10 * i + 7,
-                            liquidLeft + 8,
-                            guiTop + 125,
-                            10,
-                            10,
-                            "-"))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    liquidGuiParts[i][7] = new SmallGuiButton(
+                                            100 + 10 * i + 7,
+                                            liquidLeft + 8,
+                                            guiTop + 125,
+                                            10,
+                                            10,
+                                            "-"))));
             if (isAdvancedSat) {
                 extention.registerButton(
-                    extentionControllerLeft.registerControlledButton(
-                        addButton(
-                            liquidGuiParts[i][8] = new SmallGuiButton(
-                                100 + 10 * i + 8,
-                                liquidLeft + 5,
-                                guiTop + 158,
-                                10,
-                                10,
-                                "<"))));
+                        extentionControllerLeft.registerControlledButton(
+                                addButton(
+                                        liquidGuiParts[i][8] = new SmallGuiButton(
+                                                100 + 10 * i + 8,
+                                                liquidLeft + 5,
+                                                guiTop + 158,
+                                                10,
+                                                10,
+                                                "<"))));
                 extention.registerButton(
-                    extentionControllerLeft.registerControlledButton(
-                        addButton(
-                            liquidGuiParts[i][9] = new SmallGuiButton(
-                                100 + 10 * i + 9,
-                                liquidLeft + 25,
-                                guiTop + 158,
-                                10,
-                                10,
-                                ">"))));
+                        extentionControllerLeft.registerControlledButton(
+                                addButton(
+                                        liquidGuiParts[i][9] = new SmallGuiButton(
+                                                100 + 10 * i + 9,
+                                                liquidLeft + 25,
+                                                guiTop + 158,
+                                                10,
+                                                10,
+                                                ">"))));
                 extentionControllerLeft.addExtention(extention);
             }
             extention.registerSlot(fluidSlotIDs[i]);
@@ -400,27 +401,27 @@ public class GuiCraftingPipe extends ModuleBaseGui {
         if (cleanupSize > 0) {
             CleanupExtention cleanupExtention = new CleanupExtention();
             cleanupExtention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        cleanupModeButton = new SmallGuiButton(
-                            24,
-                            guiLeft - 56,
-                            guiTop + 18 + (18 * cleanupSize),
-                            50,
-                            10,
-                            StringUtils.translate(
-                                GuiCraftingPipe.PREFIX
-                                    + (_pipe.cleanupModeIsExclude ? "Exclude" : "Include"))))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    cleanupModeButton = new SmallGuiButton(
+                                            24,
+                                            guiLeft - 56,
+                                            guiTop + 18 + (18 * cleanupSize),
+                                            50,
+                                            10,
+                                            StringUtils.translate(
+                                                    GuiCraftingPipe.PREFIX
+                                                            + (_pipe.cleanupModeIsExclude ? "Exclude" : "Include"))))));
             cleanupExtention.registerButton(
-                extentionControllerLeft.registerControlledButton(
-                    addButton(
-                        new SmallGuiButton(
-                            25,
-                            guiLeft - 56,
-                            guiTop + 32 + (18 * cleanupSize),
-                            50,
-                            10,
-                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")))));
+                    extentionControllerLeft.registerControlledButton(
+                            addButton(
+                                    new SmallGuiButton(
+                                            25,
+                                            guiLeft - 56,
+                                            guiTop + 32 + (18 * cleanupSize),
+                                            50,
+                                            10,
+                                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Import")))));
             for (int i = 0; i < cleanupSize * 3; i++) {
                 cleanupExtention.registerSlot(cleanupSlotIDs[i]);
             }
@@ -536,7 +537,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
         super.drawGuiContainerForegroundLayer(par1, par2);
         mc.fontRenderer.drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Inputs"), 18, 7, 0x404040);
         mc.fontRenderer
-            .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Inventory"), 10, ySize - 93, 0x404040);
+                .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Inventory"), 10, ySize - 93, 0x404040);
 
         if (!isAdvancedSat) {
             mc.fontRenderer.drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Output"), 77, 40, 0x404040);
@@ -545,59 +546,59 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 mc.fontRenderer.drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"), 135, 52, 0x404040);
             } else {
                 mc.fontRenderer.drawString(
-                    "" + _pipe.satelliteId,
-                    146 - mc.fontRenderer.getStringWidth("" + _pipe.satelliteId),
-                    52,
-                    0x404040);
+                        "" + _pipe.satelliteId,
+                        146 - mc.fontRenderer.getStringWidth("" + _pipe.satelliteId),
+                        52,
+                        0x404040);
             }
             mc.fontRenderer
-                .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Priority") + ":", 123, 75, 0x404040);
+                    .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Priority") + ":", 123, 75, 0x404040);
             mc.fontRenderer.drawString(
-                "" + _pipe.priority,
-                143 - (mc.fontRenderer.getStringWidth("" + _pipe.priority) / 2),
-                87,
-                0x404040);
+                    "" + _pipe.priority,
+                    143 - (mc.fontRenderer.getStringWidth("" + _pipe.priority) / 2),
+                    87,
+                    0x404040);
         } else {
             for (int i = 0; i < 9; i++) {
                 if (_pipe.advancedSatelliteIdArray[i] == 0) {
                     mc.fontRenderer.drawString(
-                        StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
-                        10 + (i * 18),
-                        57,
-                        0x404040);
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
+                            10 + (i * 18),
+                            57,
+                            0x404040);
                 } else {
                     mc.fontRenderer.drawString(
-                        "" + _pipe.advancedSatelliteIdArray[i],
-                        20 - mc.fontRenderer.getStringWidth("" + _pipe.advancedSatelliteIdArray[i]) + (i * 18),
-                        57,
-                        0x404040);
+                            "" + _pipe.advancedSatelliteIdArray[i],
+                            20 - mc.fontRenderer.getStringWidth("" + _pipe.advancedSatelliteIdArray[i]) + (i * 18),
+                            57,
+                            0x404040);
                 }
             }
             mc.fontRenderer.drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Output"), 77, 90, 0x404040);
             mc.fontRenderer
-                .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Priority") + ":", 123, 95, 0x404040);
+                    .drawString(StringUtils.translate(GuiCraftingPipe.PREFIX + "Priority") + ":", 123, 95, 0x404040);
             mc.fontRenderer.drawString(
-                "" + _pipe.priority,
-                143 - (mc.fontRenderer.getStringWidth("" + _pipe.priority) / 2),
-                107,
-                0x404040);
+                    "" + _pipe.priority,
+                    143 - (mc.fontRenderer.getStringWidth("" + _pipe.priority) / 2),
+                    107,
+                    0x404040);
         }
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float f, int x, int y) {
         GuiGraphics.drawGuiBackGround(
-            mc,
-            guiLeft,
-            guiTop,
-            guiLeft + xSize - (hasByproductExtractor ? 40 : 0),
-            guiTop + ySize,
-            zLevel,
-            true,
-            true,
-            true,
-            true,
-            true);
+                mc,
+                guiLeft,
+                guiTop,
+                guiLeft + xSize - (hasByproductExtractor ? 40 : 0),
+                guiTop + ySize,
+                zLevel,
+                true,
+                true,
+                true,
+                true,
+                true);
 
         if (!isAdvancedSat) {
             Gui.drawRect(guiLeft + 115, guiTop + 4, guiLeft + 170, guiTop + 70, 0xff8B8B8B);
@@ -618,7 +619,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
 
     public void onCleanupModeChange() {
         cleanupModeButton.displayString = StringUtils
-            .translate(GuiCraftingPipe.PREFIX + (_pipe.cleanupModeIsExclude ? "Exclude" : "Include"));
+                .translate(GuiCraftingPipe.PREFIX + (_pipe.cleanupModeIsExclude ? "Exclude" : "Include"));
     }
 
     private final class FluidCraftingExtention extends GuiExtention {
@@ -653,9 +654,9 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 RenderHelper.enableGUIStandardItemLighting();
                 ItemStack stack = new ItemStack(LogisticsPipes.UpgradeItem, 1, ItemUpgrade.LIQUID_CRAFTING);
                 GuiScreen.itemRender
-                    .renderItemAndEffectIntoGUI(mc.fontRenderer, getMC().renderEngine, stack, left + 5, top + 5);
+                        .renderItemAndEffectIntoGUI(mc.fontRenderer, getMC().renderEngine, stack, left + 5, top + 5);
                 GuiScreen.itemRender
-                    .renderItemOverlayIntoGUI(mc.fontRenderer, getMC().renderEngine, stack, left + 5, top + 5, "");
+                        .renderItemOverlayIntoGUI(mc.fontRenderer, getMC().renderEngine, stack, left + 5, top + 5, "");
                 GL11.glDisable(GL11.GL_LIGHTING);
                 GL11.glDisable(GL11.GL_DEPTH_TEST);
             }
@@ -664,7 +665,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
             if (!isAdvancedSat && liquidCrafter > 1 && !isFullyExtended()) {
                 String s = Integer.toString(liquidCrafter);
                 mc.fontRenderer
-                    .drawStringWithShadow(s, left + 22 - fontRendererObj.getStringWidth(s), top + 14, 16777215);
+                        .drawStringWithShadow(s, left + 22 - fontRendererObj.getStringWidth(s), top + 14, 16777215);
             }
             if (isFullyExtended()) {
                 if (liquidCrafter > 1 && !isAdvancedSat) {
@@ -684,10 +685,10 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                     if (_pipe.liquidSatelliteId == 0) {
                         Gui.drawRect(left + 3, top + 3, left + 3 + (liquidCrafter * 40), top + 138, 0xAA8B8B8B);
                         mc.fontRenderer.drawString(
-                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
-                            left + (liquidCrafter * 40) / 2 - 5,
-                            top + 145,
-                            0x404040);
+                                StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
+                                left + (liquidCrafter * 40) / 2 - 5,
+                                top + 145,
+                                0x404040);
                         for (int i = 0; i < liquidCrafter; i++) {
                             for (int j = 0; j < 8; j++) {
                                 liquidGuiParts[i][j].enabled = false;
@@ -695,13 +696,13 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                         }
                     } else {
                         mc.fontRenderer.drawString(
-                            Integer.toString(_pipe.liquidSatelliteId),
-                            left + (liquidCrafter * 40) / 2
-                                + 3
-                                - (fontRendererObj.getStringWidth(Integer.toString(_pipe.liquidSatelliteId))
-                                / 2),
-                            top + 145,
-                            0x404040);
+                                Integer.toString(_pipe.liquidSatelliteId),
+                                left + (liquidCrafter * 40) / 2
+                                        + 3
+                                        - (fontRendererObj.getStringWidth(Integer.toString(_pipe.liquidSatelliteId))
+                                                / 2),
+                                top + 145,
+                                0x404040);
                         for (int i = 0; i < liquidCrafter; i++) {
                             for (int j = 0; j < 8; j++) {
                                 liquidGuiParts[i][j].enabled = true;
@@ -717,10 +718,10 @@ public class GuiCraftingPipe extends ModuleBaseGui {
         private void renderFluidText(int left, int top, int i) {
             GuiGraphics.drawSlotBackground(mc, left + 12, top + 19);
             mc.fontRenderer.drawString(
-                Integer.toString(_pipe.getFluidAmount()[i]),
-                left + 22 - (fontRendererObj.getStringWidth(Integer.toString(_pipe.getFluidAmount()[i])) / 2),
-                top + 40,
-                0x404040);
+                    Integer.toString(_pipe.getFluidAmount()[i]),
+                    left + 22 - (fontRendererObj.getStringWidth(Integer.toString(_pipe.getFluidAmount()[i])) / 2),
+                    top + 40,
+                    0x404040);
             mc.fontRenderer.drawString("1", left + 19, top + 53, 0x404040);
             mc.fontRenderer.drawString("10", left + 16, top + 73, 0x404040);
             mc.fontRenderer.drawString("100", left + 13, top + 93, 0x404040);
@@ -729,21 +730,21 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 if (_pipe.liquidSatelliteIdArray[i] == 0) {
                     Gui.drawRect(left + 3, top + 3, left + 42, top + 138, 0xAA8B8B8B);
                     mc.fontRenderer.drawString(
-                        StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
-                        left + 15,
-                        top + 146,
-                        0x404040);
+                            StringUtils.translate(GuiCraftingPipe.PREFIX + "Off"),
+                            left + 15,
+                            top + 146,
+                            0x404040);
                     for (int j = 0; j < 8; j++) {
                         liquidGuiParts[i][j].enabled = false;
                     }
                 } else {
                     mc.fontRenderer.drawString(
-                        Integer.toString(_pipe.liquidSatelliteIdArray[i]),
-                        left + 22
-                            - (fontRendererObj.getStringWidth(Integer.toString(_pipe.liquidSatelliteIdArray[i]))
-                            / 2),
-                        top + 146,
-                        0x404040);
+                            Integer.toString(_pipe.liquidSatelliteIdArray[i]),
+                            left + 22
+                                    - (fontRendererObj.getStringWidth(Integer.toString(_pipe.liquidSatelliteIdArray[i]))
+                                            / 2),
+                            top + 146,
+                            0x404040);
                     for (int j = 0; j < 8; j++) {
                         liquidGuiParts[i][j].enabled = true;
                     }
@@ -751,8 +752,8 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 Gui.drawRect(left + 3, top + 138, left + 42, top + 139, 0xff8B8B8B);
             }
             if (_pipe.getFluidInventory().getStackInSlot(i) == null
-                && !((!isAdvancedSat && _pipe.liquidSatelliteId == 0)
-                || (isAdvancedSat && _pipe.liquidSatelliteIdArray[i] == 0))) {
+                    && !((!isAdvancedSat && _pipe.liquidSatelliteId == 0)
+                            || (isAdvancedSat && _pipe.liquidSatelliteIdArray[i] == 0))) {
                 Gui.drawRect(left + 3, top + 50, left + 42, top + 138, 0xAA8B8B8B);
                 for (int j = 0; j < 8; j++) {
                     liquidGuiParts[i][j].enabled = false;
@@ -763,7 +764,7 @@ public class GuiCraftingPipe extends ModuleBaseGui {
         @Override
         public boolean renderSelectSlot(int slotId) {
             if ((isAdvancedSat && _pipe.liquidSatelliteIdArray[id] == 0)
-                || (!isAdvancedSat && _pipe.liquidSatelliteId == 0)) {
+                    || (!isAdvancedSat && _pipe.liquidSatelliteId == 0)) {
                 return false;
             }
             return super.renderSelectSlot(slotId);
@@ -791,23 +792,23 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 GL11.glEnable(GL11.GL_DEPTH_TEST);
                 RenderHelper.enableGUIStandardItemLighting();
                 ItemStack stack = new ItemStack(
-                    LogisticsPipes.UpgradeItem,
-                    1,
-                    ItemUpgrade.CRAFTING_BYPRODUCT_EXTRACTOR);
+                        LogisticsPipes.UpgradeItem,
+                        1,
+                        ItemUpgrade.CRAFTING_BYPRODUCT_EXTRACTOR);
                 GuiScreen.itemRender
-                    .renderItemAndEffectIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5);
+                        .renderItemAndEffectIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5);
                 GuiScreen.itemRender
-                    .renderItemOverlayIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5, "");
+                        .renderItemOverlayIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5, "");
                 GL11.glDisable(GL11.GL_LIGHTING);
                 GL11.glDisable(GL11.GL_DEPTH_TEST);
                 GuiScreen.itemRender.zLevel = 0.0F;
             } else {
                 GuiGraphics.drawBigSlotBackground(mc, left + 9, top + 20);
                 fontRendererObj.drawString(
-                    StringUtils.translate(GuiCraftingPipe.PREFIX + "Extra"),
-                    left + 9,
-                    top + 8,
-                    0x404040);
+                        StringUtils.translate(GuiCraftingPipe.PREFIX + "Extra"),
+                        left + 9,
+                        top + 8,
+                        0x404040);
             }
         }
     }
@@ -834,9 +835,9 @@ public class GuiCraftingPipe extends ModuleBaseGui {
                 RenderHelper.enableGUIStandardItemLighting();
                 ItemStack stack = new ItemStack(LogisticsPipes.UpgradeItem, 1, ItemUpgrade.CRAFTING_CLEANUP);
                 GuiScreen.itemRender
-                    .renderItemAndEffectIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5);
+                        .renderItemAndEffectIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5);
                 GuiScreen.itemRender
-                    .renderItemOverlayIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5, "");
+                        .renderItemOverlayIntoGUI(fontRendererObj, getMC().renderEngine, stack, left + 5, top + 5, "");
                 GL11.glDisable(GL11.GL_LIGHTING);
                 GL11.glDisable(GL11.GL_DEPTH_TEST);
                 GuiScreen.itemRender.zLevel = 0.0F;

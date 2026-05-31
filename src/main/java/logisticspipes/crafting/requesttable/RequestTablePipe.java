@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
@@ -44,6 +43,7 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.Pair;
+import lombok.Getter;
 
 /**
  * New request table implementation with separate item and fluid storage.
@@ -104,18 +104,20 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         if (MainProxy.isClient(getWorld()) || requestTableGuiWatchers.isEmpty()) {
             return;
         }
-        MainProxy.sendToPlayerList(PacketHandler.getPacket(RequestTableContentPacket.class)
-                .setEntries(RequestTableRefreshPacket.buildEntries(this))
-                .setTilePos(container), requestTableGuiWatchers);
+        MainProxy.sendToPlayerList(
+                PacketHandler.getPacket(RequestTableContentPacket.class)
+                        .setEntries(RequestTableRefreshPacket.buildEntries(this)).setTilePos(container),
+                requestTableGuiWatchers);
     }
 
     private void sendNetworkContentToPlayer(EntityPlayer player) {
         if (MainProxy.isClient(getWorld())) {
             return;
         }
-        MainProxy.sendPacketToPlayer(PacketHandler.getPacket(RequestTableContentPacket.class)
-                .setEntries(RequestTableRefreshPacket.buildEntries(this))
-                .setTilePos(container), player);
+        MainProxy.sendPacketToPlayer(
+                PacketHandler.getPacket(RequestTableContentPacket.class)
+                        .setEntries(RequestTableRefreshPacket.buildEntries(this)).setTilePos(container),
+                player);
     }
 
     /**
@@ -124,18 +126,18 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
     public void updateStorageUpgrades() {
         if (container == null) return;
 
-        int itemSlotCount = BASE_ITEM_SLOTS + countUpgrade(ItemUpgrade.REQUEST_TABLE_ITEM_INVENTORY)
-            * ITEM_SLOT_UPGRADE_SIZE;
-        int itemStackLimit = BASE_ITEM_STACK_LIMIT + countUpgrade(ItemUpgrade.REQUEST_TABLE_ITEM_STACK)
-            * ITEM_STACK_UPGRADE_SIZE;
+        int itemSlotCount = BASE_ITEM_SLOTS
+                + countUpgrade(ItemUpgrade.REQUEST_TABLE_ITEM_INVENTORY) * ITEM_SLOT_UPGRADE_SIZE;
+        int itemStackLimit = BASE_ITEM_STACK_LIMIT
+                + countUpgrade(ItemUpgrade.REQUEST_TABLE_ITEM_STACK) * ITEM_STACK_UPGRADE_SIZE;
         adjustItemStorageForUpgrades(itemSlotCount, itemStackLimit);
 
-        int fluidSlotCount = BASE_FLUID_SLOTS + countUpgrade(ItemUpgrade.REQUEST_TABLE_FLUID_INVENTORY)
-            * FLUID_SLOT_UPGRADE_SIZE;
+        int fluidSlotCount = BASE_FLUID_SLOTS
+                + countUpgrade(ItemUpgrade.REQUEST_TABLE_FLUID_INVENTORY) * FLUID_SLOT_UPGRADE_SIZE;
         int fluidSlotCapacity = Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY
-            * (1 + countUpgrade(ItemUpgrade.REQUEST_TABLE_FLUID_CAPACITY));
+                * (1 + countUpgrade(ItemUpgrade.REQUEST_TABLE_FLUID_CAPACITY));
         boolean fluidStorageChanged = fluidStorage.getSizeInventory() != fluidSlotCount
-            || fluidStorage.getSlotCapacity() != fluidSlotCapacity;
+                || fluidStorage.getSlotCapacity() != fluidSlotCapacity;
         if (getWorld() != null)
             fluidStorage.resize(fluidSlotCount, fluidSlotCapacity, getWorld(), getX(), getY(), getZ());
         if (fluidStorageChanged) {
@@ -282,18 +284,13 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
      * @param mouseButton mouse button sent by the GUI
      * @param shift       whether shift was held
      */
-    public void handleNetworkEntryInteraction(
-            EntityPlayer player,
-            ItemIdentifierStack stack,
-            boolean fluid,
-            int mouseButton,
-            boolean shift) {
+    public void handleNetworkEntryInteraction(EntityPlayer player, ItemIdentifierStack stack, boolean fluid,
+            int mouseButton, boolean shift) {
         if (stack == null || mouseButton < 0 || mouseButton > 1) {
             return;
         }
         updateStorageUpgrades();
-        boolean changed = fluid
-                ? handleNetworkFluidInteraction(player, stack.getItem())
+        boolean changed = fluid ? handleNetworkFluidInteraction(player, stack.getItem())
                 : handleNetworkItemInteraction(player, stack.getItem(), mouseButton, shift);
         if (!changed) {
             return;
@@ -308,10 +305,7 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         sendNetworkContentToWatchers();
     }
 
-    private boolean handleNetworkItemInteraction(
-            EntityPlayer player,
-            ItemIdentifier item,
-            int mouseButton,
+    private boolean handleNetworkItemInteraction(EntityPlayer player, ItemIdentifier item, int mouseButton,
             boolean shift) {
         ItemStack cursor = player.inventory.getItemStack();
         if (cursor != null) {
@@ -539,7 +533,8 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
             }
             ItemStack filled = FluidContainerRegistry.fillFluidContainer(stored, cursor);
             FluidStack filledFluid = getContainedFluid(filled);
-            if (filled == null || filledFluid == null || !target.equals(FluidIdentifier.get(filledFluid))
+            if (filled == null || filledFluid == null
+                    || !target.equals(FluidIdentifier.get(filledFluid))
                     || filledFluid.amount > stored.amount) {
                 continue;
             }
@@ -603,7 +598,8 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         if (fluid != null) {
             return fluid;
         }
-        return SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+        return SimpleServiceLocator.logisticsFluidManager
+                .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
     }
 
     private boolean isContainerFull(ItemStack stack, FluidStack held) {
@@ -634,9 +630,10 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
 
     private void syncCursor(EntityPlayer player) {
         if (player instanceof EntityPlayerMP) {
-            MainProxy.sendPacketToPlayer(PacketHandler.getPacket(RequestTableSetCursorPacket.class)
-                    .setStack(player.inventory.getItemStack())
-                    .setTilePos(container), player);
+            MainProxy.sendPacketToPlayer(
+                    PacketHandler.getPacket(RequestTableSetCursorPacket.class).setStack(player.inventory.getItemStack())
+                            .setTilePos(container),
+                    player);
         }
     }
 
@@ -810,7 +807,7 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         }
         ItemStack previewResult = recipe.getCraftingResult(preview);
         if (previewResult == null || !ItemIdentifier.get(previewResult)
-            .equalsWithoutNBT(ItemIdentifier.get(resultInv.getStackInSlot(0)))) {
+                .equalsWithoutNBT(ItemIdentifier.get(resultInv.getStackInSlot(0)))) {
             return null;
         }
         return new CraftingPreview(recipe, uses, previewResult.copy());
@@ -833,8 +830,9 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
     }
 
     private boolean canMerge(ItemStack first, ItemStack second) {
-        return first != null && second != null && first.isItemEqual(second)
-            && ItemStack.areItemStackTagsEqual(first, second);
+        return first != null && second != null
+                && first.isItemEqual(second)
+                && ItemStack.areItemStackTagsEqual(first, second);
     }
 
     private int getPlayerInventoryRoom(EntityPlayer player, ItemStack stack) {
@@ -898,11 +896,8 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         return uses;
     }
 
-    private IngredientUse findIngredientInInventory(
-        ItemIdentifier expected,
-        IInventory inventory,
-        int[] used,
-        boolean oreDict) {
+    private IngredientUse findIngredientInInventory(ItemIdentifier expected, IInventory inventory, int[] used,
+            boolean oreDict) {
         int limit = Math.min(used.length, inventory.getSizeInventory());
         for (int slot = 0; slot < limit; slot++) {
             ItemStack stack = inventory.getStackInSlot(slot);
@@ -921,10 +916,9 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
         if (expected.equalsForCrafting(candidate)) {
             return true;
         }
-        return oreDict
-            && expected.getDictIdentifiers() != null
-            && candidate.getDictIdentifiers() != null
-            && expected.getDictIdentifiers().canMatch(candidate.getDictIdentifiers(), true, false);
+        return oreDict && expected.getDictIdentifiers() != null
+                && candidate.getDictIdentifiers() != null
+                && expected.getDictIdentifiers().canMatch(candidate.getDictIdentifiers(), true, false);
     }
 
     private AutoCraftingInventory buildPreviewCraftingInventory(IngredientUse[] uses) {
@@ -987,7 +981,8 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
                 ItemStack toSendStack = stack.copy();
                 toSendStack.stackSize = Math.min(stack.stackSize, stack.getMaxStackSize());
                 IRoutedItem itemToSend = SimpleServiceLocator.routedItemHelper.createNewTravelItem(toSendStack);
-                SimpleServiceLocator.logisticsManager.assignDestinationFor(itemToSend, getRouter().getSimpleID(), false);
+                SimpleServiceLocator.logisticsManager
+                        .assignDestinationFor(itemToSend, getRouter().getSimpleID(), false);
                 if (itemToSend.getDestinationUUID() == null) {
                     break;
                 }
@@ -1016,9 +1011,11 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
                 FluidStack toSend = stored.copy();
                 toSend.amount = Math.min(toSend.amount, FLUID_SEND_CHUNK);
                 Pair<Integer, Integer> destination = SimpleServiceLocator.logisticsFluidManager
-                    .getBestReply(toSend, getRouter(), new ArrayList<>());
-                if (destination == null || destination.getValue1() == null || destination.getValue1() == 0
-                    || destination.getValue2() == null || destination.getValue2() <= 0) {
+                        .getBestReply(toSend, getRouter(), new ArrayList<>());
+                if (destination == null || destination.getValue1() == null
+                        || destination.getValue1() == 0
+                        || destination.getValue2() == null
+                        || destination.getValue2() <= 0) {
                     break;
                 }
                 int amount = Math.min(toSend.amount, destination.getValue2());
@@ -1027,7 +1024,7 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
                     break;
                 }
                 IRoutedItem item = SimpleServiceLocator.routedItemHelper
-                    .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
+                        .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
                 item.setDestination(destination.getValue1());
                 item.setTransportMode(TransportMode.Passive);
                 ForgeDirection dir = getRouteLayer().getOrientationForItem(item, null);
@@ -1060,7 +1057,7 @@ public class RequestTablePipe extends PipeBlockRequestTable implements IRequestF
                         if (filled < fluid.amount) {
                             fluid.amount -= filled;
                             ItemStack leftover = SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid)
-                                .makeNormalStack();
+                                    .makeNormalStack();
                             leftover.stackSize = inv.addCompressed(leftover, true);
                             if (leftover.stackSize > 0) {
                                 ItemIdentifierInventory.dropItems(getWorld(), leftover, getX(), getY(), getZ());

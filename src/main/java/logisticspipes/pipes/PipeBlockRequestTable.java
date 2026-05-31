@@ -627,15 +627,12 @@ public class PipeBlockRequestTable extends PipeItemsRequestLogistics
                 localGuiWatcher);
         MainProxy.sendToPlayerList(
                 PacketHandler.getPacket(PatternCraftingWatchPacket.class)
-                        .setRoots(PatternCraftingMonitorRegistry.build(request.getValue2()))
-                        .setInteger(id)
+                        .setRoots(PatternCraftingMonitorRegistry.build(request.getValue2())).setInteger(id)
                         .setTilePos(container),
                 localGuiWatcher);
     }
 
-    private void sendWatchedRequestToPlayer(
-            int id,
-            Pair<IResource, LinkedLogisticsOrderList> request,
+    private void sendWatchedRequestToPlayer(int id, Pair<IResource, LinkedLogisticsOrderList> request,
             EntityPlayer player) {
         MainProxy.sendPacketToPlayer(
                 PacketHandler.getPacket(OrdererWatchPacket.class).setOrders(request.getValue2())
@@ -643,8 +640,7 @@ public class PipeBlockRequestTable extends PipeItemsRequestLogistics
                 player);
         MainProxy.sendPacketToPlayer(
                 PacketHandler.getPacket(PatternCraftingWatchPacket.class)
-                        .setRoots(PatternCraftingMonitorRegistry.build(request.getValue2()))
-                        .setInteger(id)
+                        .setRoots(PatternCraftingMonitorRegistry.build(request.getValue2())).setInteger(id)
                         .setTilePos(container),
                 player);
     }

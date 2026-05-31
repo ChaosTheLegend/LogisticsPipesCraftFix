@@ -54,15 +54,20 @@ public class RequestTableNetworkGrid {
     /**
      * Renders the grid and updates the hover tooltip.
      */
-    public void render(LogisticsBaseGuiScreen screen, RequestTableLayout layout, String search, int mouseX, int mouseY) {
+    public void render(LogisticsBaseGuiScreen screen, RequestTableLayout layout, String search, int mouseX,
+            int mouseY) {
         List<RequestTableNetworkEntry> filtered = filter(search);
         int columns = layout.getNetworkColumns();
         int visibleRows = layout.getVisiblePanelRows();
         int maxScroll = Math.max(0, (filtered.size() + columns - 1) / columns - visibleRows);
         scrollRow = Math.min(scrollRow, maxScroll);
 
-        screen.drawRect(layout.panelLeft, layout.panelTop, layout.panelLeft + layout.panelWidth,
-                layout.panelTop + layout.panelHeight, Color.GREY);
+        screen.drawRect(
+                layout.panelLeft,
+                layout.panelTop,
+                layout.panelLeft + layout.panelWidth,
+                layout.panelTop + layout.panelHeight,
+                Color.GREY);
         drawScrollbar(screen, layout, maxScroll);
 
         tooltip = null;
@@ -74,7 +79,8 @@ public class RequestTableNetworkGrid {
             int x = layout.panelLeft + 2 + (localIndex % columns) * RequestTableLayout.PANEL_CELL;
             int y = layout.panelTop + 2 + (localIndex / columns) * RequestTableLayout.PANEL_CELL;
             boolean hover = mouseX >= x && mouseX < x + RequestTableLayout.PANEL_CELL
-                    && mouseY >= y && mouseY < y + RequestTableLayout.PANEL_CELL;
+                    && mouseY >= y
+                    && mouseY < y + RequestTableLayout.PANEL_CELL;
             if (hover) {
                 screen.drawRect(x - 1, y - 1, x + 19, y + 19, Color.BLACK);
                 screen.drawRect(x, y, x + 18, y + 18, Color.DARKER_GREY);
@@ -93,10 +99,8 @@ public class RequestTableNetworkGrid {
                 screen.drawRect(x + 14, y, x + 18, y + 4, Color.BLUE);
             }
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-            new ItemStackRenderer(x + 1, y + 1, 100.0F, true, false, true)
-                    .setItemIdentifierStack(entry.getStack())
-                    .setDisplayAmount(DisplayAmount.HIDE_ONE)
-                    .renderInGui();
+            new ItemStackRenderer(x + 1, y + 1, 100.0F, true, false, true).setItemIdentifierStack(entry.getStack())
+                    .setDisplayAmount(DisplayAmount.HIDE_ONE).renderInGui();
             drawInternalAmount(screen, entry, x, y);
         }
     }
@@ -120,7 +124,8 @@ public class RequestTableNetworkGrid {
      */
     public RequestTableNetworkEntry getEntryAt(RequestTableLayout layout, String search, int mouseX, int mouseY) {
         if (mouseX < layout.panelLeft || mouseX >= layout.panelLeft + layout.panelWidth
-                || mouseY < layout.panelTop || mouseY >= layout.panelTop + layout.panelHeight) {
+                || mouseY < layout.panelTop
+                || mouseY >= layout.panelTop + layout.panelHeight) {
             return null;
         }
         List<RequestTableNetworkEntry> filtered = filter(search);
@@ -138,8 +143,12 @@ public class RequestTableNetworkGrid {
     }
 
     private void drawScrollbar(LogisticsBaseGuiScreen screen, RequestTableLayout layout, int maxScroll) {
-        screen.drawRect(layout.scrollbarX, layout.panelTop + 1, layout.scrollbarX + 5,
-                layout.panelTop + layout.panelHeight - 1, Color.DARKER_GREY);
+        screen.drawRect(
+                layout.scrollbarX,
+                layout.panelTop + 1,
+                layout.scrollbarX + 5,
+                layout.panelTop + layout.panelHeight - 1,
+                Color.DARKER_GREY);
         int barHeight = Math.max(10, layout.panelHeight / Math.max(1, maxScroll + 1));
         int travel = Math.max(1, layout.panelHeight - 2 - barHeight);
         int barTop = layout.panelTop + 1 + (maxScroll == 0 ? 0 : travel * scrollRow / maxScroll);

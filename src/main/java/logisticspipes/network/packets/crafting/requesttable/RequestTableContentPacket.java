@@ -64,11 +64,12 @@ public class RequestTableContentPacket extends CoordinatesPacket {
         entries = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             boolean fluid = data.readBoolean();
-            entries.add(new RequestTableNetworkEntry(
-                    data.readItemIdentifierStack(),
-                    fluid,
-                    data.readInt(),
-                    data.readInt()));
+            entries.add(
+                    new RequestTableNetworkEntry(
+                            data.readItemIdentifierStack(),
+                            fluid,
+                            data.readInt(),
+                            data.readInt()));
         }
     }
 }

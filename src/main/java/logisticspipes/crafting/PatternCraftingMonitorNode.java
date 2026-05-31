@@ -22,10 +22,7 @@ public class PatternCraftingMonitorNode {
     private boolean inProgress;
     private final List<PatternCraftingMonitorNode> children = new ArrayList<>();
 
-    public PatternCraftingMonitorNode(
-            ItemIdentifierStack stack,
-            int unrequestedAmount,
-            int orderedAmount,
+    public PatternCraftingMonitorNode(ItemIdentifierStack stack, int unrequestedAmount, int orderedAmount,
             boolean inProgress) {
         this.stack = stack;
         this.unrequestedAmount = Math.max(0, unrequestedAmount);

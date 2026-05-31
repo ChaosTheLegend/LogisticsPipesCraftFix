@@ -25,8 +25,7 @@ import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 
 public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
 
-    private LogisticsCraftingOverlayHandler() {
-    }
+    private LogisticsCraftingOverlayHandler() {}
 
     public static final LogisticsCraftingOverlayHandler INSTANCE = new LogisticsCraftingOverlayHandler();
 
@@ -58,7 +57,7 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             int slot = x + y * 3;
             if (x < 0 || x > 2 || y < 0 || y > 2 || slot < 0 || slot > 8) {
                 FMLClientHandler.instance().getClient().thePlayer
-                    .sendChatMessage("Internal Error. This button is broken.");
+                        .sendChatMessage("Internal Error. This button is broken.");
                 return;
             }
             if (slot < 9) {
@@ -70,9 +69,9 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
                     if (wildCardCheckStack.getItemDamage() == OreDictionary.WILDCARD_VALUE) {
                         iter.remove();
                         wildCardCheckStack.getItem().getSubItems(
-                            wildCardCheckStack.getItem(),
-                            wildCardCheckStack.getItem().getCreativeTab(),
-                            list);
+                                wildCardCheckStack.getItem(),
+                                wildCardCheckStack.getItem().getCreativeTab(),
+                                list);
                         iter = list.iterator();
                     }
                 }
@@ -88,7 +87,7 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
             gui.setSubGui(new GuiRecipeImport(tile, stacks));
         } else {
             MainProxy.sendPacketToServer(
-                packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
+                    packet.setContent(stack).setPosX(tile.xCoord).setPosY(tile.yCoord).setPosZ(tile.zCoord));
         }
     }
 }

@@ -3,7 +3,6 @@ package logisticspipes.crafting;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -12,8 +11,8 @@ import logisticspipes.routing.order.LinkedLogisticsOrderList;
 
 public final class PatternCraftingMonitorRegistry {
 
-    private static final Map<IOrderInfoProvider, PatternCraftingOrder> STAGED_ORDERS =
-            Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<IOrderInfoProvider, PatternCraftingOrder> STAGED_ORDERS = Collections
+            .synchronizedMap(new IdentityHashMap<>());
 
     private PatternCraftingMonitorRegistry() {}
 
@@ -55,8 +54,8 @@ public final class PatternCraftingMonitorRegistry {
             if (stagedOrder == null) {
                 continue;
             }
-            PatternCraftingMonitorNode node = stagedOrder.toMonitorNode(
-                    Collections.newSetFromMap(new IdentityHashMap<>()));
+            PatternCraftingMonitorNode node = stagedOrder
+                    .toMonitorNode(Collections.newSetFromMap(new IdentityHashMap<>()));
             if (node.hasVisibleWork()) {
                 result.add(node);
             }
@@ -68,7 +67,8 @@ public final class PatternCraftingMonitorRegistry {
 
     private static void cleanupFinishedOrders() {
         synchronized (STAGED_ORDERS) {
-            STAGED_ORDERS.keySet().removeIf(order -> order == null || order.isFinished() && order.getProgresses().isEmpty());
+            STAGED_ORDERS.keySet()
+                    .removeIf(order -> order == null || order.isFinished() && order.getProgresses().isEmpty());
         }
     }
 }
