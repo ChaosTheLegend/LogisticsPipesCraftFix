@@ -24,23 +24,7 @@ public class ProviderGUI extends LogisticsMUIGui {
     }
 
     @Override
-    public int GetWidth() {
-        return 180;
-    }
-
-    @Override
-    public int GetHeight() {
-        return 140;
-    }
-
-    @Override
     public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
-
-        if(!(guiData instanceof PlayerInventoryGuiData)){
-            return super.GetPanel(guiData, guiSyncManager);
-        }
-
-        PlayerInventoryGuiData playerInventoryGuiData = (PlayerInventoryGuiData) guiData;
 
         var panel = ModularPanel
             .defaultPanel(getId(), 180, 140);

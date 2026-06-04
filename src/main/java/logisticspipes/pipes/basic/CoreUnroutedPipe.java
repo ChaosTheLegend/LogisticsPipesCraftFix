@@ -3,6 +3,8 @@ package logisticspipes.pipes.basic;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -380,6 +382,11 @@ public abstract class CoreUnroutedPipe implements IClientState, ILPPipe, ILPCCTy
             @Override
             public ForgeDirection[] getCombinedSneakyOrientation() {
                 return null;
+            }
+
+            @Override
+            public IItemHandlerModifiable getUpgradeInventory() {
+                return new ItemStackHandler(0);
             }
         };
     }

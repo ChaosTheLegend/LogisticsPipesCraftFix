@@ -16,14 +16,17 @@ import java.util.TreeMap;
 
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.factory.inventory.ItemHandler;
 import com.cleanroommc.modularui.network.NetworkUtils;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
+import com.enderio.core.common.util.InventoryWrapper;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.api.IMUICompatiblePipe;
 import logisticspipes.api.IMUICompatiblePipeV2;
@@ -107,6 +110,8 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     public PipeItemsProviderLogistics(Item item) {
         super(item);
+        myModule = new ModuleProvider();
+        myModule.registerHandler(this, this);
     }
 
     public PipeItemsProviderLogistics(Item item, LogisticsItemOrderManager logisticsOrderManager) {
@@ -565,7 +570,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     @Override
     public void onWrenchClicked(EntityPlayer entityplayer) {
-        entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_ProviderPipe_ID, getWorld(), getX(), getY(), getZ());
+        openGui(entityplayer, this);
         MainProxy.sendPacketToPlayer(
                 PacketHandler.getPacket(ProviderPipeMode.class).setInteger(getExtractionMode().ordinal())
                         .setPosX(getX()).setPosY(getY()).setPosZ(getZ()),
@@ -633,8 +638,11 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
     private class PipeItemProviderLogisticsGui extends LogisticsMUIGui{
 
         private final CoreRoutedPipe pipe;
+        private final IItemHandlerModifiable upgradeHandler;
+
         public PipeItemProviderLogisticsGui(LogisticsModule module, CoreRoutedPipe pipe) {
             super(module);
+            upgradeHandler = upgradeManager.getUpgradeInventory();
             this.pipe = pipe;
         }
 
@@ -647,14 +655,12 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
             var panel = ((IMUICompatibleModule) module).getPipeGui().GetPanel(guiData, guiSyncManager);
 
+            addUpgradeGui(panel);
 
-
-            return ModularPanel
-                .defaultPanel(getId(), 100, 100);
+            return panel;
         }
 
         private void addUpgradeGui(ModularPanel panel){
-
             panel.child(new Column()
                 .background(ModularUIHelper.BACKGROUND_TEXTURE).width(26).right(-28)
                 .child(SlotGroupWidget.builder()
@@ -663,7 +669,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
                     .row("I")
                     .row("I")
                     .key('I', i -> new ItemSlot()
-                        .slot(, i))
+                        .slot(upgradeHandler, i))
                     .build()
                 )
                 .padding(4)
@@ -674,9 +680,6 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     @Override
     public LogisticsMUIGui getPipeGui() {
-
-
-
-        return null;
+        return new PipeItemProviderLogisticsGui(myModule, this);
     }
 }

@@ -1,5 +1,7 @@
 package logisticspipes.interfaces;
 
+import com.cleanroommc.modularui.factory.inventory.ItemHandler;
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import net.minecraftforge.common.util.ForgeDirection;
 
 public interface IPipeUpgradeManager {
@@ -25,4 +27,6 @@ public interface IPipeUpgradeManager {
     boolean hasCombinedSneakyUpgrade();
 
     ForgeDirection[] getCombinedSneakyOrientation();
+
+    IItemHandlerModifiable getUpgradeInventory();
 }

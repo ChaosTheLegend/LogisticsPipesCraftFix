@@ -3,6 +3,10 @@ package logisticspipes.pipes.upgrades;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import buildcraft.core.lib.inventory.InventoryWrapper;
+import com.cleanroommc.modularui.factory.inventory.ItemHandler;
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.InvWrapper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
@@ -258,6 +262,11 @@ public class UpgradeManager implements ISimpleInventoryEventHandler, ISlotUpgrad
     @Override
     public ForgeDirection[] getCombinedSneakyOrientation() {
         return combinedSneakyOrientation;
+    }
+
+    @Override
+    public IItemHandlerModifiable getUpgradeInventory() {
+        return new InvWrapper(inv);
     }
 
     public void openGui(EntityPlayer entityplayer, CoreRoutedPipe pipe) {
