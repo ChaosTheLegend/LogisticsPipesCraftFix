@@ -7,6 +7,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.MUI.LogisticsMUIGui;
+import logisticspipes.gui.MUI.ProviderGUI;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -69,7 +75,7 @@ import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "Provider Module")
 public class ModuleProvider extends LogisticsSneakyDirectionModule implements ILegacyActiveModule,
-        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive {
+        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive, IMUICompatibleModule{
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -537,5 +543,15 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     @SideOnly(Side.CLIENT)
     public IIcon getIconTexture(IIconRegister register) {
         return register.registerIcon("logisticspipes:itemModule/ModuleProvider");
+    }
+
+    @Override
+    public LogisticsMUIGui getHandGui() {
+        return new ProviderGUI(this);
+    }
+
+    @Override
+    public LogisticsMUIGui getPipeGui() {
+        return new ProviderGUI(this);
     }
 }

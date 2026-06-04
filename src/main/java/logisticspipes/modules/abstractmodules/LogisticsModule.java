@@ -21,6 +21,7 @@ import logisticspipes.utils.SinkReply;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
+import net.minecraft.world.World;
 
 @CCType(name = "LogisticsModule")
 public abstract class LogisticsModule implements ISaveState, ILPCCTypeHolder {
@@ -39,6 +40,14 @@ public abstract class LogisticsModule implements ISaveState, ILPCCTypeHolder {
     public void registerHandler(IWorldProvider world, IPipeServiceProvider service) {
         _world = world;
         _service = service;
+    }
+
+    public World getWorld() {
+        return _world.getWorld();
+    }
+
+    public IPipeServiceProvider getService() {
+        return _service;
     }
 
     @Getter

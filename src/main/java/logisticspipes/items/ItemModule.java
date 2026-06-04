@@ -4,6 +4,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.cleanroommc.modularui.api.IGuiHolder;
+import com.cleanroommc.modularui.factory.GuiData;
+import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import ibxm.Player;
+import logisticspipes.api.IMUICompatibleModule;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
@@ -67,7 +76,7 @@ import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 
-public class ItemModule extends LogisticsItem {
+public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInventoryGuiData>{
 
     // PASSIVE MODULES
     public static final int BLANK = 0;
@@ -115,6 +124,24 @@ public class ItemModule extends LogisticsItem {
     public static final int CRAFTER_MK3 = 602;
 
     private final List<Module> modules = new ArrayList<>();
+
+    @Override
+    public ModularPanel buildUI(PlayerInventoryGuiData guiData, PanelSyncManager guiSyncManager, UISettings settings) {
+
+        var item = guiData.getPlayer().getHeldItem();
+
+        var module = getModuleForItem(item, null, null, null);
+
+        if (!(module instanceof IMUICompatibleModule)) {
+            throw new UnsupportedOperationException("Module " + module.getClass().getSimpleName() + " is not compatible with MUI");
+        }
+
+        IMUICompatibleModule compatibleModule = (IMUICompatibleModule) module;
+
+        var gui = compatibleModule.getHandGui();
+
+        return gui.GetPanel(guiData, guiSyncManager);
+    }
 
     private class Module {
 
@@ -254,13 +281,24 @@ public class ItemModule extends LogisticsItem {
 
     private void openConfigGui(ItemStack par1ItemStack, EntityPlayer par2EntityPlayer, World par3World) {
         LogisticsModule module = getModuleForItem(par1ItemStack, null, null, null);
-        if (module != null && module.hasGui()) {
-            if (par1ItemStack != null && par1ItemStack.stackSize > 0) {
-                ItemModuleInformationManager.readInformation(par1ItemStack, module);
-                module.registerPosition(ModulePositionType.IN_HAND, par2EntityPlayer.inventory.currentItem);
-                ((LogisticsGuiModule) module).getInHandGuiProviderForModule().open(par2EntityPlayer);
-            }
+        if (module == null || !module.hasGui()) {
+            return;
         }
+
+        if (par1ItemStack == null || par1ItemStack.stackSize <= 0) {
+            return;
+        }
+
+        if(module instanceof IMUICompatibleModule){
+            if(!(module instanceof LogisticsGuiModule)) return;
+
+            ((IMUICompatibleModule) module).openGui(par2EntityPlayer, (LogisticsGuiModule) module, par3World);
+            return;
+        }
+
+        ItemModuleInformationManager.readInformation(par1ItemStack, module);
+        module.registerPosition(ModulePositionType.IN_HAND, par2EntityPlayer.inventory.currentItem);
+        ((LogisticsGuiModule) module).getInHandGuiProviderForModule().open(par2EntityPlayer);
     }
 
     @Override

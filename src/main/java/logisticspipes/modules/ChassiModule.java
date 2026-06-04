@@ -23,7 +23,7 @@ import logisticspipes.utils.SinkReply;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
-public class ChassiModule extends LogisticsGuiModule {
+public class ChassiModule extends LogisticsGuiModule{
 
     private final LogisticsModule[] _modules;
     private final PipeLogisticsChassi _parentPipe;

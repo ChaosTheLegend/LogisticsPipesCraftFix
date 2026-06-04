@@ -1054,11 +1054,6 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
             MainProxy.sendPacketToAllWatchingChunk(getX(), getZ(), MainProxy.getDimensionForWorld(getWorld()), packet);
         }
     }
-
-    protected World getWorld() {
-        return _world.getWorld();
-    }
-
     public void priorityUp(EntityPlayer player) {
         priority++;
         if (MainProxy.isClient(player.worldObj)) {

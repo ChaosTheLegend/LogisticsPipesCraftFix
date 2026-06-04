@@ -1,5 +1,9 @@
 package logisticspipes.compat;
 
+import com.cleanroommc.modularui.factory.inventory.InventoryType;
+import com.cleanroommc.modularui.factory.inventory.InventoryTypes;
+import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
+import logisticspipes.modules.abstractmodules.LogisticsModule;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.world.World;
 
@@ -19,5 +23,11 @@ public class ModularUIHelper {
         if (world == null || world.isRemote) return;
 
         GuiFactories.tileEntity().open(player, pipe.getX(), pipe.getY(), pipe.getZ());
+    }
+
+    public static void openModuleUI(EntityPlayer player, LogisticsGuiModule module, World world) {
+        if (world == null || world.isRemote) return;
+
+        GuiFactories.playerInventory().open(player, InventoryTypes.PLAYER, player.inventory.currentItem);
     }
 }
