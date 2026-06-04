@@ -14,6 +14,21 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.cleanroommc.modularui.factory.GuiData;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.network.NetworkUtils;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.utils.item.ItemStackHandler;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widgets.SlotGroupWidget;
+import com.cleanroommc.modularui.widgets.layout.Column;
+import com.cleanroommc.modularui.widgets.slot.ItemSlot;
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.compat.ModularUIHelper;
+import logisticspipes.gui.MUI.LogisticsMUIGui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -73,7 +88,7 @@ import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
-        IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver {
+        IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2 {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
 
@@ -611,5 +626,57 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     public void nextExtractionMode() {
         _extractionMode = _extractionMode.next();
+    }
+
+
+
+    private class PipeItemProviderLogisticsGui extends LogisticsMUIGui{
+
+        private final CoreRoutedPipe pipe;
+        public PipeItemProviderLogisticsGui(LogisticsModule module, CoreRoutedPipe pipe) {
+            super(module);
+            this.pipe = pipe;
+        }
+
+        @Override
+        public String getId() {
+            return "";
+        }
+
+        @Override
+        public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
+            var panel = ((IMUICompatibleModule) module).getPipeGui().GetPanel(guiData, guiSyncManager);
+
+
+
+            return ModularPanel
+                .defaultPanel(getId(), 100, 100);
+        }
+
+        private void addUpgradeGui(ModularPanel panel){
+
+            panel.child(new Column()
+                .background(ModularUIHelper.BACKGROUND_TEXTURE).width(26).right(-28)
+                .child(SlotGroupWidget.builder()
+                    .row("I")
+                    .row("I")
+                    .row("I")
+                    .row("I")
+                    .key('I', i -> new ItemSlot()
+                        .slot(, i))
+                    .build()
+                )
+                .padding(4)
+                .coverChildrenHeight());
+        }
+
+    }
+
+    @Override
+    public LogisticsMUIGui getPipeGui() {
+
+
+
+        return null;
     }
 }

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
 import net.minecraft.block.Block;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.player.EntityPlayer;
@@ -1162,8 +1163,19 @@ public class LogisticsTileGenericPipe extends TileEntity
 
     @Override
     public ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings) {
-        if (!(pipe instanceof IMUICompatiblePipe)) {
+        if (!(pipe instanceof IMUICompatiblePipe) && !(pipe instanceof IMUICompatiblePipeV2)) {
             throw new IllegalArgumentException();
+        }
+
+        syncManager.addCloseListener(player -> {
+            if (!NetworkUtils.isClient(player)) {
+                markDirty();
+            }
+        });
+
+        if(pipe instanceof IMUICompatiblePipeV2) {
+
+            return ((IMUICompatiblePipeV2) pipe).getPipeGui().GetPanel(data, syncManager);
         }
 
         IMUICompatiblePipe pipeWithGui = (IMUICompatiblePipe) pipe;
@@ -1172,11 +1184,7 @@ public class LogisticsTileGenericPipe extends TileEntity
                 .defaultPanel(pipeWithGui.getId(), pipeWithGui.getGuiWidth(), pipeWithGui.getGuiHeight());
 
         // auto-saving of tile on gui close
-        syncManager.addCloseListener(player -> {
-            if (!NetworkUtils.isClient(player)) {
-                markDirty();
-            }
-        });
+
 
         pipeWithGui.addUIWidgets(panel, data, syncManager);
 
