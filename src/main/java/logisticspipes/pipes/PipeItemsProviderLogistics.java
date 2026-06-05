@@ -14,6 +14,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.factory.inventory.ItemHandler;
@@ -23,6 +25,7 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
@@ -89,6 +92,7 @@ import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import net.minecraft.util.ResourceLocation;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
         IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2 {
@@ -570,6 +574,10 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     @Override
     public void onWrenchClicked(EntityPlayer entityplayer) {
+        //Fallback gui
+        //entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_ProviderPipe_ID, getWorld(), getX(), getY(), getZ());
+
+        //New gui
         openGui(entityplayer, this);
         MainProxy.sendPacketToPlayer(
                 PacketHandler.getPacket(ProviderPipeMode.class).setInteger(getExtractionMode().ordinal())
@@ -640,6 +648,9 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         private final CoreRoutedPipe pipe;
         private final IItemHandlerModifiable upgradeHandler;
 
+        private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
+            "logisticspipes",
+            "textures/gui/upgrade_slot.png");
         public PipeItemProviderLogisticsGui(LogisticsModule module, CoreRoutedPipe pipe) {
             super(module);
             upgradeHandler = upgradeManager.getUpgradeInventory();
@@ -652,26 +663,52 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         }
 
         @Override
+        public ParentWidget addWidgets(ParentWidget widget) {
+            ((IMUICompatibleModule) module).getPipeGui().addWidgets(widget);
+            return widget;
+        }
+
+        @Override
         public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
-            var panel = ((IMUICompatibleModule) module).getPipeGui().GetPanel(guiData, guiSyncManager);
+
+            ModuleProvider provider = (ModuleProvider) module;
+
+            var panel = ModularPanel
+                .defaultPanel(getId(), getWidth(), getHeight())
+                .background(IDrawable.EMPTY);
+
+            panel.child(addWidgets(new Column()
+                .width(provider.getPipeGui().getWidth())
+                    .height(provider.getPipeGui().getHeight()))
+                .background(ModularUIHelper.BACKGROUND_TEXTURE));
+
 
             addUpgradeGui(panel);
 
             return panel;
         }
 
+        @Override
+        public int getWidth() {
+            return ((IMUICompatibleModule) module).getPipeGui().getWidth() + 28;
+        }
+
+        @Override
+        public int getHeight() {
+            return 170;
+        }
+
         private void addUpgradeGui(ModularPanel panel){
             panel.child(new Column()
-                .background(ModularUIHelper.BACKGROUND_TEXTURE).width(26).right(-28)
+                .background(ModularUIHelper.BACKGROUND_TEXTURE)
+                .width(26)
+                .right(0)
                 .child(SlotGroupWidget.builder()
-                    .row("I")
-                    .row("I")
-                    .row("I")
-                    .row("I")
+                    .row("I").row("I").row("I").row("I")
                     .key('I', i -> new ItemSlot()
+                        .background(UITexture.fullImage(UpgradeSlotTexture))
                         .slot(upgradeHandler, i))
-                    .build()
-                )
+                    .build())
                 .padding(4)
                 .coverChildrenHeight());
         }
