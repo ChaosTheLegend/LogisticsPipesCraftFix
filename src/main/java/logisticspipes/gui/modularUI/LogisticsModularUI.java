@@ -1,13 +1,11 @@
-package logisticspipes.gui.MUI;
+package logisticspipes.gui.modularUI;
 
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandler;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.ParentWidget;
 
-public abstract class LogisticsMUIGui {
+public abstract class LogisticsModularUI {
 
     public abstract String getId();
 

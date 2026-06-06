@@ -1,13 +1,9 @@
-package logisticspipes.gui.MUI;
+package logisticspipes.gui.modularUI.modules;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.api.widget.IParentWidget;
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
@@ -16,18 +12,17 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.logisticspipes.ExtractionMode;
 import logisticspipes.modules.ModuleProvider;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 
-public class ProviderGUI extends LogisticsMUIGui {
+public class ModuleProviderMui extends LogisticsModuleMUI {
 
     private final IItemHandlerModifiable filterInventory;
 
-    private final IMUICompatibleModule module;
-
-    public ProviderGUI(IMUICompatibleModule module) {
-        this.module = module;
+    public ModuleProviderMui(LogisticsModule module) {
+        super(module);
 
         filterInventory = new InvWrapper(((ModuleProvider)module).getFilterInventory());
     }

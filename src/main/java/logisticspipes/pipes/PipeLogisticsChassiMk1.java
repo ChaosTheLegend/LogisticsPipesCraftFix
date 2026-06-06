@@ -1,7 +1,5 @@
 package logisticspipes.pipes;
 
-import logisticspipes.gui.MUI.ChassisGui;
-import logisticspipes.gui.MUI.LogisticsMUIGui;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 

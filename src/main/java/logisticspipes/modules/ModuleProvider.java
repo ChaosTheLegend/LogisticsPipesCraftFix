@@ -7,12 +7,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.MUI.LogisticsMUIGui;
-import logisticspipes.gui.MUI.ProviderGUI;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleProviderMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -504,6 +501,10 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
         displayList.addAll(list);
     }
 
+    public int getExtractionSpeed() {
+        return itemsToExtract();
+    }
+
     @Override
     public boolean hasGenericInterests() {
         return false;
@@ -546,12 +547,12 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
     }
 
     @Override
-    public LogisticsMUIGui getHandGui() {
-        return new ProviderGUI(this);
+    public LogisticsModularUI getHandGui() {
+        return new ModuleProviderMui(this);
     }
 
     @Override
-    public LogisticsMUIGui getPipeGui() {
-        return new ProviderGUI(this);
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleProviderMui(this);
     }
 }

@@ -14,36 +14,15 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.api.widget.IParentWidget;
-import com.cleanroommc.modularui.drawable.UITexture;
-import com.cleanroommc.modularui.factory.GuiData;
-import com.cleanroommc.modularui.factory.PosGuiData;
-import com.cleanroommc.modularui.factory.inventory.ItemHandler;
-import com.cleanroommc.modularui.network.NetworkUtils;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
-import com.cleanroommc.modularui.utils.item.ItemStackHandler;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widgets.SlotGroupWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
-import com.cleanroommc.modularui.widgets.slot.ItemSlot;
-import com.enderio.core.common.util.InventoryWrapper;
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.api.IMUICompatiblePipe;
 import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.compat.ModularUIHelper;
-import logisticspipes.gui.MUI.LogisticsMUIGui;
-import logisticspipes.gui.MUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-import logisticspipes.LogisticsPipes;
 import logisticspipes.gui.hud.HUDProvider;
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IChestContentReceiver;
@@ -61,13 +40,10 @@ import logisticspipes.logisticspipes.IRoutedItem;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.modules.ModuleProvider;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
-import logisticspipes.network.GuiIDs;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.hud.ChestContent;
 import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
-import logisticspipes.network.packets.modules.ProviderPipeInclude;
-import logisticspipes.network.packets.modules.ProviderPipeMode;
 import logisticspipes.network.packets.orderer.OrdererManagerContent;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
@@ -94,10 +70,8 @@ import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.util.ResourceLocation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.ApiStatus;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
         IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2 {
@@ -634,7 +608,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
     }
 
     @Override
-    public LogisticsMUIGui getPipeGui() {
+    public LogisticsModularUI getPipeGui() {
         return PipeGuiFactory.fromModule(this, myModule);
     }
 }

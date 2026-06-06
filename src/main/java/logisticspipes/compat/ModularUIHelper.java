@@ -1,14 +1,6 @@
 package logisticspipes.compat;
 
-import com.cleanroommc.modularui.factory.GuiManager;
-import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
-import com.cleanroommc.modularui.factory.PlayerInventoryGuiFactory;
-import com.cleanroommc.modularui.factory.inventory.InventoryType;
-import com.cleanroommc.modularui.factory.inventory.InventoryTypes;
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.MUI.LogisticsModuleData;
 import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
-import logisticspipes.modules.abstractmodules.LogisticsModule;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.World;

@@ -1,4 +1,4 @@
-package logisticspipes.gui.MUI;
+package logisticspipes.gui.modularUI;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.factory.GuiData;
@@ -7,12 +7,9 @@ import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
-import com.cleanroommc.modularui.widgets.PageButton;
 import com.cleanroommc.modularui.widgets.PagedWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
-import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
-import com.cleanroommc.modularui.widgets.layout.Row;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.items.ItemModule;
@@ -23,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-public class ChassisGui extends LogisticsMUIGui{
+public class ChassisGui extends LogisticsModularUI {
 
     private static final Logger log = LogManager.getLogger(ChassisGui.class);
     private final PipeLogisticsChassi pipe;
@@ -80,7 +77,7 @@ public class ChassisGui extends LogisticsMUIGui{
 
         if(!(module instanceof IMUICompatibleModule)) return widget;
 
-        LogisticsMUIGui gui = ((IMUICompatibleModule) module).getPipeGui();
+        LogisticsModularUI gui = ((IMUICompatibleModule) module).getPipeGui();
 
         widget.width(gui.getWidth())
             .height(gui.getHeight());

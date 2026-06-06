@@ -1,4 +1,4 @@
-package logisticspipes.gui.MUI;
+package logisticspipes.gui.modularUI;
 
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -27,7 +27,7 @@ public class PipeGuiFactory {
      * @param module The IMUICompatibleModule instance associated with the pipe.
      * @return A LogisticsMUIGui instance for the specified pipe and module.
      */
-    public static LogisticsMUIGui fromModule(CoreRoutedPipe pipe, IMUICompatibleModule module) {
+    public static LogisticsModularUI fromModule(CoreRoutedPipe pipe, IMUICompatibleModule module) {
         return new GenericPipeLogisticsGui(module, pipe);
     }
 

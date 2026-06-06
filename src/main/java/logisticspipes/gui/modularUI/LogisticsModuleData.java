@@ -1,12 +1,9 @@
-package logisticspipes.gui.MUI;
+package logisticspipes.gui.modularUI;
 
-import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
 import com.cleanroommc.modularui.factory.inventory.InventoryType;
-import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 public class LogisticsModuleData extends PlayerInventoryGuiData {
