@@ -1,6 +1,7 @@
 package logisticspipes.gui.MUI;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.api.widget.IParentWidget;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.Alignment;
@@ -14,6 +15,7 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.logisticspipes.ExtractionMode;
 import logisticspipes.modules.ModuleProvider;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -21,20 +23,25 @@ import logisticspipes.modules.abstractmodules.LogisticsModule;
 public class ProviderGUI extends LogisticsMUIGui {
 
     private final IItemHandlerModifiable filterInventory;
-    public ProviderGUI(LogisticsModule module) {
-        super(module);
+
+    private final IMUICompatibleModule module;
+
+    public ProviderGUI(IMUICompatibleModule module) {
+        this.module = module;
 
         filterInventory = new InvWrapper(((ModuleProvider)module).getFilterInventory());
     }
+
     @Override
     public String getId() {
         return "Provider_module";
     }
 
-    public ParentWidget addWidgets(ParentWidget widget){
+    @Override
+    public ParentWidget addWidgets(ParentWidget widget, boolean addPlayerInventory) {
         ModuleProvider moduleProvider = (ModuleProvider)module;
 
-        widget.child(SlotGroupWidget.playerInventory(true));
+        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         widget.child(
                 new Column()
@@ -57,18 +64,18 @@ public class ProviderGUI extends LogisticsMUIGui {
                                     case Leave1PerType -> "Mode: Leave 1 per type";
                                 })
                         )
-                        .width(80).height(22).top(60).left(6))
+                        .width(80).height(22).top(72).left(6))
                     .child(new CycleButtonWidget()
                         .value(
                             SyncHandlers.bool(moduleProvider::isExcludeFilter, moduleProvider::setFilterExcluded))
                         .overlay(
                             IKey.lang(
-                                () -> moduleProvider.isExcludeFilter() ?
+                                () -> !moduleProvider.isExcludeFilter() ?
                                     "Whitelist" :
                                     "Blacklist"
                             )
                         )
-                        .width(50).height(16).top(4).right(6)
+                        .width(50).height(16).top(16).right(6)
                     )
                     .child(SlotGroupWidget
                         .builder()
@@ -80,23 +87,10 @@ public class ProviderGUI extends LogisticsMUIGui {
                         ))
                         .build()
                         .align(Alignment.TopCenter)
-                        .top(4))
+                        .top(16))
             );
 
         return widget;
-    }
-
-    @Override
-    public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
-
-        ModuleProvider moduleProvider = (ModuleProvider)module;
-
-        var panel = ModularPanel
-            .defaultPanel(getId(), getWidth(), getHeight());
-
-        addWidgets(panel);
-
-        return panel;
     }
 
     @Override
@@ -106,6 +100,6 @@ public class ProviderGUI extends LogisticsMUIGui {
 
     @Override
     public int getHeight() {
-        return 170;
+        return 180;
     }
 }

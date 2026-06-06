@@ -16,5 +16,5 @@ public interface IMUICompatiblePipeV2 {
         ModularUIHelper.openPipeUI(player, pipe);
     }
 
-    public LogisticsMUIGui getPipeGui();
+    LogisticsMUIGui getPipeGui();
 }

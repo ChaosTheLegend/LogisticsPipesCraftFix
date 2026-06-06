@@ -5,14 +5,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
-import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import ibxm.Player;
 import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.MUI.LogisticsModuleData;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
@@ -128,19 +126,25 @@ public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInvent
     @Override
     public ModularPanel buildUI(PlayerInventoryGuiData guiData, PanelSyncManager guiSyncManager, UISettings settings) {
 
-        var item = guiData.getPlayer().getHeldItem();
+        ItemStack item = guiData.getPlayer().getHeldItem();
 
-        var module = getModuleForItem(item, null, null, null);
+        LogisticsModule module = getModuleForItem(item, null, null, null);
 
-        if (!(module instanceof IMUICompatibleModule)) {
+        if (!(module instanceof IMUICompatibleModule compatibleModule)) {
             throw new UnsupportedOperationException("Module " + module.getClass().getSimpleName() + " is not compatible with MUI");
         }
 
-        IMUICompatibleModule compatibleModule = (IMUICompatibleModule) module;
+        ItemModuleInformationManager.readInformation(item, module);
 
         var gui = compatibleModule.getHandGui();
 
-        return gui.GetPanel(guiData, guiSyncManager);
+        //Save item nbt on close
+        guiSyncManager.addCloseListener(e -> {
+            var heldItem = guiData.getPlayer().getHeldItem();
+            ItemModuleInformationManager.saveInfotmation(heldItem, module);
+        });
+
+        return gui.getPanel(guiData, guiSyncManager);
     }
 
     private class Module {

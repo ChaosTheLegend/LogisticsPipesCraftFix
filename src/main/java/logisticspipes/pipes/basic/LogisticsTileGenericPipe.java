@@ -1175,7 +1175,7 @@ public class LogisticsTileGenericPipe extends TileEntity
 
         if(pipe instanceof IMUICompatiblePipeV2) {
 
-            return ((IMUICompatiblePipeV2) pipe).getPipeGui().GetPanel(data, syncManager);
+            return ((IMUICompatiblePipeV2) pipe).getPipeGui().getPanel(data, syncManager);
         }
 
         IMUICompatiblePipe pipeWithGui = (IMUICompatiblePipe) pipe;
@@ -1184,7 +1184,6 @@ public class LogisticsTileGenericPipe extends TileEntity
                 .defaultPanel(pipeWithGui.getId(), pipeWithGui.getGuiWidth(), pipeWithGui.getGuiHeight());
 
         // auto-saving of tile on gui close
-
 
         pipeWithGui.addUIWidgets(panel, data, syncManager);
 

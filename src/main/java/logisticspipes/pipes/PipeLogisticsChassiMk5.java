@@ -1,5 +1,7 @@
 package logisticspipes.pipes;
 
+import logisticspipes.gui.MUI.ChassisGui;
+import logisticspipes.gui.MUI.LogisticsMUIGui;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 
@@ -30,4 +32,5 @@ public class PipeLogisticsChassiMk5 extends PipeLogisticsChassi {
     public ResourceLocation getChassiGUITexture() {
         return PipeLogisticsChassiMk5.TEXTURE;
     }
+
 }

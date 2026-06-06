@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.api.widget.IParentWidget;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.GuiData;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -35,6 +36,7 @@ import logisticspipes.api.IMUICompatiblePipe;
 import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.gui.MUI.LogisticsMUIGui;
+import logisticspipes.gui.MUI.PipeGuiFactory;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -93,10 +95,13 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.util.ResourceLocation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
         IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2 {
 
+    private static final Logger log = LogManager.getLogger(PipeItemsProviderLogistics.class);
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
 
     private final Map<ItemIdentifier, Integer> displayMap = new TreeMap<>();
@@ -641,82 +646,9 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         _extractionMode = _extractionMode.next();
     }
 
-
-
-    private class PipeItemProviderLogisticsGui extends LogisticsMUIGui{
-
-        private final CoreRoutedPipe pipe;
-        private final IItemHandlerModifiable upgradeHandler;
-
-        private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
-            "logisticspipes",
-            "textures/gui/upgrade_slot.png");
-        public PipeItemProviderLogisticsGui(LogisticsModule module, CoreRoutedPipe pipe) {
-            super(module);
-            upgradeHandler = upgradeManager.getUpgradeInventory();
-            this.pipe = pipe;
-        }
-
-        @Override
-        public String getId() {
-            return "";
-        }
-
-        @Override
-        public ParentWidget addWidgets(ParentWidget widget) {
-            ((IMUICompatibleModule) module).getPipeGui().addWidgets(widget);
-            return widget;
-        }
-
-        @Override
-        public ModularPanel GetPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
-
-            ModuleProvider provider = (ModuleProvider) module;
-
-            var panel = ModularPanel
-                .defaultPanel(getId(), getWidth(), getHeight())
-                .background(IDrawable.EMPTY);
-
-            panel.child(addWidgets(new Column()
-                .width(provider.getPipeGui().getWidth())
-                    .height(provider.getPipeGui().getHeight()))
-                .background(ModularUIHelper.BACKGROUND_TEXTURE));
-
-
-            addUpgradeGui(panel);
-
-            return panel;
-        }
-
-        @Override
-        public int getWidth() {
-            return ((IMUICompatibleModule) module).getPipeGui().getWidth() + 28;
-        }
-
-        @Override
-        public int getHeight() {
-            return 170;
-        }
-
-        private void addUpgradeGui(ModularPanel panel){
-            panel.child(new Column()
-                .background(ModularUIHelper.BACKGROUND_TEXTURE)
-                .width(26)
-                .right(0)
-                .child(SlotGroupWidget.builder()
-                    .row("I").row("I").row("I").row("I")
-                    .key('I', i -> new ItemSlot()
-                        .background(UITexture.fullImage(UpgradeSlotTexture))
-                        .slot(upgradeHandler, i))
-                    .build())
-                .padding(4)
-                .coverChildrenHeight());
-        }
-
-    }
-
     @Override
     public LogisticsMUIGui getPipeGui() {
-        return new PipeItemProviderLogisticsGui(myModule, this);
+        log.info("Creating PipeItemsProviderLogistics GUI");
+        return PipeGuiFactory.fromModule(this, myModule);
     }
 }

@@ -20,6 +20,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
 import net.minecraft.client.Minecraft;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.player.EntityPlayer;
@@ -960,7 +961,10 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
                 && SimpleServiceLocator.toolWrenchHandler.canWrench(entityplayer, getX(), getY(), getZ())) {
             if (MainProxy.isServer(entityplayer.worldObj)) {
                 if (settings == null || settings.openGui) {
-                    if (getLogisticsModule() != null && getLogisticsModule() instanceof LogisticsGuiModule) {
+                    if(this instanceof IMUICompatiblePipeV2){
+                        ((IMUICompatiblePipeV2)this).openGui(entityplayer, this);
+                    }
+                    else if (getLogisticsModule() != null && getLogisticsModule() instanceof LogisticsGuiModule) {
                         ((LogisticsGuiModule) getLogisticsModule()).getPipeGuiProviderForModule().setTilePos(container)
                                 .open(entityplayer);
                     } else {
