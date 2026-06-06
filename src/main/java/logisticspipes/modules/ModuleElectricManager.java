@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleElectricManagerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -49,7 +52,7 @@ import logisticspipes.utils.string.StringUtils;
 import logisticspipes.utils.tuples.Triplet;
 
 public class ModuleElectricManager extends LogisticsGuiModule implements IClientInformationProvider, IHUDModuleHandler,
-        IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive {
+        IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -167,7 +170,8 @@ public class ModuleElectricManager extends LogisticsGuiModule implements IClient
         if (inv == null) {
             return;
         }
-        for (int i = 0; i < inv.getSizeInventory(); i++) {
+        var size = inv.getSizeInventory();
+        for (int i = 0; i < size; i++) {
             ItemStack stack = inv.getStackInSlot(i);
             if (stack == null) {
                 return;
@@ -313,5 +317,15 @@ public class ModuleElectricManager extends LogisticsGuiModule implements IClient
     @SideOnly(Side.CLIENT)
     public IIcon getIconTexture(IIconRegister register) {
         return register.registerIcon("logisticspipes:itemModule/ModuleElectricManager");
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleElectricManagerMui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleElectricManagerMui(this);
     }
 }

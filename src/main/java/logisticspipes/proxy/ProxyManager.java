@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.proxy.gtnh.GTNHProxy;
 import net.minecraft.block.Block;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -585,6 +587,70 @@ public class ProxyManager {
                     public void syncTracker(World world, EntityPlayer player) {}
                 }));
 
+        if(LogisticsPipes.isGregTech){
+            SimpleServiceLocator.setElectricItemProxy(
+            ProxyManager.getWrappedProxy("gregtech", IIC2Proxy.class, GTNHProxy.class, new GTNHProxy() {
+                @Override
+                public boolean isElectricItem(ItemStack stack) {
+                    return false;
+                }
+
+                @Override
+                public boolean isSimilarElectricItem(ItemStack stack, ItemStack template) {
+                    return false;
+                }
+
+                @Override
+                public boolean isFullyCharged(ItemStack stack) {
+                    return false;
+                }
+
+                @Override
+                public boolean isFullyDischarged(ItemStack stack) {
+                    return false;
+                }
+
+                @Override
+                public boolean isPartiallyCharged(ItemStack stack) {
+                    return false;
+                }
+
+                @Override
+                public void addCraftingRecipes(ICraftingParts parts) {}
+
+                @Override
+                public boolean hasIC2() {
+                    return false;
+                }
+
+                @Override
+                public void registerToEneryNet(TileEntity tile) {}
+
+                @Override
+                public void unregisterToEneryNet(TileEntity tile) {}
+
+                @Override
+                public boolean acceptsEnergyFrom(TileEntity tile1, TileEntity tile2, ForgeDirection opposite) {
+                    return false;
+                }
+
+                @Override
+                public boolean isEnergySink(TileEntity tile) {
+                    return false;
+                }
+
+                @Override
+                public double demandedEnergyUnits(TileEntity tile) {
+                    return 0;
+                }
+
+                @Override
+                public double injectEnergyUnits(TileEntity tile, ForgeDirection opposite, double d) {
+                    return d;
+                }
+            }));
+        }
+        else{
         SimpleServiceLocator.setElectricItemProxy(
                 ProxyManager.getWrappedProxy("IC2", IIC2Proxy.class, IC2Proxy.class, new IIC2Proxy() {
                     @Override
@@ -646,6 +712,7 @@ public class ProxyManager {
                         return d;
                     }
                 }));
+        }
 
         SimpleServiceLocator.setCCProxy(ProxyManager.getWrappedProxy(
                 LPConstants.computerCraftModID, ICCProxy.class, CCProxy.class, new ICCProxy() {
