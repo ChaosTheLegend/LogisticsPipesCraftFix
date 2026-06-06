@@ -97,6 +97,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.util.ResourceLocation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.ApiStatus;
 
 public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
         IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2 {
@@ -572,83 +573,68 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
         return (_orderManager.totalAmountCountInAllOrders() + 63) / 64.0;
     }
 
-    // import from logic
-    private final ItemIdentifierInventory providingInventory = new ItemIdentifierInventory(9, "", 1);
-    private boolean _filterIsExclude;
-    private ExtractionMode _extractionMode = ExtractionMode.Normal;
-
-    @Override
-    public void onWrenchClicked(EntityPlayer entityplayer) {
-        //Fallback gui
-        //entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_ProviderPipe_ID, getWorld(), getX(), getY(), getZ());
-
-        //New gui
-        openGui(entityplayer, this);
-        MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(ProviderPipeMode.class).setInteger(getExtractionMode().ordinal())
-                        .setPosX(getX()).setPosY(getY()).setPosZ(getZ()),
-                entityplayer);
-        MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(ProviderPipeInclude.class).setInteger(isExcludeFilter() ? 1 : 0).setPosX(getX())
-                        .setPosY(getY()).setPosZ(getZ()),
-                entityplayer);
-    }
-
     /*** GUI ***/
     public ItemIdentifierInventory getprovidingInventory() {
-        return providingInventory;
+        return (ItemIdentifierInventory)myModule.getFilterInventory();
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         super.readFromNBT(nbttagcompound);
-        providingInventory.readFromNBT(nbttagcompound, "");
-        _filterIsExclude = nbttagcompound.getBoolean("filterisexclude");
-        _extractionMode = ExtractionMode.getMode(nbttagcompound.getInteger("extractionMode"));
+        myModule.readFromNBT(nbttagcompound);
     }
 
     @Override
     public void writeToNBT(NBTTagCompound nbttagcompound) {
         super.writeToNBT(nbttagcompound);
-        providingInventory.writeToNBT(nbttagcompound, "");
-        nbttagcompound.setBoolean("filterisexclude", _filterIsExclude);
-        nbttagcompound.setInteger("extractionMode", _extractionMode.ordinal());
+        myModule.writeToNBT(nbttagcompound);
     }
 
     /**
      * INTERFACE TO PIPE
      **/
     public boolean hasFilter() {
-        return !providingInventory.isEmpty();
+        return !((ItemIdentifierInventory)myModule.getFilterInventory()).isEmpty();
     }
 
     public boolean itemIsFiltered(ItemIdentifier item) {
-        return providingInventory.containsItem(item);
+        return ((ItemIdentifierInventory)myModule.getFilterInventory()).containsItem(item);
     }
 
     public boolean isExcludeFilter() {
-        return _filterIsExclude;
+        return myModule.isExcludeFilter();
     }
 
+    @Deprecated
+    /*
+     * replaced by modular ui handlers
+     */
     public void setFilterExcluded(boolean isExcluded) {
-        _filterIsExclude = isExcluded;
+        return;
     }
 
     public ExtractionMode getExtractionMode() {
-        return _extractionMode;
+        return myModule.getExtractionMode();
     }
 
+    @Deprecated
+    /*
+     * replaced by modular ui handlers
+     */
     public void setExtractionMode(int id) {
-        _extractionMode = ExtractionMode.getMode(id);
+        return;
     }
 
+    @Deprecated
+    /*
+    * replaced by modular ui handlers
+     */
     public void nextExtractionMode() {
-        _extractionMode = _extractionMode.next();
+        return;
     }
 
     @Override
     public LogisticsMUIGui getPipeGui() {
-        log.info("Creating PipeItemsProviderLogistics GUI");
         return PipeGuiFactory.fromModule(this, myModule);
     }
 }

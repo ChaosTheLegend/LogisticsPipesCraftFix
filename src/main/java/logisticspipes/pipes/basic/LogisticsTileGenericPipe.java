@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.routing.pathfinder.PipeInformationManager;
 import net.minecraft.block.Block;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.player.EntityPlayer;
