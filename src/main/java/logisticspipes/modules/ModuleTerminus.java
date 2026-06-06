@@ -5,6 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleTerminusMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -40,7 +43,7 @@ import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "Terminus Module")
 public class ModuleTerminus extends LogisticsSimpleFilterModule implements IClientInformationProvider,
-        IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive {
+        IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -198,5 +201,15 @@ public class ModuleTerminus extends LogisticsSimpleFilterModule implements IClie
     @SideOnly(Side.CLIENT)
     public IIcon getIconTexture(IIconRegister register) {
         return register.registerIcon("logisticspipes:itemModule/ModuleTerminus");
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleTerminusMui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleTerminusMui(this);
     }
 }

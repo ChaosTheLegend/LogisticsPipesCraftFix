@@ -5,6 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModulePassiveSupplierMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -38,7 +41,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 
 public class ModulePassiveSupplier extends LogisticsSimpleFilterModule implements IClientInformationProvider,
-        IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive, ISimpleInventoryEventHandler {
+        IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive, ISimpleInventoryEventHandler, IMUICompatibleModule {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -206,5 +209,15 @@ public class ModulePassiveSupplier extends LogisticsSimpleFilterModule implement
     @SideOnly(Side.CLIENT)
     public IIcon getIconTexture(IIconRegister register) {
         return register.registerIcon("logisticspipes:itemModule/ModulePassiveSupplier");
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModulePassiveSupplierMui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModulePassiveSupplierMui(this);
     }
 }

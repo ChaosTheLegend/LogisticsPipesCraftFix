@@ -5,6 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleEnchantmentSinkMK2Mui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -40,7 +43,7 @@ import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "EnchantmentSink Module MK2")
 public class ModuleEnchantmentSinkMK2 extends LogisticsSimpleFilterModule implements IClientInformationProvider,
-        IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive {
+        IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
@@ -208,5 +211,15 @@ public class ModuleEnchantmentSinkMK2 extends LogisticsSimpleFilterModule implem
     @Override
     public boolean hasEffect() {
         return true;
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleEnchantmentSinkMK2Mui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleEnchantmentSinkMK2Mui(this);
     }
 }
