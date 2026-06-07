@@ -21,7 +21,7 @@ public class PipeSatelliteMui extends LogisticsPipeMUI {
 
     @Override
     public String getId() {
-        return "module_terminus";
+        return "pipe_satellite";
     }
 
     @Override

@@ -1,5 +1,9 @@
 package logisticspipes.pipes;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.modules.PipeFluidBasicMui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
@@ -20,10 +24,11 @@ import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.tuples.Pair;
+import net.minecraftforge.fluids.IFluidTank;
 
-public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink {
+public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink, IMUICompatiblePipeV2 {
 
-    public ItemIdentifierInventory filterInv = new ItemIdentifierInventory(1, "Dummy", 1, true);
+    public final FluidTank filterTank = new FluidTank(1);
     private final PlayerCollectionList guiOpenedBy = new PlayerCollectionList();
 
     public PipeFluidBasic(Item item) {
@@ -51,13 +56,10 @@ public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink {
             return 0; // Don't sink when the gui is open
         }
 
+        if(filterTank.getFluid() == null) return 0;
+        if(!filterTank.getFluid().isFluidEqual(stack)) return 0;
+
         FluidIdentifier ident = FluidIdentifier.get(stack);
-        if (filterInv.getStackInSlot(0) == null) {
-            return 0;
-        }
-        if (!ident.equals(FluidIdentifier.get(filterInv.getIDStackInSlot(0).getItem()))) {
-            return 0;
-        }
 
         // using long for our internal calculations avoids an overflow when tanks report
         // a capacity of Integer.MAX_VALUE (notably gt5 super tank when set to void fluids)
@@ -98,13 +100,13 @@ public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink {
     @Override
     public void writeToNBT(NBTTagCompound nbttagcompound) {
         super.writeToNBT(nbttagcompound);
-        filterInv.writeToNBT(nbttagcompound);
+        filterTank.writeToNBT(nbttagcompound);
     }
 
     @Override
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         super.readFromNBT(nbttagcompound);
-        filterInv.readFromNBT(nbttagcompound);
+        filterTank.readFromNBT(nbttagcompound);
     }
 
     @Override
@@ -123,5 +125,15 @@ public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink {
     @Override
     public boolean canReceiveFluid() {
         return false;
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromMui(new PipeFluidBasicMui(this));
+    }
+
+    public String getFluidName() {
+        if(filterTank.getFluid() == null) return "None";
+        return filterTank.getFluid().getLocalizedName();
     }
 }

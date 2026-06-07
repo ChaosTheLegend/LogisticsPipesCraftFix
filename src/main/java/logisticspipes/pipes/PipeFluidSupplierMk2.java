@@ -1,5 +1,9 @@
 package logisticspipes.pipes;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.modules.PipeFluidSupplierMk2Mui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
@@ -45,116 +49,14 @@ import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 public class PipeFluidSupplierMk2 extends FluidRoutedPipe
-        implements IRequestFluid, IRequireReliableFluidTransport, IMUICompatiblePipe {
+        implements IRequestFluid, IRequireReliableFluidTransport, IMUICompatiblePipeV2 {
 
     private boolean _lastRequestFailed = false;
 
-    private final FluidTank phantomTank = new FluidTank(1);
-    private int amount = 0;
-    private boolean requestPartials = false;
-    private int refillThreshold = 0;
-
-    @Override
-    public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
-        panel.background(ModularUIHelper.BACKGROUND_TEXTURE).bindPlayerInventory().child(
-                new Column().widthRel(1.0F).top(6).coverChildrenHeight().child(
-                        new Row().mainAxisAlignment(Alignment.MainAxis.CENTER)
-                                .crossAxisAlignment(Alignment.CrossAxis.CENTER).widthRel(1.0F).coverChildrenHeight()
-                                .child(IKey.lang("gui.fluidsuppliermk2.TargetInv").asWidget()))
-                        .child(
-                                new Row().mainAxisAlignment(Alignment.MainAxis.CENTER)
-                                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).marginTop(5)
-                                        .coverChildrenHeight()
-                                        .child(
-                                                IKey.comp(IKey.lang("gui.fluidsuppliermk2.Fluid"), IKey.str(":"))
-                                                        .asWidget())
-                                        .child(
-                                                new FluidSlot()
-                                                        .syncHandler(
-                                                                new FluidSlotSyncHandler(phantomTank).phantom(true)
-                                                                        .controlsAmount(false))
-                                                        .marginLeft(6).width(16).height(16))
-                                        .child(
-                                                new TextFieldWidget().marginLeft(6).width(80)
-                                                        .setNumbers(0, Integer.MAX_VALUE).value(
-                                                                SyncHandlers.intNumber(
-                                                                        () -> amount,
-                                                                        value -> this.amount = value)))
-                                        .child(IKey.str("mB").asWidget().marginLeft(3)))
-                        .child(
-                                new Row().mainAxisAlignment(Alignment.MainAxis.CENTER)
-                                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).marginTop(5)
-                                        .coverChildrenHeight()
-                                        .child(
-                                                IKey.comp(IKey.lang("gui.fluidsuppliermk2.partial"), IKey.str(":"))
-                                                        .asWidget())
-                                        .child(
-                                                new CycleButtonWidget().marginLeft(6).width(24)
-                                                        .value(
-                                                                SyncHandlers.bool(
-                                                                        () -> this.requestPartials,
-                                                                        value -> this.requestPartials = value))
-                                                        .overlay(
-                                                                IKey.lang(
-                                                                        () -> this.requestPartials
-                                                                                ? "gui.fluidsuppliermk2.partial.yes"
-                                                                                : "gui.fluidsuppliermk2.partial.no"))
-                                                        .tooltipBuilder((tooltip -> {
-                                                            tooltip.addLine(
-                                                                    IKey.lang("gui.fluidsuppliermk2.partial.tip"));
-
-                                                            if (requestPartials) {
-                                                                tooltip.addLine(
-                                                                        IKey.lang(
-                                                                                "gui.fluidsuppliermk2.partial.yes.tip"));
-                                                            } else {
-                                                                tooltip.addLine(
-                                                                        IKey.lang(
-                                                                                "gui.fluidsuppliermk2.partial.no.tip"));
-                                                            }
-                                                        })).tooltipPos(RichTooltip.Pos.ABOVE)))
-                        .child(
-                                new Row().mainAxisAlignment(Alignment.MainAxis.CENTER)
-                                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).marginTop(5)
-                                        .coverChildrenHeight().child(
-                                                IKey.comp(
-                                                        IKey.lang("gui.fluidsuppliermk2.refill_if_depleted"),
-                                                        IKey.str(":")).asWidget()))
-                        .child(
-                                new Row().marginTop(5).mainAxisAlignment(Alignment.MainAxis.CENTER)
-                                        .coverChildrenHeight()
-                                        .child(
-                                                new TextFieldWidget().width(80).setNumbers(0, Integer.MAX_VALUE).value(
-                                                        SyncHandlers.intNumber(
-                                                                () -> refillThreshold,
-                                                                value -> this.refillThreshold = value))
-
-                                        ).child(IKey.str("mB").asWidget().marginLeft(3))
-                                        .child(IKey.str("§9[?]").asWidget().marginLeft(6).tooltipBuilder(tooltip -> {
-                                            tooltip.setAutoUpdate(true);
-                                            tooltip.addLine(
-                                                    IKey.lang(
-                                                            "gui.fluidsuppliermk2.refill_if_depleted.tip",
-                                                            this.refillThreshold != 0 ? this.refillThreshold : "n"));
-                                            tooltip.addLine(
-                                                    IKey.lang("gui.fluidsuppliermk2.refill_if_depleted.tip.zero"));
-                                        }).tooltipPos(RichTooltip.Pos.ABOVE))));
-    }
-
-    @Override
-    public String getId() {
-        return "fluid_supplier_mk2";
-    }
-
-    @Override
-    public int getGuiWidth() {
-        return 184;
-    }
-
-    @Override
-    public int getGuiHeight() {
-        return 186;
-    }
+    public final FluidTank phantomTank = new FluidTank(1);
+    public int amount = 0;
+    public boolean requestPartials = false;
+    public int refillThreshold = 0;
 
     public PipeFluidSupplierMk2(Item item) {
         super(item);
@@ -402,12 +304,12 @@ public class PipeFluidSupplierMk2 extends FluidRoutedPipe
     public void liquidNotInserted(FluidIdentifier item, int amount) {}
 
     @Override
-    public void onWrenchClicked(EntityPlayer player) {
-        openGui(player, this);
+    public boolean canReceiveFluid() {
+        return false;
     }
 
     @Override
-    public boolean canReceiveFluid() {
-        return false;
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromMui(new PipeFluidSupplierMk2Mui(this));
     }
 }

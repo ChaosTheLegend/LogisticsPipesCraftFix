@@ -59,14 +59,16 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
             .background(ModularUIHelper.BACKGROUND_TEXTURE));
 
 
-        addUpgradeGui(panel);
+        //Disabled until all pipes have a Mui gui
+
+        //addUpgradeGui(panel);
 
         return panel;
     }
 
     @Override
     public int getWidth() {
-        return pipeMUI.getWidth() + 28;
+        return pipeMUI.getWidth(); //+ 28; for upgrade slots
     }
 
     @Override
