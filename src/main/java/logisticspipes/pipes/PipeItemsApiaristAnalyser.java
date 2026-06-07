@@ -2,6 +2,9 @@ package logisticspipes.pipes;
 
 import java.util.List;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.tileentity.TileEntity;
@@ -28,7 +31,7 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.tuples.LPPosition;
 import logisticspipes.utils.tuples.Triplet;
 
-public class PipeItemsApiaristAnalyser extends CoreRoutedPipe implements ISendRoutedItem {
+public class PipeItemsApiaristAnalyser extends CoreRoutedPipe implements ISendRoutedItem, IMUICompatiblePipeV2 {
 
     private final ModuleApiaristAnalyser analyserModule;
 
@@ -183,5 +186,10 @@ public class PipeItemsApiaristAnalyser extends CoreRoutedPipe implements ISendRo
     @Override
     public boolean hasGenericInterests() {
         return true;
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromModule(this, analyserModule);
     }
 }

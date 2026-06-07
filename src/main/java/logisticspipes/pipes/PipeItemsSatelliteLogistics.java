@@ -11,6 +11,14 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.modules.PipeSatelliteMui;
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -55,7 +63,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
 
 public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
-        implements IRequestItems, IRequireReliableTransport, IHeadUpDisplayRendererProvider, IChestContentReceiver {
+        implements IRequestItems, IRequireReliableTransport, IHeadUpDisplayRendererProvider, IChestContentReceiver, ISatellitePipe, IMUICompatiblePipeV2 {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     public final LinkedList<ItemIdentifierStack> itemList = new LinkedList<>();
@@ -200,6 +208,8 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
 
     protected final LinkedList<ItemIdentifierStack> _lostItems = new LinkedList<>();
 
+    @Setter
+    @Getter
     public int satelliteId;
 
     @Override
@@ -283,6 +293,15 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
         }
     }
 
+    public void setNextFreeId(){
+        var potentialId = findId(1);
+        ensureAllSatelliteStatus();
+        setSatelliteId(potentialId);
+    }
+
+
+    //public void setSatelliteId(int id) {satelliteId = id;}
+
     public void setNextId(EntityPlayer player) {
         satelliteId = findId(1);
         ensureAllSatelliteStatus();
@@ -365,7 +384,8 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
     @Override
     public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
 
-    public void setSatelliteId(int integer) {
-        satelliteId = integer;
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromMui(new PipeSatelliteMui(this));
     }
 }

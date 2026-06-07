@@ -13,33 +13,35 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
-import logisticspipes.modules.ModuleProvider;
+import logisticspipes.gui.modularUI.modules.LogisticsPipeMUI;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import net.minecraft.util.ResourceLocation;
 
-public class GenericPipeLogisticsGui extends LogisticsModularUI {
+import static mcp.mobius.waila.addons.etb.ETBModule.module;
+
+public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
 
     private final CoreRoutedPipe pipe;
+    private final LogisticsPipeMUI pipeMUI;
     private final IItemHandlerModifiable upgradeHandler;
-    private final IMUICompatibleModule module;
 
     private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
         "logisticspipes",
         "textures/gui/upgrade_slot.png");
-    public GenericPipeLogisticsGui(IMUICompatibleModule module, CoreRoutedPipe pipe) {
-        this.module = module;
+    public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui) {
+        this.pipeMUI = pipeMui;
+        this.pipe = pipeMui.getPipe();
         upgradeHandler = pipe.getUpgradeManager().getUpgradeInventory();
-        this.pipe = pipe;
     }
 
     @Override
     public String getId() {
-        return module.getPipeGui().getId();
+        return pipeMUI.getId();
     }
 
     @Override
     public ParentWidget addWidgets(ParentWidget widget, boolean addPlayerInventory) {
-        ((IMUICompatibleModule) module).getPipeGui().addWidgets(widget, addPlayerInventory);
+        pipeMUI.addWidgets(widget, addPlayerInventory);
         return widget;
     }
 
@@ -51,8 +53,8 @@ public class GenericPipeLogisticsGui extends LogisticsModularUI {
             .background(IDrawable.EMPTY);
 
         panel.child(addWidgets(new Column()
-            .width(module.getPipeGui().getWidth())
-            .height(module.getPipeGui().getHeight())
+            .width(pipeMUI.getWidth())
+            .height(pipeMUI.getHeight())
         , true)
             .background(ModularUIHelper.BACKGROUND_TEXTURE));
 
@@ -64,12 +66,12 @@ public class GenericPipeLogisticsGui extends LogisticsModularUI {
 
     @Override
     public int getWidth() {
-        return ((IMUICompatibleModule) module).getPipeGui().getWidth() + 28;
+        return pipeMUI.getWidth() + 28;
     }
 
     @Override
     public int getHeight() {
-        return ((IMUICompatibleModule) module).getPipeGui().getHeight();
+        return pipeMUI.getHeight();
     }
 
     private void addUpgradeGui(ModularPanel panel){

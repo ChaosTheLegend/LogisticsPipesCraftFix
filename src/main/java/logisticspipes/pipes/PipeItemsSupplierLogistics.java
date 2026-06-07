@@ -6,6 +6,10 @@ package logisticspipes.pipes;
 
 import java.util.List;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -21,7 +25,7 @@ import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
-public class PipeItemsSupplierLogistics extends CoreRoutedPipe implements IRequestItems, IRequireReliableTransport {
+public class PipeItemsSupplierLogistics extends CoreRoutedPipe implements IRequestItems, IRequireReliableTransport, IMUICompatiblePipeV2 {
 
     private final ModuleActiveSupplier module;
 
@@ -78,5 +82,10 @@ public class PipeItemsSupplierLogistics extends CoreRoutedPipe implements IReque
     public void addStatusInformation(List<StatusEntry> status) {
         super.addStatusInformation(status);
         module.addStatusInformation(status);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromModule(this, module);
     }
 }

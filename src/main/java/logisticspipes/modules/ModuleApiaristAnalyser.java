@@ -3,6 +3,9 @@ package logisticspipes.modules;
 import java.util.ArrayList;
 import java.util.List;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleBeeAnalyzerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -34,7 +37,7 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.tuples.Pair;
 
 public class ModuleApiaristAnalyser extends LogisticsGuiModule
-        implements IClientInformationProvider, IModuleWatchReciver {
+        implements IClientInformationProvider, IModuleWatchReciver, IMUICompatibleModule {
 
     private final int ticksToAction = 100;
     private int currentTick = 0;
@@ -147,6 +150,14 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
         return true;
     }
 
+    public void setExtractMode(boolean isOn) {
+        extractMode = isOn;
+    }
+
+    public boolean getExtractModeBool() {
+        return extractMode;
+    }
+
     public void setExtractMode(int mode) {
         if (getExtractMode() == mode) {
             return;
@@ -214,4 +225,13 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
     protected ModuleInHandGuiProvider getInHandGuiProvider() {
         return NewGuiHandler.getGui(ApiaristAnalyserModuleInHand.class);
     }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleBeeAnalyzerMui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {return new ModuleBeeAnalyzerMui(this);}
+
 }

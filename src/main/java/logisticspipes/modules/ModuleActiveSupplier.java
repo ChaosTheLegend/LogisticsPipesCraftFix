@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.modules.ModuleActiveSupplierMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -62,7 +65,7 @@ import lombok.Setter;
 
 public class ModuleActiveSupplier extends LogisticsGuiModule
         implements IRequestItems, IRequireReliableTransport, IClientInformationProvider, IHUDModuleHandler,
-        IModuleWatchReciver, IModuleInventoryReceive, ISimpleInventoryEventHandler {
+        IModuleWatchReciver, IModuleInventoryReceive, ISimpleInventoryEventHandler, IMUICompatibleModule {
 
     private final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
 
@@ -180,6 +183,16 @@ public class ModuleActiveSupplier extends LogisticsGuiModule
     private final ItemIdentifierInventory dummyInventory = new ItemIdentifierInventory(9, "", 127);
 
     private final HashMap<ItemIdentifier, Integer> _requestedItems = new HashMap<>();
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleActiveSupplierMui(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleActiveSupplierMui(this);
+    }
 
     public enum SupplyMode {
         Partial,

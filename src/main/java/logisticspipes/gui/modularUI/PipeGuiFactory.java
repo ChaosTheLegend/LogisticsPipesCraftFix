@@ -9,6 +9,8 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
+import logisticspipes.gui.modularUI.modules.LogisticsPipeMUI;
+import logisticspipes.gui.modularUI.modules.PipeSatelliteMui;
 import logisticspipes.items.ItemUpgrade;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import net.minecraft.item.ItemStack;
@@ -53,6 +55,10 @@ public class PipeGuiFactory {
                 .build())
             .padding(4)
             .coverChildrenHeight());
+    }
+
+    public static LogisticsModularUI fromMui(LogisticsPipeMUI pipeMui) {
+        return new GenericSimplePipeLogisticsGui(pipeMui);
     }
 }
 

@@ -51,7 +51,7 @@ public class ModuleElectricManagerMui extends LogisticsModuleMUI {
                     .build()
                 )
                 .child(new CycleButtonWidget()
-                    .width(80).height(20)
+                    .width(86).height(20)
                     .alignX(Alignment.END)
                     .value(
                         SyncHandlers.bool(itemSinkModule::isDischargeMode, itemSinkModule::setDischargeMode))
@@ -75,6 +75,6 @@ public class ModuleElectricManagerMui extends LogisticsModuleMUI {
 
     @Override
     public int getHeight() {
-        return 150;
+        return 146;
     }
 }
