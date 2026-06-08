@@ -229,6 +229,7 @@ item.ModuleTypeFilterItemSink=Type Filter ItemSink module
 
 # Items
 
+item.legacyWrench=Legacy Wrench
 item.structframe=Structural Pipe Frame
 item.pipeComponents.name=Structural Pipe Frame
 item.microservo=Micro Servo

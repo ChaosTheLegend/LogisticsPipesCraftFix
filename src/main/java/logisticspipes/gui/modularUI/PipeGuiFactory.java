@@ -1,8 +1,12 @@
 package logisticspipes.gui.modularUI;
 
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.TabTexture;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
@@ -18,7 +22,7 @@ import net.minecraft.util.ResourceLocation;
 
 public class PipeGuiFactory {
 
-    private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
+    public static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
         "logisticspipes",
         "textures/gui/upgrade_slot.png");
     /*
@@ -40,10 +44,14 @@ public class PipeGuiFactory {
     }
 
     public static void addUpgradeGui(ModularPanel panel, IItemHandlerModifiable upgradeHandler){
-        panel.child(new Column()
-            .background(ModularUIHelper.BACKGROUND_TEXTURE)
-            .width(26)
-            .right(0)
+        panel.child(getUpgradeGui(upgradeHandler));
+    }
+
+    public static ParentWidget getUpgradeGui(IItemHandlerModifiable upgradeHandler){
+        var column = new Column()
+            .background(ModularUIHelper.TAB_RIGHT_TEXTURE)
+            .width(24)
+            .right(4)
             .child(SlotGroupWidget.builder()
                 .row("I").row("I").row("I").row("I")
                 .key('I', i -> new ItemSlot()
@@ -54,7 +62,9 @@ public class PipeGuiFactory {
                     .background(UITexture.fullImage(UpgradeSlotTexture)))
                 .build())
             .padding(4)
-            .coverChildrenHeight());
+            .coverChildrenHeight();
+
+        return (ParentWidget)column;
     }
 
     public static LogisticsModularUI fromMui(LogisticsPipeMUI pipeMui) {

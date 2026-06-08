@@ -1,5 +1,7 @@
 package logisticspipes.pipes.upgrades;
 
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.InvWrapper;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -16,9 +18,9 @@ import lombok.Getter;
 public class ModuleUpgradeManager implements ISimpleInventoryEventHandler, ISlotUpgradeManager {
 
     @Getter
-    private final SimpleStackInventory inv = new SimpleStackInventory(2, "UpgradeInventory", 16);
+    private final SimpleStackInventory inv = new SimpleStackInventory(4, "UpgradeInventory", 16);
 
-    private final IPipeUpgrade[] upgrades = new IPipeUpgrade[2];
+    private final IPipeUpgrade[] upgrades = new IPipeUpgrade[4];
     private final PipeLogisticsChassi pipe;
 
     private final UpgradeManager parent;
@@ -143,6 +145,10 @@ public class ModuleUpgradeManager implements ISimpleInventoryEventHandler, ISlot
     public void writeToNBT(NBTTagCompound nbttagcompound, String prefix) {
         inv.writeToNBT(nbttagcompound, "ModuleUpgradeInventory_" + prefix);
         InventoryChanged(inv);
+    }
+
+    public IItemHandlerModifiable getUpgradeInventory() {
+        return new InvWrapper(inv);
     }
 
     private boolean updateModule(int slot, IPipeUpgrade[] upgrades, IInventory inv) {

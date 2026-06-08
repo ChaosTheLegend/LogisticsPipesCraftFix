@@ -12,6 +12,7 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import logisticspipes.items.*;
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -48,20 +49,6 @@ import logisticspipes.commands.LogisticsPipesCommand;
 import logisticspipes.commands.chathelper.LPChatListener;
 import logisticspipes.config.Configs;
 import logisticspipes.config.PlayerConfig;
-import logisticspipes.items.ItemDisk;
-import logisticspipes.items.ItemHUDArmor;
-import logisticspipes.items.ItemLogisticsPipe;
-import logisticspipes.items.ItemModule;
-import logisticspipes.items.ItemParts;
-import logisticspipes.items.ItemPipeComponents;
-import logisticspipes.items.ItemPipeController;
-import logisticspipes.items.ItemPipeSignCreator;
-import logisticspipes.items.ItemUpgrade;
-import logisticspipes.items.LogisticsBrokenItem;
-import logisticspipes.items.LogisticsFluidContainer;
-import logisticspipes.items.LogisticsItemCard;
-import logisticspipes.items.LogisticsSolidBlockItem;
-import logisticspipes.items.RemoteOrderer;
 import logisticspipes.logistics.LogisticsFluidManager;
 import logisticspipes.logistics.LogisticsManager;
 import logisticspipes.network.GuiHandler;
@@ -275,6 +262,8 @@ public class LogisticsPipes {
     public static Item LogisticsFluidContainer;
     public static Item LogisticsBrokenItem;
     public static Item LogisticsPipeControllerItem;
+
+    public static Item LegacyWrenchItem;
 
     // Logistics Blocks
     public static Block LogisticsSolidBlock;
@@ -528,8 +517,16 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsPipeControllerItem = new ItemPipeController();
         LogisticsPipes.LogisticsPipeControllerItem.setUnlocalizedName("pipeController");
         GameRegistry.registerItem(
-                LogisticsPipes.LogisticsPipeControllerItem,
-                LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
+            LogisticsPipes.LogisticsPipeControllerItem,
+            LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
+
+        LogisticsPipes.LegacyWrenchItem = new ItemLegacyWrench();
+        LogisticsPipes.LegacyWrenchItem.setUnlocalizedName("legacyWrench");
+        GameRegistry.registerItem(
+            LogisticsPipes.LegacyWrenchItem,
+            LogisticsPipes.LegacyWrenchItem.getUnlocalizedName());
+
+
 
         // Blocks
         LogisticsPipes.LogisticsSolidBlock = new LogisticsSolidBlock();

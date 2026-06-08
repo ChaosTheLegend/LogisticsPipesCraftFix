@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.ChassisGui;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -89,7 +91,7 @@ import lombok.Getter;
 @CCType(name = "LogisticsChassiePipe")
 public abstract class PipeLogisticsChassi extends CoreRoutedPipe
         implements ICraftItems, IBufferItems, ISimpleInventoryEventHandler, ISendRoutedItem, IProvideItems,
-        IHeadUpDisplayRendererProvider, ISendQueueContentRecieiver {
+        IHeadUpDisplayRendererProvider, ISendQueueContentRecieiver, IMUICompatiblePipeV2 {
 
     private final ChassiModule _module;
     private final ItemIdentifierInventory _moduleInventory;
@@ -785,6 +787,11 @@ public abstract class PipeLogisticsChassi extends CoreRoutedPipe
         // probably not needed, the chasi order manager handles the count, would need to store origin to specifically
         // know this.
         return 0;
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ChassisGui(this);
     }
 
     public static class ChassiTargetInformation implements IAdditionalTargetInformation {
