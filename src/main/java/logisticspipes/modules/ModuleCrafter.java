@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -128,7 +131,7 @@ import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
 
 public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver,
-        ISimpleInventoryEventHandler, IModuleInventoryReceive {
+        ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
 
     private IRequestItems _invRequester;
     // private ForgeDirection _sneakyDirection = ForgeDirection.UNKNOWN;
@@ -1757,6 +1760,16 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                             .setIdentList(ItemIdentifierStack.getListFromInventory(inventory)).setModulePos(this),
                     localModeWatchers);
         }
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return null;
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleCraftingMuiDynamic(this);
     }
 
     public static class CraftingChassieInformation extends ChassiTargetInformation {

@@ -1,4 +1,4 @@
-﻿package logisticspipes.gui.modularUI;
+package logisticspipes.gui.modularUI;
 
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 

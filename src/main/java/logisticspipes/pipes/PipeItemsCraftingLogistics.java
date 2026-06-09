@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -55,7 +59,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 
 @CCType(name = "LogisticsPipes:Crafting")
 public class PipeItemsCraftingLogistics extends CoreRoutedPipe implements ICraftItems, IRequireReliableTransport,
-        IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver, IHavePriority {
+        IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver, IHavePriority, IMUICompatiblePipeV2 {
 
     protected ModuleCrafter craftingModule;
 
@@ -294,5 +298,10 @@ public class PipeItemsCraftingLogistics extends CoreRoutedPipe implements ICraft
             }
         }
         return false;
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return PipeGuiFactory.fromModule(this, craftingModule);
     }
 }
