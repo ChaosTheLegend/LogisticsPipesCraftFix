@@ -27,10 +27,17 @@ public class GenericPipeLogisticsGui extends LogisticsModularUI {
         "logisticspipes",
         "textures/gui/upgrade_slot.png");
     public GenericPipeLogisticsGui(IMUICompatibleModule module, CoreRoutedPipe pipe) {
+        this(module, pipe, "");
+    }
+
+    public GenericPipeLogisticsGui(IMUICompatibleModule module, CoreRoutedPipe pipe, String prefix) {
+        super(prefix);
         this.module = module;
         upgradeHandler = pipe.getUpgradeManager().getUpgradeInventory();
         this.pipe = pipe;
     }
+
+
 
     @Override
     public String getId() {

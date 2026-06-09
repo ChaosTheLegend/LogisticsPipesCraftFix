@@ -5,6 +5,7 @@ import java.util.List;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleBeeAnalyzerMuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModuleBeeAnalyzerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -232,6 +233,6 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
     }
 
     @Override
-    public LogisticsModularUI getPipeGui() {return new ModuleBeeAnalyzerMui(this);}
+    public LogisticsModularUI getPipeGui() {return new ModuleBeeAnalyzerMuiDynamic(this);}
 
 }

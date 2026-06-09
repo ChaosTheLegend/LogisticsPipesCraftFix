@@ -7,6 +7,7 @@ import java.util.Map;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleEnchantmentSinkMK2MuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModuleEnchantmentSinkMK2Mui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -220,6 +221,6 @@ public class ModuleEnchantmentSinkMK2 extends LogisticsSimpleFilterModule implem
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModuleEnchantmentSinkMK2Mui(this);
+        return new ModuleEnchantmentSinkMK2MuiDynamic(this);
     }
 }

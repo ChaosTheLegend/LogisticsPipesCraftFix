@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.modules.ModuleProviderMui;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleProviderMuiDynamic;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -553,6 +554,6 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule implements IL
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModuleProviderMui(this);
+        return new ModuleProviderMuiDynamic(this);
     }
 }

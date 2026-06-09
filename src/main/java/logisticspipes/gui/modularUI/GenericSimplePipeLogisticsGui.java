@@ -28,10 +28,15 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
     private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
         "logisticspipes",
         "textures/gui/upgrade_slot.png");
-    public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui) {
+
+    public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui, String prefix) {
+        super(prefix);
         this.pipeMUI = pipeMui;
         this.pipe = pipeMui.getPipe();
         upgradeHandler = pipe.getUpgradeManager().getUpgradeInventory();
+    }
+    public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui) {
+        this(pipeMui, "");
     }
 
     @Override

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModulePassiveSupplierMuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModulePassiveSupplierMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -218,6 +219,6 @@ public class ModulePassiveSupplier extends LogisticsSimpleFilterModule implement
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModulePassiveSupplierMui(this);
+        return new ModulePassiveSupplierMuiDynamic(this);
     }
 }

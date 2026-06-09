@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleActiveSupplierMuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModuleActiveSupplierMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -191,7 +192,7 @@ public class ModuleActiveSupplier extends LogisticsGuiModule
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModuleActiveSupplierMui(this);
+        return new ModuleActiveSupplierMuiDynamic(this);
     }
 
     public enum SupplyMode {

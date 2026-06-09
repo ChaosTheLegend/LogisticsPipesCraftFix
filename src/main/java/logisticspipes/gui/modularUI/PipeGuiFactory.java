@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.drawable.TabTexture;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
@@ -45,6 +46,30 @@ public class PipeGuiFactory {
 
     public static void addUpgradeGui(ModularPanel panel, IItemHandlerModifiable upgradeHandler){
         panel.child(getUpgradeGui(upgradeHandler));
+    }
+
+    public static ParentWidget getUpgradeGui(IItemHandlerModifiable upgradeHandler, PanelSyncManager syncManager){
+
+        syncManager.registerSlotGroup("upgrade_inventory", 4);
+
+        var column = new Column()
+            .background(ModularUIHelper.TAB_RIGHT_TEXTURE)
+            .width(24)
+            .right(4)
+            .child(SlotGroupWidget.builder()
+                .row("I").row("I").row("I").row("I")
+                .key('I', i -> new ItemSlot()
+                    .slot(
+                        new ModularSlot(upgradeHandler, i)
+                            .slotGroup("upgrade_inventory")
+                            .filter(PipeGuiFactory::isUpgradeItem)
+                            .accessibility(true, true))
+                    .background(UITexture.fullImage(UpgradeSlotTexture)))
+                .build())
+            .padding(4)
+            .coverChildrenHeight();
+
+        return (ParentWidget)column;
     }
 
     public static ParentWidget getUpgradeGui(IItemHandlerModifiable upgradeHandler){

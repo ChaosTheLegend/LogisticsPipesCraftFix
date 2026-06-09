@@ -8,6 +8,7 @@ import java.util.Map;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleItemSinkMuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModuleItemSinkMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -415,6 +416,6 @@ public class ModuleItemSink extends LogisticsGuiModule implements IClientInforma
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModuleItemSinkMui(this);
+        return new ModuleItemSinkMuiDynamic(this);
     }
 }

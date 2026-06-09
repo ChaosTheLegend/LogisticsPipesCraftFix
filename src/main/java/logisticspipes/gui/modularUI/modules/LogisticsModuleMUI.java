@@ -7,7 +7,12 @@ public abstract class LogisticsModuleMUI extends LogisticsModularUI {
 
     protected final LogisticsModule module;
 
-    public LogisticsModuleMUI(LogisticsModule module) {
+    public LogisticsModuleMUI(LogisticsModule module, String prefix) {
+        super(prefix);
         this.module = module;
+    }
+
+    public LogisticsModuleMUI(LogisticsModule module) {
+        this(module, "");
     }
 }

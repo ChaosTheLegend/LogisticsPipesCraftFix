@@ -10,7 +10,12 @@ public abstract class LogisticsPipeMUI extends LogisticsModularUI {
 
     public CoreRoutedPipe getPipe() {return pipe;}
 
-    public LogisticsPipeMUI(CoreRoutedPipe pipe) {
+    public LogisticsPipeMUI(CoreRoutedPipe pipe, String prefix) {
+        super(prefix);
         this.pipe = pipe;
+    }
+
+    public LogisticsPipeMUI(CoreRoutedPipe pipe) {
+        this(pipe, "");
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleElectricManagerMuiDynamic;
 import logisticspipes.gui.modularUI.modules.ModuleElectricManagerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -326,6 +327,6 @@ public class ModuleElectricManager extends LogisticsGuiModule implements IClient
 
     @Override
     public LogisticsModularUI getPipeGui() {
-        return new ModuleElectricManagerMui(this);
+        return new ModuleElectricManagerMuiDynamic(this);
     }
 }

@@ -21,10 +21,12 @@ public class ModuleProviderMui extends LogisticsModuleMUI {
 
     private final IItemHandlerModifiable filterInventory;
 
-    public ModuleProviderMui(LogisticsModule module) {
-        super(module);
-
+    public ModuleProviderMui(LogisticsModule module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(((ModuleProvider)module).getFilterInventory());
+    }
+    public ModuleProviderMui(LogisticsModule module) {
+        this(module, "");
     }
 
     @Override
