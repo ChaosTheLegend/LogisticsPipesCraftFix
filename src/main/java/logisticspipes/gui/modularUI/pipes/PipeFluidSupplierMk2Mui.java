@@ -1,4 +1,4 @@
-package logisticspipes.gui.modularUI.modules;
+package logisticspipes.gui.modularUI.pipes;
 
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.RichTooltip;
@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+import logisticspipes.gui.modularUI.LogisticsPipeMUI;
 import logisticspipes.pipes.PipeFluidSupplierMk2;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 

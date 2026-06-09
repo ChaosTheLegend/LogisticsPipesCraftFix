@@ -6,7 +6,7 @@ import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
-import logisticspipes.gui.modularUI.modules.GenericModuleMUI;
+import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleApiaristAnalyser;
 
 public class ModuleBeeAnalyzerMuiDynamic extends GenericModuleMUI<ModuleApiaristAnalyser> {

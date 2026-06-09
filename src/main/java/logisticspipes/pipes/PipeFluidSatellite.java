@@ -11,7 +11,7 @@ import java.util.Map.Entry;
 import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.modules.PipeSatelliteMui;
+import logisticspipes.gui.modularUI.pipes.PipeSatelliteMui;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.player.EntityPlayer;

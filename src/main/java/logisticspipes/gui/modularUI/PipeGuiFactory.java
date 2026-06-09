@@ -1,8 +1,5 @@
 package logisticspipes.gui.modularUI;
 
-import com.cleanroommc.modularui.api.drawable.IDrawable;
-import com.cleanroommc.modularui.drawable.GuiTextures;
-import com.cleanroommc.modularui.drawable.TabTexture;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -14,8 +11,6 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
-import logisticspipes.gui.modularUI.modules.LogisticsPipeMUI;
-import logisticspipes.gui.modularUI.modules.PipeSatelliteMui;
 import logisticspipes.items.ItemUpgrade;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import net.minecraft.item.ItemStack;

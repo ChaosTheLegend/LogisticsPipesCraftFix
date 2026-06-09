@@ -1,7 +1,5 @@
-package logisticspipes.gui.modularUI.modules;
+﻿package logisticspipes.gui.modularUI;
 
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 
 public abstract class LogisticsPipeMUI extends LogisticsModularUI {

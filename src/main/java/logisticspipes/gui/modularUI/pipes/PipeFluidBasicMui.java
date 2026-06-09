@@ -1,16 +1,14 @@
-package logisticspipes.gui.modularUI.modules;
+package logisticspipes.gui.modularUI.pipes;
 
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
-import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
+import logisticspipes.gui.modularUI.LogisticsPipeMUI;
 import logisticspipes.pipes.PipeFluidBasic;
-import logisticspipes.pipes.PipeFluidProvider;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 
 public class PipeFluidBasicMui extends LogisticsPipeMUI {

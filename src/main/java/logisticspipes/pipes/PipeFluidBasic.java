@@ -3,7 +3,7 @@ package logisticspipes.pipes;
 import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.modules.PipeFluidBasicMui;
+import logisticspipes.gui.modularUI.pipes.PipeFluidBasicMui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
@@ -22,9 +22,7 @@ import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.transport.PipeFluidTransportLogistics;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.PlayerCollectionList;
-import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.tuples.Pair;
-import net.minecraftforge.fluids.IFluidTank;
 
 public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink, IMUICompatiblePipeV2 {
 

@@ -13,6 +13,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleItemSink;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 

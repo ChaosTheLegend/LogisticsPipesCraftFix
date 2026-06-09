@@ -11,13 +11,9 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
-import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
-import logisticspipes.gui.modularUI.modules.LogisticsPipeMUI;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import net.minecraft.util.ResourceLocation;
-
-import static mcp.mobius.waila.addons.etb.ETBModule.module;
 
 public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
 

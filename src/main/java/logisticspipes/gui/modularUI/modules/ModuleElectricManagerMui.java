@@ -11,8 +11,8 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleElectricManager;
-import logisticspipes.modules.ModuleTerminus;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 
 public class ModuleElectricManagerMui extends LogisticsModuleMUI {

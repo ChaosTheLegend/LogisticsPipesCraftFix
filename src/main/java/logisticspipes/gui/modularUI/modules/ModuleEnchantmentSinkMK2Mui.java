@@ -8,9 +8,8 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import logisticspipes.modules.ModuleEnchantmentSink;
+import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleEnchantmentSinkMK2;
-import logisticspipes.modules.ModuleTerminus;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 
 public class ModuleEnchantmentSinkMK2Mui extends LogisticsModuleMUI {

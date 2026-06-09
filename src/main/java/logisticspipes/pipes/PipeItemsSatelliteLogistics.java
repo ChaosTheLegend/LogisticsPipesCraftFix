@@ -11,12 +11,10 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.modules.PipeSatelliteMui;
+import logisticspipes.gui.modularUI.pipes.PipeSatelliteMui;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.player.EntityPlayer;

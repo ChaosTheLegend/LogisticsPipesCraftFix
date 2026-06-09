@@ -1,6 +1,5 @@
-package logisticspipes.gui.modularUI.modules;
+﻿package logisticspipes.gui.modularUI;
 
-import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 
 public abstract class GenericModuleMUI<T extends LogisticsModule> extends LogisticsModularUI {

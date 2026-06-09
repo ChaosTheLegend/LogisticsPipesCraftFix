@@ -12,7 +12,7 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
-import logisticspipes.gui.modularUI.modules.GenericModuleMUI;
+import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleEnchantmentSinkMK2;
 
 public class ModuleEnchantmentSinkMK2MuiDynamic extends GenericModuleMUI<ModuleEnchantmentSinkMK2> {
