@@ -130,7 +130,8 @@ public class ChassisGui extends LogisticsModularUI {
 
 
         var upgrades = PipeGuiFactory.getUpgradeGui(upgradeHandler, guiSyncManager);
-        upgrades.top(30);
+        upgrades.top(30)
+                .right(4);
 
         panel.child(upgrades);
 

@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
+import cofh.core.util.fluid.FluidTankAdv;
+import com.cleanroommc.modularui.utils.FluidTankHandler;
+import com.cleanroommc.modularui.utils.fluid.IFluidTanksHandler;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
@@ -129,6 +132,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
+import net.minecraftforge.fluids.FluidTank;
 
 public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver,
         ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
@@ -152,6 +156,9 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
             "Fluid items",
             1,
             true);
+
+    protected final List<FluidTank> _liquidTank = new ArrayList<>();
+
     protected ItemIdentifierInventory _cleanupInventory = new ItemIdentifierInventory(
             ItemUpgrade.MAX_CRAFTING_CLEANUP * 3,
             "Cleanup Filer Items",
@@ -175,6 +182,10 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     public ModuleCrafter() {
         for (int i = 0; i < fuzzyCraftingFlagArray.length; i++) {
             fuzzyCraftingFlagArray[i] = new DictResource(null, null);
+        }
+
+        for (int i = 0; i < ItemUpgrade.MAX_LIQUID_CRAFTER; i++) {
+            _liquidTank.add(new FluidTank(Integer.MAX_VALUE));
         }
     }
 
@@ -831,6 +842,12 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         satelliteId = nbttagcompound.getInteger("satelliteid");
 
         priority = nbttagcompound.getInteger("priority");
+
+        for (int i = 0; i < _liquidTank.size(); i++) {
+            var tank = _liquidTank.get(i);
+            tank.readFromNBT(nbttagcompound.getCompoundTag("FluidTank_" + i));
+        }
+
         for (int i = 0; i < 9; i++) {
             advancedSatelliteIdArray[i] = nbttagcompound.getInteger("advancedSatelliteId" + i);
         }
@@ -895,6 +912,11 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         _liquidInventory.writeToNBT(nbttagcompound, "FluidInv");
         _cleanupInventory.writeToNBT(nbttagcompound, "CleanupInv");
         nbttagcompound.setInteger("satelliteid", satelliteId);
+
+        for (int i = 0; i < _liquidTank.size(); i++) {
+            var tank = _liquidTank.get(i);
+            nbttagcompound.setTag("FluidTank_" + i, tank.writeToNBT(new NBTTagCompound()));
+        }
 
         nbttagcompound.setInteger("priority", priority);
         for (int i = 0; i < 9; i++) {
@@ -974,6 +996,10 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         return _liquidInventory;
     }
 
+    public List<FluidTank> getFluidInventoryTanks() {
+        return _liquidTank;
+    }
+
     public IInventory getCleanupInventory() {
         return _cleanupInventory;
     }
@@ -1018,6 +1044,8 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         for (int i = 0; i < fluidInputs.size() && i < _liquidInventory.getSizeInventory(); i++) {
             FluidStack fs = fluidInputs.get(i);
             if (fs != null && fs.getFluid() != null) {
+                _liquidTank.get(i).setFluid(fs);
+
                 _liquidInventory.setInventorySlotContents(i, FluidIdentifier.get(fs).getItemIdentifier().makeStack(1));
                 amount[i] = fs.amount;
             }
@@ -1094,11 +1122,11 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     }
 
     public FluidIdentifier getFluidMaterial(int slotnr) {
-        ItemIdentifierStack stack = _liquidInventory.getIDStackInSlot(slotnr);
-        if (stack == null) {
-            return null;
-        }
-        return FluidIdentifier.get(stack.getItem());
+        var fluid = _liquidTank.get(slotnr);
+
+        if(fluid.getFluid() == null) {return null;}
+
+        return FluidIdentifier.get(fluid.getFluid());
     }
 
     public void setNextSatellite(EntityPlayer player, int i) {
