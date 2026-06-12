@@ -6,22 +6,22 @@ import net.minecraft.nbt.NBTTagCompound;
 
 import logisticspipes.utils.item.ItemIdentifierStack;
 
-public class PatternSolidStack implements IPatternStack {
+public class PatternItemStack implements IPatternStack {
 
     private final ItemIdentifierStack stack;
 
-    public PatternSolidStack(ItemIdentifierStack stack) {
+    public PatternItemStack(ItemIdentifierStack stack) {
         this.stack = stack;
     }
 
-    public static PatternSolidStack fromItemStack(ItemStack stack) {
+    public static PatternItemStack fromItemStack(ItemStack stack) {
         if (stack == null || stack.stackSize <= 0) {
             return null;
         }
-        return new PatternSolidStack(ItemIdentifierStack.getFromStack(stack));
+        return new PatternItemStack(ItemIdentifierStack.getFromStack(stack));
     }
 
-    public static PatternSolidStack readFromNBT(NBTTagCompound tag) {
+    public static PatternItemStack readFromNBT(NBTTagCompound tag) {
         ItemStack stack = ItemStack.loadItemStackFromNBT(tag);
         return fromItemStack(stack);
     }
@@ -42,13 +42,13 @@ public class PatternSolidStack implements IPatternStack {
 
     @Override
     public boolean canMerge(IPatternStack other) {
-        return other instanceof PatternSolidStack
-                && stack.getItem().equalsForCrafting(((PatternSolidStack) other).stack.getItem());
+        return other instanceof PatternItemStack
+                && stack.getItem().equalsForCrafting(((PatternItemStack) other).stack.getItem());
     }
 
     @Override
-    public PatternSolidStack copy() {
-        return new PatternSolidStack(stack.clone());
+    public PatternItemStack copy() {
+        return new PatternItemStack(stack.clone());
     }
 
     @Override

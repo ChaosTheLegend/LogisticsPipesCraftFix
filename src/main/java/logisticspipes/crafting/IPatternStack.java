@@ -16,7 +16,7 @@ public interface IPatternStack {
         if (fluid != null) {
             return fluid;
         }
-        return PatternSolidStack.fromItemStack(stack);
+        return PatternItemStack.fromItemStack(stack);
     }
 
     static IPatternStack readFromNBT(NBTTagCompound tag) {
@@ -25,7 +25,7 @@ public interface IPatternStack {
             return PatternFluidStack.readFromNBT(tag.getCompoundTag(FLUID_TAG));
         }
         if (TYPE_SOLID.equals(type)) {
-            return PatternSolidStack.readFromNBT(tag);
+            return PatternItemStack.readFromNBT(tag);
         }
 
         ItemStack legacyStack = ItemStack.loadItemStackFromNBT(tag);

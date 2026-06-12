@@ -45,8 +45,8 @@ final class PatternStackHelper {
     }
 
     static ItemIdentifierStack asSolidStack(IPatternStack stack) {
-        if (stack instanceof PatternSolidStack) {
-            return ((PatternSolidStack) stack).getItemIdentifierStack();
+        if (stack instanceof PatternItemStack) {
+            return ((PatternItemStack) stack).getItemIdentifierStack();
         }
         return null;
     }
@@ -59,7 +59,7 @@ final class PatternStackHelper {
     }
 
     static boolean isSolid(IPatternStack stack) {
-        return stack instanceof PatternSolidStack;
+        return stack instanceof PatternItemStack;
     }
 
     static boolean isFluid(IPatternStack stack) {

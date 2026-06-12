@@ -2,6 +2,9 @@ package logisticspipes.crafting;
 
 import java.util.List;
 
+import logisticspipes.request.resources.DictResource;
+import logisticspipes.request.resources.IResource;
+import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
@@ -40,7 +43,7 @@ class PatternCraftingResultExtractor {
      * Creates an extractor for one pattern crafting module and its selected adjacent handlers.
      */
     PatternCraftingResultExtractor(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
-            AdjacentInventoryHandler adjacentInventory) {
+                                   AdjacentInventoryHandler adjacentInventory) {
         this.module = module;
         this.pipe = pipe;
         this.adjacentInventory = adjacentInventory;
@@ -61,61 +64,69 @@ class PatternCraftingResultExtractor {
         if (!pipe.isNthTick(6) || !pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
             return;
         }
-        List<AdjacentTile> inventories = adjacentInventory.locateInventories();
-        if (inventories.isEmpty()) {
-            module.debug("extract items failed: no adjacent inventories");
-            pipe.getItemOrderManager().sendFailed();
+
+        //check for adjacent inventories
+        if (!adjacentInventory.hasConnectedTE()) {
+            module.debug("extract items failed: no connected tile entity");
             return;
         }
+
+        //check if we have an order
+        var orderManager = pipe.getItemOrderManager();
+        if (!orderManager.hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) return;
+
+        //check if we have any items to extract
+        List<ItemStack> extractableItems = adjacentInventory.getExtractableItems();
+        if (extractableItems.isEmpty()) return;
+
         pipe.spawnParticle(Particles.VioletParticle, 2);
-        LogisticsItemOrder order = pipe.getItemOrderManager()
-                .peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
-        if (order == null) {
-            module.debug("extract items skipped: no top order");
-            return;
-        }
+
 
         int itemsLeft = MAX_EXTRACTED_ITEMS_PER_TICK;
         int stacksLeft = MAX_EXTRACTED_STACKS_PER_TICK;
         boolean extractedAny = false;
-        while (itemsLeft > 0 && stacksLeft > 0
-                && pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
-            order = pipe.getItemOrderManager().peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
-            int maxToSend = Math.min(order.getAmount(), order.getResource().getItem().getMaxStackSize());
+
+
+
+        for (LogisticsItemOrder order : orderManager.getAllOrders()) {
+            var itemInOrder = order.getResource();
+
+            //calculate how much we can extract
+            int maxToSend = extractableItems.stream()
+                .filter(it -> itemInOrder.matches(ItemIdentifier.get(it), IResource.MatchSettings.NORMAL))
+                .map(it -> it.stackSize)
+                .findAny()
+                .orElse(-1);
+            if (maxToSend == -1) continue;
+            maxToSend = Math.min(maxToSend, order.getAmount());
+            maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
             maxToSend = Math.min(maxToSend, itemsLeft);
-            ItemStack extracted = null;
-            AdjacentTile source = null;
-            for (AdjacentTile tile : inventories) {
-                extracted = adjacentInventory.extract(tile, order.getResource(), maxToSend);
-                if (extracted != null && extracted.stackSize > 0) {
-                    source = tile;
-                    break;
-                }
-            }
-            if (extracted == null || extracted.stackSize <= 0 || source == null) {
-                module.debugEvent(
-                        "FLOW",
-                        "extract item deferred order=%s amount=%d",
-                        order.getResource().getItem(),
-                        maxToSend);
-                pipe.getItemOrderManager().deferSend();
-                break;
-            }
+
+            //extract and make a sanity check
+            var extracted = adjacentInventory.extract(itemInOrder, maxToSend);
+            if (extracted == null || extracted.stackSize <= 0) continue;
+
             module.debugEvent(
-                    "FLOW",
-                    "extract item success order=%s extracted=%d source=%s",
-                    order.getResource().getItem(),
-                    extracted.stackSize,
-                    source.tile);
+                "FLOW",
+                "extract item success order=%s extracted=%d source=%s",
+                order.getResource().getItem(),
+                extracted.stackSize,
+                adjacentInventory.getConnected());
+
             extractedAny = true;
             itemsLeft -= extracted.stackSize;
             stacksLeft--;
+
+            //send the extracted stuff on route
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-            sendExtracted(order, extracted, source.orientation);
+            sendExtracted(order, extracted, adjacentInventory.getConnected().orientation);
+
+            //if we cant extract any more, break;
+            if (itemsLeft <= 0 || stacksLeft <= 0) break;
         }
-        if (extractedAny) {
-            module.requestIngredientsForStagedCrafts();
-        }
+
+        // request new ingredients if we finished any craft
+        if (extractedAny) module.requestIngredientsForStagedCrafts();
     }
 
     /**
@@ -131,19 +142,19 @@ class PatternCraftingResultExtractor {
             pipe.queueRoutedItem(item, orientation);
             pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, item);
             module.debugEvent(
-                    "FLOW",
-                    "sent extracted item=%s amount=%d destination=%d",
-                    ItemIdentifier.get(extracted),
-                    extracted.stackSize,
-                    order.getDestination().getRouter().getSimpleID());
+                "FLOW",
+                "sent extracted item=%s amount=%d destination=%d",
+                ItemIdentifier.get(extracted),
+                extracted.stackSize,
+                order.getDestination().getRouter().getSimpleID());
         } else {
             pipe.sendStack(extracted, -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
             pipe.getItemOrderManager().sendSuccessfull(extracted.stackSize, false, null);
             module.debugEvent(
-                    "FLOW",
-                    "sent extracted item=%s amount=%d without routed destination",
-                    ItemIdentifier.get(extracted),
-                    extracted.stackSize);
+                "FLOW",
+                "sent extracted item=%s amount=%d without routed destination",
+                ItemIdentifier.get(extracted),
+                extracted.stackSize);
         }
     }
 
@@ -152,7 +163,7 @@ class PatternCraftingResultExtractor {
      */
     private void extractFluidsFromAdjacentHandlers() {
         if (!pipe.isNthTick(6)
-                || !pipe.getPatternFluidOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
+            || !pipe.getPatternFluidOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
             return;
         }
         List<AdjacentTile> handlers = adjacentInventory.locateFluidHandlers();
@@ -162,7 +173,7 @@ class PatternCraftingResultExtractor {
             return;
         }
         LogisticsFluidOrder order = pipe.getPatternFluidOrderManager()
-                .peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
+            .peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
         if (order == null) {
             module.debug("extract fluids skipped: no top fluid order");
             return;
@@ -176,11 +187,11 @@ class PatternCraftingResultExtractor {
                 continue;
             }
             module.debugEvent(
-                    "FLOW",
-                    "extract fluid success fluid=%s amount=%d source=%s",
-                    order.getFluid(),
-                    drained.amount,
-                    tile.tile);
+                "FLOW",
+                "extract fluid success fluid=%s amount=%d source=%s",
+                order.getFluid(),
+                drained.amount,
+                tile.tile);
             sendExtractedFluid(order, drained, tile.orientation);
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
             module.requestIngredientsForStagedCrafts();
@@ -197,30 +208,30 @@ class PatternCraftingResultExtractor {
     private void sendExtractedFluid(LogisticsFluidOrder order, FluidStack drained, ForgeDirection orientation) {
         if (order.getDestination() != null) {
             IRoutedItem item = SimpleServiceLocator.routedItemHelper
-                    .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
+                .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
             item.setDestination(order.getRouter().getSimpleID());
             item.setTransportMode(TransportMode.Active);
             item.setAdditionalTargetInformation(order.getInformation());
             pipe.queueRoutedItem(item, orientation);
             pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, item);
             module.debugEvent(
-                    "FLOW",
-                    "sent extracted fluid=%s amount=%d destination=%d",
-                    order.getFluid(),
-                    drained.amount,
-                    order.getDestination().getRouter().getSimpleID());
+                "FLOW",
+                "sent extracted fluid=%s amount=%d destination=%d",
+                order.getFluid(),
+                drained.amount,
+                order.getDestination().getRouter().getSimpleID());
         } else {
             pipe.sendStack(
-                    SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack(),
-                    -1,
-                    CoreRoutedPipe.ItemSendMode.Normal,
-                    order.getInformation());
+                SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack(),
+                -1,
+                CoreRoutedPipe.ItemSendMode.Normal,
+                order.getInformation());
             pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, null);
             module.debugEvent(
-                    "FLOW",
-                    "sent extracted fluid=%s amount=%d without routed destination",
-                    order.getFluid(),
-                    drained.amount);
+                "FLOW",
+                "sent extracted fluid=%s amount=%d without routed destination",
+                order.getFluid(),
+                drained.amount);
         }
     }
 }

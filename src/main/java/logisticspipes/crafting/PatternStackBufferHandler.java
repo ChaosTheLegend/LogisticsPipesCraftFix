@@ -1,22 +1,27 @@
 package logisticspipes.crafting;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import logisticspipes.interfaces.routing.ISaveState;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 
-class PatternStackBufferHandler {
+class PatternStackBufferHandler implements ISaveState {
 
     private final Map<Integer, List<IPatternStack>> bufferedIngredients;
 
-    PatternStackBufferHandler(Map<Integer, List<IPatternStack>> bufferedIngredients) {
-        this.bufferedIngredients = bufferedIngredients;
+    PatternStackBufferHandler() {
+        this.bufferedIngredients = new HashMap<>();
     }
 
     int amount(int patternSlot, IPatternStack stack) {
@@ -141,5 +146,61 @@ class PatternStackBufferHandler {
                 }
             }
         }
+    }
+
+    public void clear() {
+        bufferedIngredients.clear();
+    }
+
+    public int size() {
+        return bufferedIngredients.size();
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound nbttagcompound) {
+        bufferedIngredients.clear();
+        NBTTagList buffer = nbttagcompound.getTagList("patternIngredientBuffer", nbttagcompound.getId());
+        for (int i = 0; i < buffer.tagCount(); i++) {
+            NBTTagCompound stackTag = buffer.getCompoundTagAt(i);
+            int patternSlot = stackTag.getInteger("patternSlot");
+            IPatternStack stack = IPatternStack.readFromNBT(stackTag);
+            if (stack != null) {
+                getBuffer(patternSlot).add(stack);
+            }
+        }
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound nbttagcompound) {
+        NBTTagList buffer = new NBTTagList();
+        for (Map.Entry<Integer, List<IPatternStack>> entry : bufferedIngredients.entrySet()) {
+            for (IPatternStack stack : entry.getValue()) {
+                NBTTagCompound stackTag = new NBTTagCompound();
+                stack.writeToNBT(stackTag);
+                stackTag.setInteger("patternSlot", entry.getKey());
+                buffer.appendTag(stackTag);
+            }
+        }
+        nbttagcompound.setTag("bufferedIngredients", buffer);
+    }
+
+    public Map<Integer, List<IPatternStack>> asMap() {
+        return bufferedIngredients;
+    }
+
+    /**
+     * Removes this from the
+     * @param patternSlot
+     */
+    public void removeAll(int patternSlot) {
+        //TODO resend the stored items
+        bufferedIngredients.remove(patternSlot);
+    }
+
+    /**
+     * @return an unchangeable, unbacked list of the keys
+     */
+    public List<Integer> keySet() {
+        return new ArrayList<>(bufferedIngredients.keySet());
     }
 }

@@ -1,5 +1,6 @@
 package logisticspipes.routing.order;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,6 +15,16 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class LogisticsItemOrderManager extends LogisticsOrderManager<LogisticsItemOrder, DictResource.Identifier> {
+
+    public List<LogisticsItemOrder> getAllOrders() {
+        var out = new ArrayList<LogisticsItemOrder>();
+
+        for (var c : _orders) {
+            out.add(c);
+        }
+
+        return out;
+    }
 
     private static class IC
             implements LogisticsOrderLinkedList.IIdentityProvider<LogisticsItemOrder, DictResource.Identifier> {

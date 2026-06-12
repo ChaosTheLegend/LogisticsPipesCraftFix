@@ -21,6 +21,7 @@ import logisticspipes.interfaces.routing.ISaveState;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.tuples.Pair;
+import org.jetbrains.annotations.NotNull;
 
 public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pair<ItemStack, Integer>> {
 
@@ -289,9 +290,9 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
     }
 
     @Override
-    public Iterator<Pair<ItemStack, Integer>> iterator() {
+    public @NotNull Iterator<Pair<ItemStack, Integer>> iterator() {
         final Iterator<ItemStack> iter = Arrays.asList(_contents).iterator();
-        return new Iterator<Pair<ItemStack, Integer>>() {
+        return new Iterator<>() {
 
             int pos = -1;
 

@@ -240,19 +240,19 @@ public abstract class AbstractPattern {
         }
     }
 
-    private List<ItemIdentifierStack> toItemIdentifierStacks(List<PatternSolidStack> stacks) {
+    private List<ItemIdentifierStack> toItemIdentifierStacks(List<PatternItemStack> stacks) {
         List<ItemIdentifierStack> result = new ArrayList<>();
-        for (PatternSolidStack stack : stacks) {
+        for (PatternItemStack stack : stacks) {
             result.add(stack.getItemIdentifierStack().clone());
         }
         return result;
     }
 
-    private List<PatternSolidStack> getSolidPatternStacks(List<IPatternStack> stacks) {
-        List<PatternSolidStack> result = new ArrayList<>();
+    private List<PatternItemStack> getSolidPatternStacks(List<IPatternStack> stacks) {
+        List<PatternItemStack> result = new ArrayList<>();
         for (IPatternStack stack : stacks) {
-            if (stack instanceof PatternSolidStack) {
-                result.add(((PatternSolidStack) stack).copy());
+            if (stack instanceof PatternItemStack) {
+                result.add(((PatternItemStack) stack).copy());
             }
         }
         return result;
@@ -279,12 +279,12 @@ public abstract class AbstractPattern {
         return fluids;
     }
 
-    private List<PatternSolidStack> readSolidRange(int start, int end) {
-        List<PatternSolidStack> stacks = new ArrayList<>();
+    private List<PatternItemStack> readSolidRange(int start, int end) {
+        List<PatternItemStack> stacks = new ArrayList<>();
         for (int slot = start; slot < end; slot++) {
             IPatternStack stack = getPatternStackInSlot(slot);
-            if (stack instanceof PatternSolidStack && stack.getAmount() > 0) {
-                stacks.add((PatternSolidStack) stack);
+            if (stack instanceof PatternItemStack && stack.getAmount() > 0) {
+                stacks.add((PatternItemStack) stack);
             }
         }
         return stacks;
@@ -324,7 +324,7 @@ public abstract class AbstractPattern {
      * Clears the pattern, and sets the given in and outputs. If this is a processing pattern, null items in the inputs
      * will be ignored. If this is a crafting pattern, null items in the inputs will be respected, and the slot will be
      * kept empty.
-     * 
+     *
      * @param inputs  the new inputs
      * @param outputs the new outputs
      */

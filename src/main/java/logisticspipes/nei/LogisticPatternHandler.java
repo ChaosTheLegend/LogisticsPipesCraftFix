@@ -18,7 +18,7 @@ import codechicken.nei.recipe.IRecipeHandler;
 import logisticspipes.crafting.IPatternStack;
 import logisticspipes.crafting.PatternFluidStack;
 import logisticspipes.crafting.PatternGui;
-import logisticspipes.crafting.PatternSolidStack;
+import logisticspipes.crafting.PatternItemStack;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.NEISetPatternCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
@@ -44,7 +44,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
         for (OrderStack<?> orderStack : in) {
             var stack = orderStack.getStack();
             if (stack instanceof ItemStack itemStack) {
-                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
                 if (patternSolidStack == null) continue;
 
                 inputs.add(patternSolidStack);
@@ -63,7 +63,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
             if (outputStack == null) continue;
             var stack = outputStack.getStack();
             if (stack instanceof ItemStack itemStack) {
-                PatternSolidStack patternSolidStack = PatternSolidStack.fromItemStack(itemStack);
+                PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
                 if (patternSolidStack == null) continue;
                 outputs.add(patternSolidStack);
             }
@@ -84,7 +84,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     /**
      * Collects the inputs of a given recipe, transformed into IPatternStacks.
-     * 
+     *
      * @param recipe      the recipe
      * @param recipeIndex the recipe index
      * @return the inputs of the given recipe
@@ -97,7 +97,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     /**
      * Collects the aggregated outputs of a given recipe, transformed into IPatternStacks.
-     * 
+     *
      * @param recipe      the recipe
      * @param recipeIndex the recipe index
      * @return the aggregated outputs of the given recipe
@@ -123,7 +123,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     /**
      * Adds a patternStack to a list of patternStacks, aggregating if possible.
-     * 
+     *
      * @param stacks the list of stacks
      * @param stack  the stack to add
      */
