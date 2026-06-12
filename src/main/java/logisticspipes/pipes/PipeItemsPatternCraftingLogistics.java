@@ -23,6 +23,7 @@ import net.minecraftforge.fluids.IFluidHandler;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModuleItemCrafting;
+import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingTargetSelector;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.gui.hud.HUDPatternCrafting;
@@ -92,8 +93,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     private final PatternCraftingTargetSelector targetSelector;
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
-    private final LinkedList<ItemIdentifierStack> oldResultList = new LinkedList<>();
-    private final LinkedList<ItemIdentifierStack> displayResultList = new LinkedList<>();
+    private PatternCraftingHudState oldHudState = PatternCraftingHudState.empty();
+    private PatternCraftingHudState hudState = PatternCraftingHudState.empty();
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     private final HUDPatternCrafting HUD = new HUDPatternCrafting(this);
     private boolean doContentUpdate = true;
@@ -228,7 +229,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         if (doContentUpdate) {
             checkContentUpdate();
         }
-        checkResultUpdate();
+        checkHudUpdate();
     }
 
     @Override
@@ -387,8 +388,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return module.getConfiguredCraftResults();
     }
 
-    public List<ItemIdentifierStack> getHudCraftResults() {
-        return displayResultList;
+    public PatternCraftingHudState getHudState() {
+        return hudState;
     }
 
     @Override
@@ -436,13 +437,12 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         }
     }
 
-    private void checkResultUpdate() {
-        LinkedList<ItemIdentifierStack> all = new LinkedList<>(getConfiguredCraftResults());
-        if (!oldResultList.equals(all)) {
-            oldResultList.clear();
-            oldResultList.addAll(all);
+    private void checkHudUpdate() {
+        PatternCraftingHudState state = module.getHudState();
+        if (!oldHudState.equals(state)) {
+            oldHudState = state;
             MainProxy.sendToPlayerList(
-                    PacketHandler.getPacket(PatternCraftingHudContent.class).setIdentList(all).setPosX(getX())
+                    PacketHandler.getPacket(PatternCraftingHudContent.class).setState(state).setPosX(getX())
                             .setPosY(getY()).setPosZ(getZ()),
                     localModeWatchers);
         }
@@ -490,9 +490,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         displayList.addAll(list);
     }
 
-    public void setHudResultContent(Collection<ItemIdentifierStack> list) {
-        displayResultList.clear();
-        displayResultList.addAll(list);
+    public void setHudState(PatternCraftingHudState state) {
+        hudState = state == null ? PatternCraftingHudState.empty() : state;
     }
 
     public LogisticsFluidOrderManager getPatternFluidOrderManager() {
@@ -522,15 +521,12 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     public void playerStartWatching(EntityPlayer player, int mode) {
         if (mode == 1) {
             localModeWatchers.add(player);
-            LinkedList<ItemIdentifierStack> results = new LinkedList<>(getConfiguredCraftResults());
-            oldResultList.clear();
-            oldResultList.addAll(results);
             MainProxy.sendPacketToPlayer(
                     PacketHandler.getPacket(OrdererManagerContent.class).setIdentList(oldList).setPosX(getX())
                             .setPosY(getY()).setPosZ(getZ()),
                     player);
             MainProxy.sendPacketToPlayer(
-                    PacketHandler.getPacket(PatternCraftingHudContent.class).setIdentList(results).setPosX(getX())
+                    PacketHandler.getPacket(PatternCraftingHudContent.class).setState(module.getHudState()).setPosX(getX())
                             .setPosY(getY()).setPosZ(getZ()),
                     player);
         } else {

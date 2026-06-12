@@ -56,27 +56,42 @@ class PatternStackRequestHandler {
         PatternStackHelper.addAggregated(requested, stack);
     }
 
-    void remove(int patternSlot, IPatternStack stack, int amount) {
-        if (stack == null || amount <= 0) {
-            return;
+    /**
+     * Removes an amount of an Item that is stored in the request handler.
+     * Normally called on arrival of items on the pipe.
+     * <br>
+     * If the requested items are empty after the removal, remove the entry in the backing map
+     * @param patternSlot the slot of the pattern
+     * @param stack the stack of the item
+     */
+    void remove(int patternSlot, IPatternStack stack) {
+        if (stack == null || stack.getAmount() <= 0) return;
+
+        //get the stored requested item stack
+        IPatternStack requested = requestedItemForPattern(patternSlot, stack);
+        if (requested == null) return;
+
+        //make sure we cant go negative
+        int removed = Math.min(stack.getAmount(), requested.getAmount());
+        requested.addAmount(-removed);
+
+        removeEntryIfEmpty(patternSlot);
+    }
+
+    /**
+     * Removes the entry for the given pattern, if it has no more request buffer
+     * @param patternSlot the slot to check
+     */
+    private void removeEntryIfEmpty(int patternSlot) {
+        getRequested(patternSlot).removeIf(requested -> requested.getAmount() <= 0);
+        if (getRequested(patternSlot).isEmpty()) requestedIngredients.remove(patternSlot);
+    }
+
+    private IPatternStack requestedItemForPattern(int patternSlot, IPatternStack stack) {
+        for (var requested : getRequested(patternSlot)) {
+            if (requested.canMerge(stack)) return requested;
         }
-        List<IPatternStack> requested = getRequested(patternSlot);
-        for (int i = 0; i < requested.size() && amount > 0; i++) {
-            IPatternStack current = requested.get(i);
-            if (!current.canMerge(stack)) {
-                continue;
-            }
-            int removed = Math.min(amount, current.getAmount());
-            current.addAmount(-removed);
-            amount -= removed;
-            if (current.getAmount() <= 0) {
-                requested.remove(i);
-                i--;
-            }
-        }
-        if (requested.isEmpty()) {
-            requestedIngredients.remove(patternSlot);
-        }
+        return null;
     }
 
     private List<IPatternStack> getRequested(int patternSlot) {

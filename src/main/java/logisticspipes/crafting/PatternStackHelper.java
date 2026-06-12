@@ -22,6 +22,13 @@ final class PatternStackHelper {
         return result;
     }
 
+    /**
+     * Adds a stack to a list of stacks, merging if possible.
+     * If it cannot be merged, adds it to the given list.
+     *
+     * @param stacks the list of stacks to add to
+     * @param stack the stack to add
+     */
     static void addAggregated(List<IPatternStack> stacks, IPatternStack stack) {
         if (stack == null || stack.getAmount() <= 0) {
             return;

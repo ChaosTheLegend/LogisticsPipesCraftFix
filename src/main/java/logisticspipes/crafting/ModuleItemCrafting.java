@@ -602,6 +602,142 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         return results;
     }
 
+    public PatternCraftingHudState getHudState() {
+        PatternCraftingHudState state = new PatternCraftingHudState(getEffectiveBlockingMode());
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = getPatternStack(slot);
+            if (pattern == null) {
+                continue;
+            }
+            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            PatternCraftingHudState.PatternInfo patternInfo = new PatternCraftingHudState.PatternInfo(slot);
+            for (IPatternStack ingredient : configuredPattern.getAggregatedInputs()) {
+                ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(ingredient);
+                if (display != null) {
+                    patternInfo.getIngredients()
+                            .add(new PatternCraftingHudState.IngredientInfo(
+                                    display,
+                                    ingredientBuffer.amount(slot, ingredient)));
+                }
+            }
+            for (IPatternStack output : configuredPattern.getAggregatedOutputs()) {
+                ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
+                if (display != null) {
+                    patternInfo.getOutputs().add(display);
+                }
+            }
+            patternInfo.setActive(slot == runningCraft);
+            patternInfo.setStatus(getHudStatus(slot, pattern));
+            state.getPatterns().add(patternInfo);
+        }
+        return state;
+    }
+
+    private String getHudStatus(int patternSlot, ItemStack pattern) {
+        PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
+        AdjacentTile connected = adjacentInventory.getConnected();
+        int bufferedSets = completeBufferedSets(patternSlot);
+        if (runningCraft == patternSlot && runningCraftInAdjacent) {
+            return "Doing: crafting in target inventory";
+        }
+        if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && runningCraft >= 0
+                && runningCraft != patternSlot && runningCraftInAdjacent && connected != null
+                && !isInventoryEmpty(connected)) {
+            return "Waiting: blocking slot " + (runningCraft + 1) + " is crafting";
+        }
+        if (bufferedSets > 0) {
+            if (connected == null) {
+                return "Waiting: no target inventory";
+            }
+            if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
+                    && !adjacentInventory.isEmpty(connected)) {
+                return "Waiting: target inventory occupied";
+            }
+            if (adjacentInventory.availablePatternSets(pattern) <= 0) {
+                return "Waiting: no target space";
+            }
+            return "Doing: ready to insert " + formatSets(bufferedSets);
+        }
+        String pendingIngredient = getHudPendingIngredient(patternSlot, pattern);
+        if (pendingIngredient != null) {
+            return pendingIngredient;
+        }
+        int stagedSets = stagedRemainingSets(patternSlot);
+        if (stagedSets > 0) {
+            if (!canReceiveForPattern(patternSlot)) {
+                return runningCraft >= 0 ? "Waiting: blocking slot " + (runningCraft + 1)
+                        : "Waiting: buffer space";
+            }
+            return "Doing: requesting " + formatSets(stagedSets);
+        }
+        if (totalAmount(ingredientBuffer.asMap().get(patternSlot)) > 0) {
+            return "Waiting: buffered ingredients incomplete";
+        }
+        return "Idle";
+    }
+
+    private String getHudPendingIngredient(int patternSlot, ItemStack pattern) {
+        for (IPatternStack ingredient : getLocalAggregatedIngredients(pattern)) {
+            int buffered = ingredientBuffer.amount(patternSlot, ingredient);
+            int requested = requestedIngredient.amount(patternSlot, ingredient);
+
+            if (requested <= 0)
+                continue;
+
+            if (buffered >= ingredient.getAmount() && requested <= 0) {
+                continue;
+            }
+            if (buffered < ingredient.getAmount()) {
+                String status = "Waiting on " + getHudIngredientName(ingredient) + " (" + buffered + "/"
+                        + ingredient.getAmount();
+                if (requested > 0) {
+                    status += ", " + requested + " routed";
+                }
+
+                return status + ")";
+            }
+            if (requested > 0) {
+                return "Waiting on " + getHudIngredientName(ingredient) + " (" + requested + " routed)";
+            }
+        }
+        if (totalAmount(requestedIngredients.get(patternSlot)) > 0) {
+            return "Waiting on ingredients";
+        }
+        return null;
+    }
+
+    private String getHudIngredientName(IPatternStack stack) {
+        ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(stack);
+        return display == null ? "ingredient" : display.getItem().getFriendlyName();
+    }
+
+    private String formatSets(int sets) {
+        return sets == 1 ? "1 set" : sets + " sets";
+    }
+
+    private int stagedRemainingSets(int patternSlot) {
+        int sets = 0;
+        for (PatternCraftingOrder order : stagedCrafts) {
+            if (order.patternSlot == patternSlot && !order.outputOrder.isFinished()) {
+                sets += Math.max(0, order.remainingSets);
+            }
+        }
+        return sets;
+    }
+
+    private int totalAmount(List<IPatternStack> stacks) {
+        int amount = 0;
+        if (stacks == null) {
+            return amount;
+        }
+        for (IPatternStack stack : stacks) {
+            if (stack != null) {
+                amount += Math.max(0, stack.getAmount());
+            }
+        }
+        return amount;
+    }
+
     /**
      * Appends the current module-side staged crafting state to the crafting request debug dump.
      */
@@ -628,7 +764,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             int patternSlot = ((PatternTargetInformation) info).patternSlot();
             if (fluid != null) {
                 PatternFluidStack patternFluid = new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount);
-                requestedIngredient.remove(patternSlot, patternFluid, fluid.amount);
+                requestedIngredient.remove(patternSlot, patternFluid);
                 debugEvent(
                     "FLOW",
                     "lost fluid ingredient slot=%d fluid=%s amount=%d removed from requested and queued retry",
@@ -641,7 +777,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
                         5000));
                 return;
             }
-            requestedIngredient.remove(patternSlot, new PatternItemStack(item.clone()), item.getStackSize());
+            requestedIngredient.remove(patternSlot, new PatternItemStack(item.clone()));
             debugEvent(
                 "FLOW",
                 "lost item ingredient slot=%d item=%s amount=%d removed from requested",
@@ -696,8 +832,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
         int original = item.getStackSize();
         int requested = requestedIngredient.amount(patternSlot, item.getItem());
-        int accepted = Math
-            .min(original, Math.max(requested, spaceForArrivingIngredient(patternSlot, pattern, item.getItem())));
+        int accepted = Math.min(original, Math.max(requested, spaceForArrivingIngredient(patternSlot, pattern, item.getItem())));
+
         debugEvent(
             "FLOW",
             "item arrived slot=%d item=%s original=%d requested=%d accepted=%d",
@@ -708,8 +844,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             accepted);
         requestedIngredient.remove(
             patternSlot,
-            new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)),
-            accepted);
+            new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
             activateRunningCraftFromBuffer(patternSlot);
@@ -754,7 +889,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             requested,
             space,
             accepted);
-        requestedIngredient.remove(patternSlot, new PatternFluidStack(fluid, accepted), accepted);
+        requestedIngredient.remove(patternSlot, new PatternFluidStack(fluid, accepted));
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternFluidStack(fluid, accepted));
             activateRunningCraftFromBuffer(patternSlot);
@@ -799,10 +934,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         AdjacentTile connected = adjacentInventory.getConnected();
         if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && connected != null
             && adjacentInventory.isEmpty(connected)
-            && ingredientBuffer.canCompleteOneSetAfterAdding(
-            patternSlot,
-            getLocalAggregatedIngredients(pattern),
-            new PatternItemStack(new ItemIdentifierStack(item, space)))) {
+            && ingredientBuffer.canCompleteOneSetAfterAdding(patternSlot, getLocalAggregatedIngredients(pattern), new PatternItemStack(new ItemIdentifierStack(item, space)))) {
             space += localIngredientAmount(pattern, item);
         }
         debug("arrival item space slot=%d item=%s space=%d", patternSlot, item, space);
