@@ -2,8 +2,6 @@ package logisticspipes.crafting;
 
 import java.util.List;
 
-import logisticspipes.request.resources.DictResource;
-import logisticspipes.request.resources.IResource;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -61,50 +59,51 @@ class PatternCraftingResultExtractor {
      * Drains completed craft results, including extra and byproduct orders that were produced by the same staged craft.
      */
     private void extractItemsFromAdjacentInventory() {
-        if (!pipe.isNthTick(6) || !pipe.getItemOrderManager().hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
+        if (!pipe.isNthTick(6)) {
             return;
         }
 
-        //check for adjacent inventories
+        var orderManager = pipe.getItemOrderManager();
+        if (!orderManager.hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
+            return;
+        }
+
         if (!adjacentInventory.hasConnectedTE()) {
             module.debug("extract items failed: no connected tile entity");
             return;
         }
-
-        //check if we have an order
-        var orderManager = pipe.getItemOrderManager();
-        if (!orderManager.hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) return;
-
-        //check if we have any items to extract
         List<ItemStack> extractableItems = adjacentInventory.getExtractableItems();
-        if (extractableItems.isEmpty()) return;
+        if (extractableItems == null || extractableItems.isEmpty()) {
+            return;
+        }
 
         pipe.spawnParticle(Particles.VioletParticle, 2);
 
-
         int itemsLeft = MAX_EXTRACTED_ITEMS_PER_TICK;
         int stacksLeft = MAX_EXTRACTED_STACKS_PER_TICK;
+        int ordersLeftToTry = orderManager.getAllOrders().size();
         boolean extractedAny = false;
 
-
-
-        for (LogisticsItemOrder order : orderManager.getAllOrders()) {
-            var itemInOrder = order.getResource();
-
-            //calculate how much we can extract
-            int maxToSend = extractableItems.stream()
-                .filter(it -> itemInOrder.matches(ItemIdentifier.get(it), IResource.MatchSettings.NORMAL))
-                .map(it -> it.stackSize)
-                .findAny()
-                .orElse(-1);
-            if (maxToSend == -1) continue;
-            maxToSend = Math.min(maxToSend, order.getAmount());
+        while (itemsLeft > 0 && stacksLeft > 0 && ordersLeftToTry > 0
+                && orderManager.hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
+            LogisticsItemOrder order = orderManager.peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
+            if (order == null) {
+                break;
+            }
+            int maxToSend = Math.min(itemsLeft, order.getAmount());
             maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
-            maxToSend = Math.min(maxToSend, itemsLeft);
 
-            //extract and make a sanity check
-            var extracted = adjacentInventory.extract(itemInOrder, maxToSend);
-            if (extracted == null || extracted.stackSize <= 0) continue;
+            ItemStack extracted = adjacentInventory.extract(order.getResource(), maxToSend);
+            if (extracted == null || extracted.stackSize <= 0) {
+                module.debugEvent(
+                    "FLOW",
+                    "extract item deferred order=%s amount=%d",
+                    order.getResource().getItem(),
+                    order.getAmount());
+                orderManager.deferSend();
+                ordersLeftToTry--;
+                continue;
+            }
 
             module.debugEvent(
                 "FLOW",
@@ -117,15 +116,11 @@ class PatternCraftingResultExtractor {
             itemsLeft -= extracted.stackSize;
             stacksLeft--;
 
-            //send the extracted stuff on route
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
             sendExtracted(order, extracted, adjacentInventory.getConnected().orientation);
-
-            //if we cant extract any more, break;
-            if (itemsLeft <= 0 || stacksLeft <= 0) break;
+            ordersLeftToTry = orderManager.getAllOrders().size();
         }
 
-        // request new ingredients if we finished any craft
         if (extractedAny) module.requestIngredientsForStagedCrafts();
     }
 
@@ -134,6 +129,10 @@ class PatternCraftingResultExtractor {
      * routing.
      */
     private void sendExtracted(LogisticsItemOrder order, ItemStack extracted, ForgeDirection orientation) {
+        if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            sendExtractedToLocalBuffer(order, extracted);
+            return;
+        }
         if (order.getDestination() != null) {
             IRoutedItem item = SimpleServiceLocator.routedItemHelper.createNewTravelItem(extracted);
             item.setDestination(order.getDestination().getRouter().getSimpleID());
@@ -155,6 +154,37 @@ class PatternCraftingResultExtractor {
                 "sent extracted item=%s amount=%d without routed destination",
                 ItemIdentifier.get(extracted),
                 extracted.stackSize);
+        }
+    }
+
+    /**
+     * Hands a same-pipe intermediate result directly to the parent pattern buffer.
+     * <p>
+     * Routing an item to the pipe that just extracted it can make the order manager and transport retry logic disagree
+     * about whether the intermediate result is already delivered. Direct arrival keeps the local requested buffer and
+     * the live output order in lockstep.
+     */
+    private void sendExtractedToLocalBuffer(LogisticsItemOrder order, ItemStack extracted) {
+        ItemIdentifierStack arrived = ItemIdentifierStack.getFromStack(extracted);
+        int original = arrived.getStackSize();
+        module.itemArrived(arrived, order.getInformation());
+        int accepted = original - arrived.getStackSize();
+        if (accepted > 0) {
+            pipe.getItemOrderManager().sendSuccessfull(accepted, false, null);
+        }
+        module.debugEvent(
+            "FLOW",
+            "accepted extracted same-pipe item=%s amount=%d remaining=%d",
+            ItemIdentifier.get(extracted),
+            accepted,
+            arrived.getStackSize());
+        if (arrived.getStackSize() > 0) {
+            pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
+            module.debugEvent(
+                "FLOW",
+                "sent unaccepted same-pipe remainder item=%s amount=%d",
+                arrived.getItem(),
+                arrived.getStackSize());
         }
     }
 
@@ -206,6 +236,10 @@ class PatternCraftingResultExtractor {
      * routing.
      */
     private void sendExtractedFluid(LogisticsFluidOrder order, FluidStack drained, ForgeDirection orientation) {
+        if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            sendExtractedFluidToLocalBuffer(order, drained);
+            return;
+        }
         if (order.getDestination() != null) {
             IRoutedItem item = SimpleServiceLocator.routedItemHelper
                 .createNewTravelItem(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained));
@@ -233,5 +267,26 @@ class PatternCraftingResultExtractor {
                 order.getFluid(),
                 drained.amount);
         }
+    }
+
+    private void sendExtractedFluidToLocalBuffer(LogisticsFluidOrder order, FluidStack drained) {
+        ItemIdentifierStack arrived = ItemIdentifierStack.getFromStack(
+            SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack());
+        module.itemArrived(arrived, order.getInformation());
+        if (arrived.getStackSize() <= 0) {
+            pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, null);
+            module.debugEvent(
+                "FLOW",
+                "accepted extracted same-pipe fluid=%s amount=%d",
+                order.getFluid(),
+                drained.amount);
+            return;
+        }
+        pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
+        module.debugEvent(
+            "FLOW",
+            "sent unaccepted same-pipe fluid container fluid=%s amount=%d",
+            order.getFluid(),
+            drained.amount);
     }
 }

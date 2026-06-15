@@ -18,6 +18,10 @@ import logisticspipes.utils.item.ItemIdentifier;
 
 class PatternStackBufferHandler implements ISaveState {
 
+    private static final String BUFFER_TAG = "patternIngredientBuffer";
+    private static final String LEGACY_BUFFER_TAG = "bufferedIngredients";
+    private static final int TAG_COMPOUND = 10;
+
     private final Map<Integer, List<IPatternStack>> bufferedIngredients;
 
     PatternStackBufferHandler() {
@@ -159,7 +163,8 @@ class PatternStackBufferHandler implements ISaveState {
     @Override
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         bufferedIngredients.clear();
-        NBTTagList buffer = nbttagcompound.getTagList("patternIngredientBuffer", nbttagcompound.getId());
+        String tagName = nbttagcompound.hasKey(BUFFER_TAG) ? BUFFER_TAG : LEGACY_BUFFER_TAG;
+        NBTTagList buffer = nbttagcompound.getTagList(tagName, TAG_COMPOUND);
         for (int i = 0; i < buffer.tagCount(); i++) {
             NBTTagCompound stackTag = buffer.getCompoundTagAt(i);
             int patternSlot = stackTag.getInteger("patternSlot");
@@ -181,7 +186,7 @@ class PatternStackBufferHandler implements ISaveState {
                 buffer.appendTag(stackTag);
             }
         }
-        nbttagcompound.setTag("bufferedIngredients", buffer);
+        nbttagcompound.setTag(BUFFER_TAG, buffer);
     }
 
     public Map<Integer, List<IPatternStack>> asMap() {

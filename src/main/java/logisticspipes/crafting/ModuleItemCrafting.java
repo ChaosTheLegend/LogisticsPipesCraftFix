@@ -4,11 +4,9 @@ import java.util.*;
 import java.util.concurrent.DelayQueue;
 
 import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.entity.item.EntityItem;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
@@ -23,7 +21,6 @@ import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.network.abstractguis.ModuleInHandGuiProvider;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
@@ -33,7 +30,6 @@ import logisticspipes.request.debug.CraftingRequestDebugManager;
 import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
-import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidExtraPromise;
 import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.IRouter;
@@ -60,24 +56,29 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private final PipeItemsPatternCraftingLogistics pipe;
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
     private final Map<Integer, List<IPatternStack>> requestedIngredients = new HashMap<>();
-    private final List<PatternCraftingOrder> stagedCrafts = new ArrayList<>();
     private final DelayQueue<DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>>> lostIngredients = new DelayQueue<>();
     private final PatternHandler patternHandler = new PatternHandler(patternInventory);
     private final AdjacentInventoryHandler adjacentInventory;
     private final PatternStackBufferHandler ingredientBuffer = new PatternStackBufferHandler();
     private final PatternStackRequestHandler requestedIngredient = new PatternStackRequestHandler(requestedIngredients);
+    private final PatternStagedCraftingCoordinator stagedCrafting;
     private final PatternCraftingTemplateBuilder templateBuilder;
     private final PatternCraftingResultExtractor resultExtractor;
     private SinkReply sinkReply;
     private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.OFF;
     private int runningCraft = -1;
     private boolean runningCraftInAdjacent = false;
-    private final Set<Integer> requestingStagedIngredientPatterns = new HashSet<>();
     private boolean checkingBufferedOrders = false;
 
     public ModuleItemCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
         adjacentInventory = new AdjacentInventoryHandler(this, pipe);
+        stagedCrafting = new PatternStagedCraftingCoordinator(
+            this,
+            pipe,
+            patternHandler,
+            requestedIngredient,
+            adjacentInventory);
         templateBuilder = new PatternCraftingTemplateBuilder(this, patternHandler);
         resultExtractor = new PatternCraftingResultExtractor(this, pipe, adjacentInventory);
         _service = pipe;
@@ -107,7 +108,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         return adjacentInventory.isConnectedToPatternCraftingTable();
     }
 
-    private PipeItemsPatternCraftingLogistics.BlockingMode getEffectiveBlockingMode() {
+    PipeItemsPatternCraftingLogistics.BlockingMode getEffectiveBlockingMode() {
         if (adjacentInventory.isConnectedToPatternCraftingTable()) {
             return PipeItemsPatternCraftingLogistics.BlockingMode.SMART;
         }
@@ -191,7 +192,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     public void tick() {
         retryLostItems();
         pushBufferedIngredients();
-        requestIngredientsForStagedCrafts();
+        stagedCrafting.requestIngredients();
         clearRunningCraftIfFinished();
         resultExtractor.tick();
     }
@@ -370,103 +371,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     @Override
     public IOrderInfoProvider fullFillStagedCrafting(IPromise promise, IResource requestType,
                                                      IAdditionalTargetInformation info, PatternCraftingBranch branch) {
-        if (!hasRequestTarget(promise, requestType)) {
-            debugEvent(
-                "STAGED",
-                "staged craft rejected without target promise=%s request=%s info=%s",
-                promise,
-                requestType,
-                info);
-            return null;
-        }
-        debugEvent(
-            "STAGED",
-            "staged craft start promise=%s amount=%d request=%s info=%s branch=%s",
-            promise.getItemType(),
-            promise.getAmount(),
-            requestType,
-            info,
-            branch == null ? "<none>" : "available");
-        IOrderInfoProvider order = promise.fullFill(requestType, info);
-        int patternSlot = getPatternSlotForPromise(promise);
-        int resultAmountPerSet = getResultAmountPerSet(promise, patternSlot);
-        debug(
-            "staged craft output order=%s patternSlot=%d resultAmountPerSet=%d",
-            order == null ? "<none>" : order.getAsDisplayItem(),
-            patternSlot,
-            resultAmountPerSet);
-        if (patternSlot >= 0 && branch != null && order != null) {
-            PatternCraftingOrder stagedOrder = new PatternCraftingOrder(
-                patternSlot,
-                resultAmountPerSet,
-                branch,
-                order,
-                this,
-                patternHandler,
-                requestedIngredient);
-            stagedCrafts.add(stagedOrder);
-            PatternCraftingMonitorRegistry.register(order, stagedOrder);
-            debugEvent(
-                "STAGED",
-                "staged craft registered slot=%d remainingSets=%d ingredientBranches=%d",
-                patternSlot,
-                stagedOrder.remainingSets,
-                stagedOrder.ingredientBranches.size());
-            requestIngredientsForStagedCrafts(patternSlot);
-        }
-        return order;
-    }
-
-    /**
-     * Checks whether a promise can be fulfilled as a staged craft for the supplied request resource.
-     */
-    private boolean hasRequestTarget(IPromise promise, IResource requestType) {
-        if (promise instanceof FluidLogisticsPromise) {
-            return requestType instanceof FluidResource && ((FluidResource) requestType).getTarget() != null;
-        }
-        return getRequestTarget(requestType) != null;
-    }
-
-    /**
-     * Extracts the item requester from an item resource variant.
-     */
-    private IRequestItems getRequestTarget(IResource requestType) {
-        if (requestType instanceof ItemResource) {
-            return ((ItemResource) requestType).getTarget();
-        }
-        if (requestType instanceof logisticspipes.request.resources.DictResource) {
-            return ((logisticspipes.request.resources.DictResource) requestType).getTarget();
-        }
-        return null;
-    }
-
-    /**
-     * Resolves the pattern slot associated with a crafting promise.
-     * <p>
-     * Pattern promises carry this directly; older generic promises fall back to matching the result against configured
-     * pattern outputs.
-     */
-    private int getPatternSlotForPromise(IPromise promise) {
-        if (promise instanceof PatternCraftingPromise) {
-            return ((PatternCraftingPromise) promise).getPatternSlot();
-        }
-        if (promise instanceof PatternFluidCraftingPromise) {
-            return ((PatternFluidCraftingPromise) promise).getPatternSlot();
-        }
-        return patternHandler.findPatternSlotForResult(promise.getItemType());
-    }
-
-    /**
-     * Resolves how much output one pattern set creates for the given promise.
-     */
-    private int getResultAmountPerSet(IPromise promise, int patternSlot) {
-        if (promise instanceof PatternCraftingPromise) {
-            return ((PatternCraftingPromise) promise).getResultAmountPerSet();
-        }
-        if (promise instanceof PatternFluidCraftingPromise) {
-            return ((PatternFluidCraftingPromise) promise).getResultAmountPerSet();
-        }
-        return Math.max(1, patternHandler.resultAmount(patternSlot, promise.getItemType()));
+        return stagedCrafting.fulfill(promise, requestType, info, branch);
     }
 
     @Override
@@ -716,13 +621,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     }
 
     private int stagedRemainingSets(int patternSlot) {
-        int sets = 0;
-        for (PatternCraftingOrder order : stagedCrafts) {
-            if (order.patternSlot == patternSlot && !order.outputOrder.isFinished()) {
-                sets += Math.max(0, order.remainingSets);
-            }
-        }
-        return sets;
+        return stagedCrafting.remainingSets(patternSlot);
     }
 
     private int totalAmount(List<IPatternStack> stacks) {
@@ -1059,7 +958,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * <p>
      * Blocking modes restrict buffering to the active craft or to an empty connected inventory.
      */
-    private boolean canReceiveForPattern(int patternSlot) {
+    boolean canReceiveForPattern(int patternSlot) {
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             return true;
@@ -1117,7 +1016,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     /**
      * Dispatches capacity checks for item and fluid pattern ingredients.
      */
-    private int spaceForPatternIngredient(int patternSlot, ItemStack pattern, IPatternStack ingredient) {
+    int spaceForPatternIngredient(int patternSlot, ItemStack pattern, IPatternStack ingredient) {
         ItemIdentifierStack solid = PatternStackHelper.asSolidStack(ingredient);
         if (solid != null) {
             return spaceForPatternIngredient(patternSlot, pattern, solid.getItem());
@@ -1214,17 +1113,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             }
         }
         return result;
-    }
-
-    static class PatternIngredientTarget {
-
-        final IPatternStack stack;
-        final IRequestItems target;
-
-        PatternIngredientTarget(IPatternStack stack, IRequestItems target) {
-            this.stack = stack;
-            this.target = target;
-        }
     }
 
     /**
@@ -1376,130 +1264,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * inventory.
      */
     void requestIngredientsForStagedCrafts() {
-        for (PatternCraftingOrder order : new ArrayList<>(stagedCrafts)) {
-            requestIngredientsForStagedCrafts(order.patternSlot);
-        }
-    }
-
-    /**
-     * Requests ingredients for a single pattern slot.
-     * <p>
-     * The per-pattern guard allows different patterns in the same module to stage work independently while preventing
-     * recursive requests for the same pattern from re-entering through branch fulfillment.
-     */
-    private void requestIngredientsForStagedCrafts(int patternSlot) {
-        if (!requestingStagedIngredientPatterns.add(patternSlot)) {
-            debug("request ingredients slot=%d skipped: already requesting", patternSlot);
-            return;
-        }
-        try {
-            debug("request ingredients slot=%d start stagedCrafts=%d", patternSlot, stagedCrafts.size());
-
-            for (PatternCraftingOrder order : new ArrayList<>(stagedCrafts)) {
-                if (order.outputOrder.isFinished()) {
-                    debug(
-                        "request ingredients slot=%d removing staged order: the order output is already satisfied",
-                        order.patternSlot);
-                    stagedCrafts.remove(order);
-                    continue;
-                }
-                if (order.patternSlot != patternSlot) {
-                    continue;
-                }
-                ItemStack pattern = getPatternStack(order.patternSlot);
-                if (pattern == null) {
-                    debug("request ingredients slot=%d removing staged order: pattern missing", order.patternSlot);
-                    order.releaseReservations();
-                    stagedCrafts.remove(order);
-                    continue;
-                }
-                if (order.isFullyRequested()) {
-                    debug("request ingredients slot=%d removing staged order: fully requested", order.patternSlot);
-                    order.releaseReservations();
-                    stagedCrafts.remove(order);
-                    continue;
-                }
-                PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
-                if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && isRunningCraftLocked()
-                    && runningCraft != order.patternSlot) {
-                    debug(
-                        "request ingredients slot=%d skipped: running craft locked by slot=%d",
-                        order.patternSlot,
-                        runningCraft);
-                    continue;
-                }
-                int orderableSets = orderableSetsForPattern(order.patternSlot, pattern);
-                int branchSets = order.availableSetsFromBranches(pattern);
-                int sets = Math.min(order.remainingSets, orderableSets);
-                sets = Math.min(sets, branchSets);
-                debugEvent(
-                    "REQUEST",
-                    "request ingredients slot=%d remainingSets=%d orderableSets=%d branchSets=%d selectedSets=%d",
-                    order.patternSlot,
-                    order.remainingSets,
-                    orderableSets,
-                    branchSets,
-                    sets);
-                if (sets <= 0) {
-                    continue;
-                }
-                int requestedSets = order.requestIngredients(pattern, sets);
-                if (requestedSets <= 0) {
-                    debug("request ingredients slot=%d requested no sets", order.patternSlot);
-                    continue;
-                }
-                debugEvent(
-                    "REQUEST",
-                    "request ingredients slot=%d requestedSets=%d remainingSets=%d",
-                    order.patternSlot,
-                    requestedSets,
-                    order.remainingSets);
-                pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-                if (order.isFullyRequested()) {
-                    debugEvent(
-                        "REQUEST",
-                        "request ingredients slot=%d completed staged order after request",
-                        order.patternSlot);
-                    order.releaseReservations();
-                    stagedCrafts.remove(order);
-                }
-            }
-        } finally {
-            requestingStagedIngredientPatterns.remove(patternSlot);
-        }
-    }
-
-    /**
-     * Calculates how many complete pattern sets can be ordered now without overcommitting the module buffer or the
-     * adjacent inventory. Requested but not-yet-arrived ingredients are subtracted so repeated recalculation only
-     * orders the newly freed capacity.
-     */
-    private int orderableSetsForPattern(int patternSlot, ItemStack pattern) {
-        if (!canReceiveForPattern(patternSlot)) {
-            debug("orderable sets slot=%d result=0 cannot receive", patternSlot);
-            return 0;
-        }
-        AdjacentTile connected = adjacentInventory.getConnected();
-        int sets = Integer.MAX_VALUE;
-        PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
-        for (IPatternStack ingredient : getLocalAggregatedIngredients(pattern)) {
-            int room = spaceForPatternIngredient(patternSlot, pattern, ingredient);
-            if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && connected != null
-                && adjacentInventory.isEmpty(connected)) {
-                room += ingredient.getAmount();
-            }
-            room -= requestedIngredient.amount(patternSlot, ingredient);
-            debug(
-                "orderable ingredient slot=%d ingredient=%s roomAfterRequested=%d amountPerSet=%d",
-                patternSlot,
-                ingredient,
-                room,
-                ingredient.getAmount());
-            sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
-        }
-        int result = sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
-        debug("orderable sets slot=%d result=%d", patternSlot, result);
-        return result;
+        stagedCrafting.requestIngredients();
     }
 
 
@@ -1537,7 +1302,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     /**
      * Returns whether the active slot is still locked by arrived buffered ingredients or an inserted adjacent batch.
      */
-    private boolean isRunningCraftLocked() {
+    boolean isRunningCraftLocked() {
         refreshRunningCraftState(getConnectedInventoryTile());
         if (runningCraft < 0) {
             return false;
@@ -1589,7 +1354,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         refreshRunningCraftState(getConnectedInventoryTile());
     }
 
-    private AdjacentTile getConnectedInventoryTile() {
+    AdjacentTile getConnectedInventoryTile() {
         return adjacentInventory.getConnected();
     }
 
@@ -1652,7 +1417,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
     }
 
-    private boolean isOrderDestinationThisModule(LogisticsItemOrder order) {
+    boolean isOrderDestinationThisModule(LogisticsItemOrder order) {
+        IRequest destination = order.getDestination();
+        return destination == this || (destination != null && destination.getRouter() == getRouter());
+    }
+
+    boolean isOrderDestinationThisModule(LogisticsFluidOrder order) {
         IRequest destination = order.getDestination();
         return destination == this || (destination != null && destination.getRouter() == getRouter());
     }
@@ -1732,13 +1502,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
     private void appendStagedCraftDebug(StringBuilder out) {
         out.append("  staged crafts:\n");
-        if (stagedCrafts.isEmpty()) {
-            out.append("    <none>\n");
-            return;
-        }
-        for (PatternCraftingOrder order : stagedCrafts) {
-            order.appendDebugState(out, "    ");
-        }
+        stagedCrafting.appendDebugState(out, "    ");
     }
 
     private void appendOrderDebug(StringBuilder out) {
@@ -1826,11 +1590,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
         World world = pipe.getWorld();
 
-        for (PatternCraftingOrder order : stagedCrafts) {
-            debug("removal releases staged order slot=%d remainingSets=%d", order.patternSlot, order.remainingSets);
-            order.releaseReservations();
-        }
-        stagedCrafts.clear();
+        stagedCrafting.releaseAll();
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
         ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());

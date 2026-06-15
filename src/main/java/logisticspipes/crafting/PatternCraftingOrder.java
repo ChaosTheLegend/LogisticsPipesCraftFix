@@ -80,7 +80,7 @@ class PatternCraftingOrder {
                 patternSlot,
                 sets,
                 remainingSets);
-        for (ModuleItemCrafting.PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
+        for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             int requested = requestFromBranches(
                     ingredient.stack,
                     ingredient.stack.getAmount() * requestedSets,
