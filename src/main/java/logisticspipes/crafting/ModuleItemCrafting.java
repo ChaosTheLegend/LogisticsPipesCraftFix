@@ -528,7 +528,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             for (IPatternStack output : configuredPattern.getAggregatedOutputs()) {
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
                 if (display != null) {
-                    patternInfo.getOutputs().add(display);
+                    patternInfo.getOutputs().add(new PatternCraftingHudState.OutputInfo(
+                            display,
+                            stagedCrafting.remainingOutputAmount(slot, output)));
                 }
             }
             patternInfo.setActive(slot == runningCraft);
@@ -1425,6 +1427,22 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     boolean isOrderDestinationThisModule(LogisticsFluidOrder order) {
         IRequest destination = order.getDestination();
         return destination == this || (destination != null && destination.getRouter() == getRouter());
+    }
+
+    int requestedSamePipeItemAmount(LogisticsItemOrder order) {
+        if (!(order.getInformation() instanceof PatternTargetInformation)) {
+            return order.getAmount();
+        }
+        int patternSlot = ((PatternTargetInformation) order.getInformation()).patternSlot();
+        return requestedIngredient.amount(patternSlot, order.getResource().getItem());
+    }
+
+    int requestedSamePipeFluidAmount(LogisticsFluidOrder order) {
+        if (!(order.getInformation() instanceof PatternTargetInformation)) {
+            return order.getAmount();
+        }
+        int patternSlot = ((PatternTargetInformation) order.getInformation()).patternSlot();
+        return requestedIngredient.amount(patternSlot, order.getFluid());
     }
 
     private void appendConnectedInventoryDebug(StringBuilder out) {

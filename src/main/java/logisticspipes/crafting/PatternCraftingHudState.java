@@ -75,7 +75,7 @@ public class PatternCraftingHudState {
 
         private int slot;
         private List<IngredientInfo> ingredients;
-        private List<ItemIdentifierStack> outputs;
+        private List<OutputInfo> outputs;
         private String status;
         private boolean active;
 
@@ -83,7 +83,7 @@ public class PatternCraftingHudState {
             this(slot, new ArrayList<>(), new ArrayList<>(), "", false);
         }
 
-        private PatternInfo(int slot, List<IngredientInfo> ingredients, List<ItemIdentifierStack> outputs,
+        private PatternInfo(int slot, List<IngredientInfo> ingredients, List<OutputInfo> outputs,
                 String status, boolean active) {
             this.slot = slot;
             this.ingredients = ingredients == null ? new ArrayList<>() : ingredients;
@@ -100,7 +100,7 @@ public class PatternCraftingHudState {
             return ingredients;
         }
 
-        public List<ItemIdentifierStack> getOutputs() {
+        public List<OutputInfo> getOutputs() {
             return outputs;
         }
 
@@ -123,7 +123,7 @@ public class PatternCraftingHudState {
         private void writeData(LPDataOutputStream data) throws IOException {
             data.writeInt(slot);
             data.writeList(ingredients, (stream, ingredient) -> ingredient.writeData(stream));
-            data.writeList(outputs, LPDataOutputStream::writeItemIdentifierStack);
+            data.writeList(outputs, (stream, output) -> output.writeData(stream));
             data.writeUTF(status);
             data.writeBoolean(active);
         }
@@ -132,7 +132,7 @@ public class PatternCraftingHudState {
             return new PatternInfo(
                     data.readInt(),
                     data.readList(IngredientInfo::readData),
-                    data.readList(LPDataInputStream::readItemIdentifierStack),
+                    data.readList(OutputInfo::readData),
                     data.readUTF(),
                     data.readBoolean());
         }
@@ -156,6 +156,51 @@ public class PatternCraftingHudState {
         @Override
         public int hashCode() {
             return Objects.hash(slot, ingredients, outputs, status, active);
+        }
+    }
+
+    public static class OutputInfo {
+
+        private ItemIdentifierStack stack;
+        private int requestedAmount;
+
+        public OutputInfo(ItemIdentifierStack stack, int requestedAmount) {
+            this.stack = stack;
+            this.requestedAmount = Math.max(0, requestedAmount);
+        }
+
+        public ItemIdentifierStack getStack() {
+            return stack;
+        }
+
+        public int getRequestedAmount() {
+            return requestedAmount;
+        }
+
+        private void writeData(LPDataOutputStream data) throws IOException {
+            data.writeItemIdentifierStack(stack);
+            data.writeInt(requestedAmount);
+        }
+
+        private static OutputInfo readData(LPDataInputStream data) throws IOException {
+            return new OutputInfo(data.readItemIdentifierStack(), data.readInt());
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof OutputInfo)) {
+                return false;
+            }
+            OutputInfo that = (OutputInfo) o;
+            return requestedAmount == that.requestedAmount && stack.equals(that.stack);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(stack, requestedAmount);
         }
     }
 

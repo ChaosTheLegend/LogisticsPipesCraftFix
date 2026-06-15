@@ -27,6 +27,7 @@ class PatternStagedCraftingCoordinator {
     private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;
     private final List<PatternCraftingOrder> stagedCrafts = new ArrayList<>();
+    private final List<PatternCraftingOrder> outputOrders = new ArrayList<>();
     private final PatternStagedCraftingScheduler scheduler;
 
     PatternStagedCraftingCoordinator(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
@@ -94,6 +95,26 @@ class PatternStagedCraftingCoordinator {
         return sets;
     }
 
+    int remainingOutputAmount(int patternSlot, IPatternStack output) {
+        int amount = 0;
+        for (PatternCraftingOrder order : new ArrayList<>(outputOrders)) {
+            if (order.outputOrder.isFinished()) {
+                outputOrders.remove(order);
+                continue;
+            }
+            if (order.patternSlot != patternSlot) {
+                continue;
+            }
+            if (order.outputOrder.getAsDisplayItem() == null) {
+                continue;
+            }
+            if (PatternStackHelper.matches(output, order.outputOrder.getAsDisplayItem().getItem())) {
+                amount += Math.max(0, order.outputOrder.getAsDisplayItem().getStackSize());
+            }
+        }
+        return amount;
+    }
+
     void appendDebugState(StringBuilder out, String prefix) {
         if (stagedCrafts.isEmpty()) {
             out.append(prefix).append("<none>\n");
@@ -113,6 +134,7 @@ class PatternStagedCraftingCoordinator {
             order.releaseReservations();
         }
         stagedCrafts.clear();
+        outputOrders.clear();
     }
 
     private void registerOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
@@ -126,6 +148,7 @@ class PatternStagedCraftingCoordinator {
                 patternHandler,
                 requestedIngredient);
         stagedCrafts.add(stagedOrder);
+        outputOrders.add(stagedOrder);
         PatternCraftingMonitorRegistry.register(order, stagedOrder);
         module.debugEvent(
                 "STAGED",

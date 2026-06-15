@@ -10,6 +10,7 @@ import org.lwjgl.opengl.GL11;
 
 import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingHudState.IngredientInfo;
+import logisticspipes.crafting.PatternCraftingHudState.OutputInfo;
 import logisticspipes.crafting.PatternCraftingHudState.PatternInfo;
 import logisticspipes.interfaces.IHUDConfig;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
@@ -23,18 +24,31 @@ import logisticspipes.utils.string.StringUtils;
 
 public class HUDPatternCrafting extends BasicHUDGui {
 
-    private static final int WINDOW_LEFT = -78;
-    private static final int WINDOW_TOP = -60;
-    private static final int WINDOW_RIGHT = 78;
-    private static final int WINDOW_BOTTOM = 70;
-    private static final int INGREDIENT_LEFT = -61;
-    private static final int INGREDIENT_TOP = -28;
-    private static final int OUTPUT_LEFT = 25;
-    private static final int OUTPUT_TOP = -10;
+    private static final int WINDOW_LEFT = -68;
+    private static final int WINDOW_TOP = -48;
+    private static final int WINDOW_RIGHT = 68;
+    private static final int WINDOW_BOTTOM = 58;
+    private static final int HEADER_LEFT = WINDOW_LEFT + 16;
+    private static final int HEADER_TOP = WINDOW_TOP + 7;
+    private static final int INGREDIENT_LEFT = -55;
+    private static final int INGREDIENT_TOP = -21;
+    private static final int OUTPUT_LEFT = 34;
+    private static final int OUTPUT_TOP = -21;
+    private static final int LABEL_TOP = INGREDIENT_TOP - 10;
+    private static final int ARROW_X = 13;
+    private static final int ARROW_Y = 2;
+    private static final int STATUS_TOP = 39;
     private static final int SLOT_SIZE = 18;
+    private static final int SLOT_BACKGROUND_OFFSET = -1;
     private static final int BUFFER_BLUE = 0xff55aaff;
     private static final int TEXT_COLOR = 0;
     private static final int MAX_STATUS_LINES = 2;
+    private static final int STATUS_LINE_HEIGHT = 8;
+    private static final float TEXT_SCALE = 0.75F;
+    private static final float HEADER_SCALE = TEXT_SCALE;
+    private static final float ITEM_SCALE_X = 0.85F;
+    private static final float ITEM_SCALE_Y = 0.85F;
+    private static final float ITEM_SCALE_Z = -0.0001F;
 
     private final PipeItemsPatternCraftingLogistics pipe;
     private int page = 0;
@@ -102,29 +116,52 @@ public class HUDPatternCrafting extends BasicHUDGui {
         GL11.glTranslatef(0.0F, 0.0F, -0.01F);
         super.renderHeadUpDisplay(d, day, shifted, mc, config);
         GL11.glTranslatef(0.0F, 0.0F, -0.005F);
-        var topString = "Mode: " + formatMode(state.getBlockingMode());
+
+        var topString = "Mode: " + formatMode(state.getBlockingMode()) + " - ";
 
         if (patterns.isEmpty()) {
-            topString += "    No Patterns";
+            topString += "0/0";
         } else {
-            PatternInfo pattern = patterns.get(page);
-            topString += " - Pattern " + (page + 1) + "/" + patterns.size() + (pattern.isActive() ? "  Active" : "");
+            topString += (page + 1) + "/" + patterns.size();
         }
 
-        mc.fontRenderer.drawString(topString, WINDOW_LEFT + 14, WINDOW_TOP + 6, TEXT_COLOR);
+        drawScaledTrimmedString(
+            mc.fontRenderer,
+            topString,
+            HEADER_LEFT,
+            HEADER_TOP,
+            WINDOW_RIGHT - WINDOW_LEFT - 32,
+            HEADER_SCALE);
 
-        if (patterns.isEmpty()) return;
+        if (patterns.isEmpty()) {
+            return;
+        }
 
-        mc.fontRenderer.drawString("In", INGREDIENT_LEFT, WINDOW_TOP + 28, TEXT_COLOR);
-        mc.fontRenderer.drawString("Out", OUTPUT_LEFT, WINDOW_TOP + 28, TEXT_COLOR);
-        mc.fontRenderer.drawString("->", 3, -4, TEXT_COLOR);
-
+        drawScaledString(mc.fontRenderer, "In", INGREDIENT_LEFT + 1, LABEL_TOP, TEXT_SCALE);
+        drawScaledString(mc.fontRenderer, "Out", OUTPUT_LEFT - 1, LABEL_TOP, TEXT_SCALE);
+        drawScaledString(mc.fontRenderer, "->", ARROW_X, ARROW_Y, TEXT_SCALE);
         PatternInfo pattern = patterns.get(page);
-        ItemStackRenderer renderer = new ItemStackRenderer(0, 0, 100.0F, true, false, true);
-        renderer.setDisplayAmount(DisplayAmount.HIDE_ONE);
+
+        GL11.glPushMatrix();
+        GL11.glScalef(ITEM_SCALE_X, ITEM_SCALE_Y, ITEM_SCALE_Z);
+        if (shifted) {
+            renderSlotBackgrounds(mc, pattern);
+        }
+        ItemStackRenderer renderer = new ItemStackRenderer(0, 0, 100.0F, false, shifted, true);
+        renderer.setScaleX(ITEM_SCALE_X)
+            .setScaleY(ITEM_SCALE_Y)
+            .setScaleZ(ITEM_SCALE_Z)
+            .setDisplayAmount(DisplayAmount.ALWAYS);
         renderIngredients(mc, renderer, pattern.getIngredients());
-        renderOutputs(renderer, pattern.getOutputs());
-        drawWrappedStatus(mc.fontRenderer, pattern.getStatus(), WINDOW_LEFT + 8, 42, WINDOW_RIGHT - WINDOW_LEFT - 16);
+        renderOutputs(mc, renderer, pattern.getOutputs());
+        GL11.glPopMatrix();
+
+        drawWrappedStatus(
+            mc.fontRenderer,
+            pattern.getStatus(),
+            WINDOW_LEFT + 8,
+            STATUS_TOP,
+            WINDOW_RIGHT - WINDOW_LEFT - 16);
     }
 
     @Override
@@ -144,15 +181,44 @@ public class HUDPatternCrafting extends BasicHUDGui {
             int y = INGREDIENT_TOP + (i / 3) * SLOT_SIZE;
             renderStack(renderer, ingredient.getStack(), x, y);
             if (ingredient.getBufferedAmount() > 0) {
-                drawBufferedAmount(mc, ingredient.getBufferedAmount(), x, y);
+                drawHudAmount(mc, ingredient.getBufferedAmount(), x, y);
             }
         }
     }
 
-    private void renderOutputs(ItemStackRenderer renderer, List<ItemIdentifierStack> outputs) {
-        for (int i = 0; i < Math.min(outputs.size(), 3); i++) {
-            renderStack(renderer, outputs.get(i), OUTPUT_LEFT + i * SLOT_SIZE, OUTPUT_TOP);
+    private void renderSlotBackgrounds(Minecraft mc, PatternInfo pattern) {
+        for (int i = 0; i < 9; i++) {
+            int x = INGREDIENT_LEFT + (i % 3) * SLOT_SIZE;
+            int y = INGREDIENT_TOP + (i / 3) * SLOT_SIZE;
+            renderSlotBackground(mc, x, y);
         }
+
+        int outputCount = Math.min(pattern.getOutputs().size(), 3);
+        int firstY = getFirstOutputY(outputCount);
+        for (int i = 0; i < outputCount; i++) {
+            renderSlotBackground(mc, OUTPUT_LEFT, firstY + i * SLOT_SIZE);
+        }
+    }
+
+    private void renderSlotBackground(Minecraft mc, int x, int y) {
+        GuiGraphics.drawSlotBackground(mc, x + SLOT_BACKGROUND_OFFSET, y + SLOT_BACKGROUND_OFFSET);
+    }
+
+    private void renderOutputs(Minecraft mc, ItemStackRenderer renderer, List<OutputInfo> outputs) {
+        int outputCount = Math.min(outputs.size(), 3);
+        int firstY = getFirstOutputY(outputCount);
+        for (int i = 0; i < outputCount; i++) {
+            OutputInfo output = outputs.get(i);
+            int y = firstY + i * SLOT_SIZE;
+            renderStack(renderer, output.getStack(), OUTPUT_LEFT, y);
+            if (output.getRequestedAmount() > 0) {
+                drawHudAmount(mc, output.getRequestedAmount(), OUTPUT_LEFT, y);
+            }
+        }
+    }
+
+    private int getFirstOutputY(int outputCount) {
+        return OUTPUT_TOP + (3 - outputCount) * SLOT_SIZE / 2;
     }
 
     private void renderStack(ItemStackRenderer renderer, ItemIdentifierStack stack, int x, int y) {
@@ -163,7 +229,7 @@ public class HUDPatternCrafting extends BasicHUDGui {
         renderer.renderInGui();
     }
 
-    private void drawBufferedAmount(Minecraft mc, int amount, int x, int y) {
+    private void drawHudAmount(Minecraft mc, int amount, int x, int y) {
         String amountString = StringUtils.getFormatedStackSize(amount, true);
         GL11.glPushMatrix();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -182,10 +248,27 @@ public class HUDPatternCrafting extends BasicHUDGui {
     }
 
     private void drawWrappedStatus(FontRenderer fontRenderer, String status, int x, int y, int width) {
-        List<String> lines = wrap(fontRenderer, status == null ? "" : status, width, MAX_STATUS_LINES);
+        List<String> lines = wrap(
+            fontRenderer,
+            status == null ? "" : status,
+            Math.round(width / TEXT_SCALE),
+            MAX_STATUS_LINES);
         for (int i = 0; i < lines.size(); i++) {
-            fontRenderer.drawString(lines.get(i), x, y + i * 10, TEXT_COLOR);
+            drawScaledString(fontRenderer, lines.get(i), x, y + i * STATUS_LINE_HEIGHT, TEXT_SCALE);
         }
+    }
+
+    private void drawScaledTrimmedString(FontRenderer fontRenderer, String text, int x, int y, int width,
+            float scale) {
+        String trimmed = trimToWidth(fontRenderer, text, Math.round(width / scale));
+        drawScaledString(fontRenderer, trimmed, x, y, scale);
+    }
+
+    private void drawScaledString(FontRenderer fontRenderer, String text, int x, int y, float scale) {
+        GL11.glPushMatrix();
+        GL11.glScalef(scale, scale, 1.0F);
+        fontRenderer.drawString(text, Math.round(x / scale), Math.round(y / scale), TEXT_COLOR);
+        GL11.glPopMatrix();
     }
 
     private List<String> wrap(FontRenderer fontRenderer, String text, int width, int maxLines) {
@@ -198,10 +281,12 @@ public class HUDPatternCrafting extends BasicHUDGui {
             }
             if (fontRenderer.getStringWidth(line) > width) {
                 line = trimToWidth(fontRenderer, line, width);
+                remaining = "";
+            } else {
+                remaining = remaining.substring(line.length()).trim();
             }
-            remaining = remaining.substring(line.length()).trim();
             if (!remaining.isEmpty() && lines.size() + 1 == maxLines) {
-                line = trimToWidth(fontRenderer, line + "...", width);
+                line = trimToWidth(fontRenderer, line, width);
                 remaining = "";
             }
             lines.add(line);
@@ -213,15 +298,17 @@ public class HUDPatternCrafting extends BasicHUDGui {
     }
 
     private String trimToWidth(FontRenderer fontRenderer, String text, int width) {
+        if (fontRenderer.getStringWidth(text) <= width) {
+            return text;
+        }
+
+        String ellipsis = "...";
+        int availableWidth = Math.max(0, width - fontRenderer.getStringWidth(ellipsis));
         String result = text;
-        while (!result.isEmpty() && fontRenderer.getStringWidth(result) > width) {
+        while (!result.isEmpty() && fontRenderer.getStringWidth(result) > availableWidth) {
             result = result.substring(0, result.length() - 1);
         }
-        return result;
-    }
-
-    private void drawCenteredString(FontRenderer fontRenderer, String text, int x, int y, int color) {
-        fontRenderer.drawString(text, x - fontRenderer.getStringWidth(text) / 2, y, color);
+        return result + ellipsis;
     }
 
     private String formatMode(PipeItemsPatternCraftingLogistics.BlockingMode mode) {

@@ -90,8 +90,18 @@ class PatternCraftingResultExtractor {
             if (order == null) {
                 break;
             }
-            int maxToSend = Math.min(itemsLeft, order.getAmount());
-            maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
+            int maxToSend = maxExtractableItemAmount(order, itemsLeft);
+            if (maxToSend <= 0) {
+                module.debugEvent(
+                    "FLOW",
+                    "extract item deferred order=%s amount=%d localRequested=%d",
+                    order.getResource().getItem(),
+                    order.getAmount(),
+                    module.requestedSamePipeItemAmount(order));
+                orderManager.deferSend();
+                ordersLeftToTry--;
+                continue;
+            }
 
             ItemStack extracted = adjacentInventory.extract(order.getResource(), maxToSend);
             if (extracted == null || extracted.stackSize <= 0) {
@@ -122,6 +132,15 @@ class PatternCraftingResultExtractor {
         }
 
         if (extractedAny) module.requestIngredientsForStagedCrafts();
+    }
+
+    private int maxExtractableItemAmount(LogisticsItemOrder order, int itemsLeft) {
+        int maxToSend = Math.min(itemsLeft, order.getAmount());
+        maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
+        if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            maxToSend = Math.min(maxToSend, module.requestedSamePipeItemAmount(order));
+        }
+        return maxToSend;
     }
 
     /**
@@ -209,7 +228,17 @@ class PatternCraftingResultExtractor {
             return;
         }
 
-        int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
+        int amountToDrain = maxExtractableFluidAmount(order);
+        if (amountToDrain <= 0) {
+            module.debugEvent(
+                "FLOW",
+                "extract fluid deferred fluid=%s amount=%d localRequested=%d",
+                order.getFluid(),
+                order.getAmount(),
+                module.requestedSamePipeFluidAmount(order));
+            pipe.getPatternFluidOrderManager().deferSend();
+            return;
+        }
         PatternFluidStack wanted = new PatternFluidStack(order.getFluid(), amountToDrain);
         for (AdjacentTile tile : handlers) {
             FluidStack drained = adjacentInventory.extractFluid(tile, wanted, amountToDrain);
@@ -229,6 +258,14 @@ class PatternCraftingResultExtractor {
         }
         module.debugEvent("FLOW", "extract fluid deferred fluid=%s amount=%d", order.getFluid(), amountToDrain);
         pipe.getPatternFluidOrderManager().deferSend();
+    }
+
+    private int maxExtractableFluidAmount(LogisticsFluidOrder order) {
+        int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
+        if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            amountToDrain = Math.min(amountToDrain, module.requestedSamePipeFluidAmount(order));
+        }
+        return amountToDrain;
     }
 
     /**
