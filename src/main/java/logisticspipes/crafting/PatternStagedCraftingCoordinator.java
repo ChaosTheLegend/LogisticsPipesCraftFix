@@ -13,6 +13,8 @@ import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.routing.order.LogisticsFluidOrder;
+import logisticspipes.routing.order.LogisticsItemOrder;
 
 /**
  * Owns the lifecycle of staged pattern crafting output orders.
@@ -24,6 +26,7 @@ import logisticspipes.routing.order.IOrderInfoProvider;
 class PatternStagedCraftingCoordinator {
 
     private final ModuleItemCrafting module;
+    private final PipeItemsPatternCraftingLogistics pipe;
     private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;
     private final List<PatternCraftingOrder> stagedCrafts = new ArrayList<>();
@@ -34,6 +37,7 @@ class PatternStagedCraftingCoordinator {
             PatternHandler patternHandler, PatternStackRequestHandler requestedIngredient,
             AdjacentInventoryHandler adjacentInventory) {
         this.module = module;
+        this.pipe = pipe;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.scheduler = new PatternStagedCraftingScheduler(
@@ -137,6 +141,37 @@ class PatternStagedCraftingCoordinator {
         outputOrders.clear();
     }
 
+    boolean cancelPattern(int patternSlot) {
+        boolean cancelled = false;
+        List<PatternCraftingOrder> ordersToCancel = new ArrayList<>();
+        for (PatternCraftingOrder order : stagedCrafts) {
+            if (order.patternSlot == patternSlot) {
+                ordersToCancel.add(order);
+            }
+        }
+        for (PatternCraftingOrder order : outputOrders) {
+            if (order.patternSlot != patternSlot) {
+                continue;
+            }
+            if (!ordersToCancel.contains(order)) {
+                ordersToCancel.add(order);
+            }
+        }
+        for (PatternCraftingOrder order : ordersToCancel) {
+            module.debug(
+                    "cancel staged order slot=%d remainingSets=%d",
+                    order.patternSlot,
+                    order.remainingSets);
+            order.releaseReservations();
+            removeOutputOrder(order.outputOrder);
+            PatternCraftingMonitorRegistry.unregister(order.outputOrder);
+            stagedCrafts.remove(order);
+            outputOrders.remove(order);
+            cancelled = true;
+        }
+        return cancelled;
+    }
+
     private void registerOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
             IOrderInfoProvider order) {
         PatternCraftingOrder stagedOrder = new PatternCraftingOrder(
@@ -150,6 +185,7 @@ class PatternStagedCraftingCoordinator {
         stagedCrafts.add(stagedOrder);
         outputOrders.add(stagedOrder);
         PatternCraftingMonitorRegistry.register(order, stagedOrder);
+        module.clearCancelledPattern(patternSlot);
         module.debugEvent(
                 "STAGED",
                 "staged craft registered slot=%d remainingSets=%d ingredientBranches=%d",
@@ -157,6 +193,14 @@ class PatternStagedCraftingCoordinator {
                 stagedOrder.remainingSets,
                 stagedOrder.ingredientBranches.size());
         scheduler.requestIngredients(patternSlot);
+    }
+
+    private void removeOutputOrder(IOrderInfoProvider order) {
+        if (order instanceof LogisticsItemOrder) {
+            pipe.getItemOrderManager().removeOrder((LogisticsItemOrder) order);
+        } else if (order instanceof LogisticsFluidOrder) {
+            pipe.getPatternFluidOrderManager().removeOrder((LogisticsFluidOrder) order);
+        }
     }
 
     private boolean hasRequestTarget(IPromise promise, IResource requestType) {

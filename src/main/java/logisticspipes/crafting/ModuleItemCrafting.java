@@ -2,11 +2,13 @@ package logisticspipes.crafting;
 
 import java.util.*;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.TimeUnit;
 
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
@@ -21,6 +23,7 @@ import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.network.abstractguis.ModuleInHandGuiProvider;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
@@ -53,9 +56,15 @@ import logisticspipes.utils.tuples.Pair;
 public class ModuleItemCrafting extends LogisticsGuiModule
     implements ICraftItems, ICraftFluids, IRequestFluid, IRequireReliableTransport, IStagedCraftingProvider {
 
+    private static final String LOST_INGREDIENTS_TAG = "patternLostIngredients";
+    private static final String LOST_DELAY_TAG = "delay";
+    private static final String TARGET_PATTERN_SLOT_TAG = "targetPatternSlot";
+    private static final int TAG_COMPOUND = 10;
+
     private final PipeItemsPatternCraftingLogistics pipe;
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
     private final Map<Integer, List<IPatternStack>> requestedIngredients = new HashMap<>();
+    private final Set<Integer> cancelledPatternSlots = new HashSet<>();
     private final DelayQueue<DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>>> lostIngredients = new DelayQueue<>();
     private final PatternHandler patternHandler = new PatternHandler(patternInventory);
     private final AdjacentInventoryHandler adjacentInventory;
@@ -257,6 +266,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         runningCraftInAdjacent = tag.hasKey("runningCraftInAdjacent") ? tag.getBoolean("runningCraftInAdjacent")
             : runningCraft >= 0;
         ingredientBuffer.readFromNBT(tag);
+        requestedIngredient.readFromNBT(tag);
+        readLostIngredientsFromNBT(tag);
     }
 
     @Override
@@ -267,6 +278,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         tag.setInteger("bufferedPatternSlot", runningCraft);
         tag.setBoolean("runningCraftInAdjacent", runningCraftInAdjacent);
         ingredientBuffer.writeToNBT(tag);
+        requestedIngredient.writeToNBT(tag);
+        writeLostIngredientsToNBT(tag);
     }
 
     @Override
@@ -706,16 +719,21 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             debugEvent("FLOW", "arrival without pattern target item=%s info=%s", item, info);
             if (item != null && item.getStackSize() > 0) {
                 FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(item);
-                int patternSlot = fluid != null ? findFluidArrivalPattern(FluidIdentifier.get(fluid)) : -1;
+                int patternSlot = fluid != null ? findFluidArrivalPattern(FluidIdentifier.get(fluid))
+                        : findItemArrivalPattern(item.getItem());
                 if (patternSlot >= 0) {
-                    fluidArrived(patternSlot, getPatternStack(patternSlot), item, fluid);
+                    itemArrived(item, new PatternTargetInformation(patternSlot));
                 }
             }
             return;
         }
         int patternSlot = ((PatternTargetInformation) info).patternSlot();
-        ItemStack pattern = getPatternStack(patternSlot);
         FluidStack fluid = SimpleServiceLocator.logisticsFluidManager.getFluidFromContainer(item);
+        if (shouldRouteCancelledArrivalToStorage(patternSlot, item, fluid)) {
+            sendArrivedIngredientToStorage(patternSlot, item, fluid);
+            return;
+        }
+        ItemStack pattern = getPatternStack(patternSlot);
         if (fluid != null) {
             fluidArrived(patternSlot, pattern, item, fluid);
             return;
@@ -755,6 +773,29 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (accepted > 0) {
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
         }
+    }
+
+    private boolean shouldRouteCancelledArrivalToStorage(int patternSlot, ItemIdentifierStack item, FluidStack fluid) {
+        if (!cancelledPatternSlots.contains(patternSlot) || stagedRemainingSets(patternSlot) > 0) {
+            return false;
+        }
+        if (fluid != null) {
+            return requestedIngredient.amount(patternSlot, FluidIdentifier.get(fluid)) <= 0;
+        }
+        return requestedIngredient.amount(patternSlot, item.getItem()) <= 0;
+    }
+
+    private void sendArrivedIngredientToStorage(int patternSlot, ItemIdentifierStack item, FluidStack fluid) {
+        debugEvent(
+            "FLOW",
+            "cancelled slot=%d sends late ingredient to storage item=%s fluid=%s amount=%d",
+            patternSlot,
+            item.getItem(),
+            fluid == null ? "<none>" : FluidIdentifier.get(fluid),
+            fluid == null ? item.getStackSize() : fluid.amount);
+        pipe.sendStack(item.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, null);
+        item.setStackSize(0);
+        pipe.getCacheHolder().trigger(CacheTypes.Inventory);
     }
 
     /**
@@ -822,6 +863,45 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             }
         }
         debug("fluid arrival pattern lookup fluid=%s selected=%d", fluid, fallback);
+        return fallback;
+    }
+
+    /**
+     * Finds the best pattern slot for a routed item whose target information was not available after loading.
+     * <p>
+     * Saved requested-ingredient state wins so in-flight items from before a world stop keep completing the craft that
+     * reserved them. Capacity fallback is used only when exactly one pattern can accept the item, avoiding ambiguous
+     * multi-pattern ingredients being consumed by the wrong craft.
+     */
+    private int findItemArrivalPattern(ItemIdentifier item) {
+        int requestedSlot = -1;
+        int fallback = -1;
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
+            if (pattern == null || !patternContains(pattern, item)) {
+                continue;
+            }
+            if (requestedIngredient.amount(slot, item) > 0) {
+                if (requestedSlot >= 0) {
+                    debug("item arrival pattern lookup item=%s ambiguous requested slots", item);
+                    return -1;
+                }
+                requestedSlot = slot;
+                continue;
+            }
+            if (canReceiveForPattern(slot) && spaceForPatternIngredient(slot, pattern, item) > 0) {
+                if (fallback >= 0) {
+                    debug("item arrival pattern lookup item=%s ambiguous", item);
+                    return -1;
+                }
+                fallback = slot;
+            }
+        }
+        if (requestedSlot >= 0) {
+            debug("item arrival pattern lookup item=%s selected requested slot=%d", item, requestedSlot);
+            return requestedSlot;
+        }
+        debug("item arrival pattern lookup item=%s selected=%d", item, fallback);
         return fallback;
     }
 
@@ -1269,6 +1349,42 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         stagedCrafting.requestIngredients();
     }
 
+    public boolean cancelPatternCraft(int patternSlot) {
+        if (patternSlot < 0 || patternSlot >= patternHandler.size()) {
+            return false;
+        }
+        boolean changed = stagedCrafting.cancelPattern(patternSlot);
+        changed |= requestedIngredient.removeAll(patternSlot);
+        changed |= flushBufferedIngredientsToStorage(patternSlot);
+        if (runningCraft == patternSlot) {
+            runningCraft = -1;
+            runningCraftInAdjacent = false;
+            changed = true;
+        }
+        if (changed) {
+            cancelledPatternSlots.add(patternSlot);
+            debugEvent("CANCEL", "cancelled pattern slot=%d and flushed buffer", patternSlot);
+            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
+        }
+        return changed;
+    }
+
+    void clearCancelledPattern(int patternSlot) {
+        cancelledPatternSlots.remove(patternSlot);
+    }
+
+    private boolean flushBufferedIngredientsToStorage(int patternSlot) {
+        boolean sent = false;
+        for (IPatternStack stack : ingredientBuffer.removeAll(patternSlot)) {
+            for (ItemStack itemStack : PatternStackBufferHandler.makeItemStacks(stack)) {
+                pipe.sendStack(itemStack, -1, CoreRoutedPipe.ItemSendMode.Normal, null);
+                sent = true;
+                debugEvent("CANCEL", "sent buffered ingredient to storage slot=%d stack=%s", patternSlot, stack);
+            }
+        }
+        return sent;
+    }
+
 
     /**
      * @return a pattern slot whose buffered arrived ingredients can be pushed as a complete set.
@@ -1604,11 +1720,57 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         return 0;
     }
 
+    private void readLostIngredientsFromNBT(NBTTagCompound tag) {
+        lostIngredients.clear();
+        NBTTagList lost = tag.getTagList(LOST_INGREDIENTS_TAG, TAG_COMPOUND);
+        for (int i = 0; i < lost.tagCount(); i++) {
+            NBTTagCompound stackTag = lost.getCompoundTagAt(i);
+            IPatternStack stack = IPatternStack.readFromNBT(stackTag);
+            if (stack == null || stack.getAmount() <= 0) {
+                continue;
+            }
+            long delay = Math.max(1, stackTag.getLong(LOST_DELAY_TAG));
+            lostIngredients.add(new DelayedGeneric<>(new Pair<>(stack, readTargetInformation(stackTag)), delay));
+        }
+    }
+
+    private void writeLostIngredientsToNBT(NBTTagCompound tag) {
+        NBTTagList lost = new NBTTagList();
+        for (DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>> queued : lostIngredients) {
+            Pair<IPatternStack, IAdditionalTargetInformation> pair = queued.get();
+            IPatternStack stack = pair.getValue1();
+            if (stack == null || stack.getAmount() <= 0) {
+                continue;
+            }
+            NBTTagCompound stackTag = new NBTTagCompound();
+            stack.writeToNBT(stackTag);
+            stackTag.setLong(LOST_DELAY_TAG, Math.max(1, queued.getDelay(TimeUnit.NANOSECONDS) / 1000));
+            writeTargetInformation(stackTag, pair.getValue2());
+            lost.appendTag(stackTag);
+        }
+        tag.setTag(LOST_INGREDIENTS_TAG, lost);
+    }
+
+    private IAdditionalTargetInformation readTargetInformation(NBTTagCompound tag) {
+        if (!tag.hasKey(TARGET_PATTERN_SLOT_TAG)) {
+            return null;
+        }
+        return new PatternTargetInformation(tag.getInteger(TARGET_PATTERN_SLOT_TAG));
+    }
+
+    private void writeTargetInformation(NBTTagCompound tag, IAdditionalTargetInformation info) {
+        if (info instanceof PatternTargetInformation) {
+            tag.setInteger(TARGET_PATTERN_SLOT_TAG, ((PatternTargetInformation) info).patternSlot());
+        }
+    }
+
     public void onAllowedRemoval() {
 
         World world = pipe.getWorld();
 
         stagedCrafting.releaseAll();
+        requestedIngredients.clear();
+        cancelledPatternSlots.clear();
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
         ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());

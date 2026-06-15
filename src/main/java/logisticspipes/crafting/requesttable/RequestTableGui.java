@@ -394,6 +394,7 @@ public class RequestTableGui extends LogisticsBaseGuiScreen {
     @Override
     public void handleMouseInputSub() {
         if (requestOverlay.isOpen()) {
+            super.handleMouseInputSub();
             Mouse.getEventDWheel();
             return;
         }

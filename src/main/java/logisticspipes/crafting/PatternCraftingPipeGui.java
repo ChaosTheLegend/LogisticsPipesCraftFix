@@ -5,6 +5,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Slot;
 
 import logisticspipes.network.PacketHandler;
+import logisticspipes.network.packets.gui.PatternCraftingPipeCancel;
 import logisticspipes.network.packets.gui.PatternCraftingPipeMode;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.proxy.MainProxy;
@@ -15,6 +16,9 @@ import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
 
 public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
+
+    private static final int MODE_BUTTON = 0;
+    private static final int CANCEL_BUTTON_BASE = 10;
 
     private final PipeItemsPatternCraftingLogistics pipe;
 
@@ -31,14 +35,24 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     public void initGui() {
         super.initGui();
         buttonList.clear();
-        GuiButton modeButton = new SmallGuiButton(0, guiLeft + 8, guiTop + 55, 70, 12, modeLabel());
+        GuiButton modeButton = new SmallGuiButton(MODE_BUTTON, guiLeft + 8, guiTop + 66, 70, 12, modeLabel());
         modeButton.enabled = !pipe.isBlockingModeFixed();
         buttonList.add(modeButton);
+        for (int slot = 0; slot < 9; slot++) {
+            buttonList.add(new SmallGuiButton(
+                    CANCEL_BUTTON_BASE + slot,
+                    guiLeft + 8 + slot * 18,
+                    guiTop + 50,
+                    16,
+                    10,
+                    "x"));
+        }
+        updateCancelButtons();
     }
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button.id == 0 && !pipe.isBlockingModeFixed()) {
+        if (button.id == MODE_BUTTON && !pipe.isBlockingModeFixed()) {
             PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode
                     .values();
             PipeItemsPatternCraftingLogistics.BlockingMode next = values[(pipe.getBlockingMode().ordinal() + 1)
@@ -48,11 +62,17 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternCraftingPipeMode.class).setMode(next.ordinal())
                             .setTilePos(pipe.container));
+        } else if (button.id >= CANCEL_BUTTON_BASE && button.id < CANCEL_BUTTON_BASE + 9) {
+            int slot = button.id - CANCEL_BUTTON_BASE;
+            MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(slot)
+                            .setTilePos(pipe.container));
         }
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        updateCancelButtons();
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
         GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 84);
         for (int i = 0; i < 9; i++) {
@@ -81,6 +101,20 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             case OFF:
             default:
                 return "No Block";
+        }
+    }
+
+    private void updateCancelButtons() {
+        for (Object buttonObject : buttonList) {
+            if (!(buttonObject instanceof GuiButton)) {
+                continue;
+            }
+            GuiButton button = (GuiButton) buttonObject;
+            if (button.id < CANCEL_BUTTON_BASE || button.id >= CANCEL_BUTTON_BASE + 9) {
+                continue;
+            }
+            int slot = button.id - CANCEL_BUTTON_BASE;
+            button.enabled = pipe.getPatternModule().getPatternStack(slot) != null;
         }
     }
 }

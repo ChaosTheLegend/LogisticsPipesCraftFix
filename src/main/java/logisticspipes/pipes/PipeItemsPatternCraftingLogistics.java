@@ -246,6 +246,14 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return module;
     }
 
+    public boolean cancelPatternCraft(int patternSlot) {
+        boolean changed = module.cancelPatternCraft(patternSlot);
+        if (changed) {
+            doContentUpdate = true;
+        }
+        return changed;
+    }
+
     @Override
     public ItemSendMode getItemSendMode() {
         return ItemSendMode.Normal;

@@ -4,10 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
+import logisticspipes.interfaces.routing.ISaveState;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 
-class PatternStackRequestHandler {
+class PatternStackRequestHandler implements ISaveState {
+
+    private static final String REQUESTED_TAG = "patternRequestedIngredients";
+    private static final int TAG_COMPOUND = 10;
 
     private final Map<Integer, List<IPatternStack>> requestedIngredients;
 
@@ -94,7 +101,50 @@ class PatternStackRequestHandler {
         return null;
     }
 
+    boolean removeAll(int patternSlot) {
+        List<IPatternStack> removed = requestedIngredients.remove(patternSlot);
+        if (removed == null) {
+            return false;
+        }
+        for (IPatternStack stack : removed) {
+            if (stack != null && stack.getAmount() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<IPatternStack> getRequested(int patternSlot) {
         return requestedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        requestedIngredients.clear();
+        NBTTagList requested = tag.getTagList(REQUESTED_TAG, TAG_COMPOUND);
+        for (int i = 0; i < requested.tagCount(); i++) {
+            NBTTagCompound stackTag = requested.getCompoundTagAt(i);
+            IPatternStack stack = IPatternStack.readFromNBT(stackTag);
+            if (stack != null && stack.getAmount() > 0) {
+                add(stackTag.getInteger("patternSlot"), stack);
+            }
+        }
+    }
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
+        NBTTagList requested = new NBTTagList();
+        for (Map.Entry<Integer, List<IPatternStack>> entry : requestedIngredients.entrySet()) {
+            for (IPatternStack stack : entry.getValue()) {
+                if (stack == null || stack.getAmount() <= 0) {
+                    continue;
+                }
+                NBTTagCompound stackTag = new NBTTagCompound();
+                stack.writeToNBT(stackTag);
+                stackTag.setInteger("patternSlot", entry.getKey());
+                requested.appendTag(stackTag);
+            }
+        }
+        tag.setTag(REQUESTED_TAG, requested);
     }
 }

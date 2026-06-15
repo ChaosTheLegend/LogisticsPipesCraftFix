@@ -35,6 +35,12 @@ public final class PatternCraftingMonitorRegistry {
         return STAGED_ORDERS.get(outputOrder);
     }
 
+    static void unregister(IOrderInfoProvider outputOrder) {
+        if (outputOrder != null) {
+            STAGED_ORDERS.remove(outputOrder);
+        }
+    }
+
     /**
      * Builds monitor roots for every staged pattern order in a watched request tree.
      */

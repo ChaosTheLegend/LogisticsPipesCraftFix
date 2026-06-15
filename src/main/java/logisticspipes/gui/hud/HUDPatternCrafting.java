@@ -24,20 +24,19 @@ import logisticspipes.utils.string.StringUtils;
 
 public class HUDPatternCrafting extends BasicHUDGui {
 
-    private static final int WINDOW_LEFT = -68;
-    private static final int WINDOW_TOP = -48;
-    private static final int WINDOW_RIGHT = 68;
-    private static final int WINDOW_BOTTOM = 58;
-    private static final int HEADER_LEFT = WINDOW_LEFT + 16;
-    private static final int HEADER_TOP = WINDOW_TOP + 7;
-    private static final int INGREDIENT_LEFT = -55;
-    private static final int INGREDIENT_TOP = -21;
-    private static final int OUTPUT_LEFT = 34;
-    private static final int OUTPUT_TOP = -21;
-    private static final int LABEL_TOP = INGREDIENT_TOP - 10;
+    private static final int WINDOW_LEFT = -58;
+    private static final int WINDOW_TOP = -42;
+    private static final int WINDOW_RIGHT = 58;
+    private static final int WINDOW_BOTTOM = 50;
+    private static final int HEADER_LEFT = WINDOW_LEFT + 14;
+    private static final int HEADER_TOP = WINDOW_TOP + 6;
+    private static final int INGREDIENT_LEFT = -51;
+    private static final int INGREDIENT_TOP = -23;
+    private static final int OUTPUT_LEFT = 36;
+    private static final int OUTPUT_TOP = -23;
     private static final int ARROW_X = 13;
     private static final int ARROW_Y = 2;
-    private static final int STATUS_TOP = 39;
+    private static final int STATUS_TOP = 35;
     private static final int SLOT_SIZE = 18;
     private static final int SLOT_BACKGROUND_OFFSET = -1;
     private static final int BUFFER_BLUE = 0xff55aaff;
@@ -46,8 +45,8 @@ public class HUDPatternCrafting extends BasicHUDGui {
     private static final int STATUS_LINE_HEIGHT = 8;
     private static final float TEXT_SCALE = 0.75F;
     private static final float HEADER_SCALE = TEXT_SCALE;
-    private static final float ITEM_SCALE_X = 0.85F;
-    private static final float ITEM_SCALE_Y = 0.85F;
+    private static final float ITEM_SCALE_X = 0.8F;
+    private static final float ITEM_SCALE_Y = 0.8F;
     private static final float ITEM_SCALE_Z = -0.0001F;
 
     private final PipeItemsPatternCraftingLogistics pipe;
@@ -137,8 +136,6 @@ public class HUDPatternCrafting extends BasicHUDGui {
             return;
         }
 
-        drawScaledString(mc.fontRenderer, "In", INGREDIENT_LEFT + 1, LABEL_TOP, TEXT_SCALE);
-        drawScaledString(mc.fontRenderer, "Out", OUTPUT_LEFT - 1, LABEL_TOP, TEXT_SCALE);
         drawScaledString(mc.fontRenderer, "->", ARROW_X, ARROW_Y, TEXT_SCALE);
         PatternInfo pattern = patterns.get(page);
 

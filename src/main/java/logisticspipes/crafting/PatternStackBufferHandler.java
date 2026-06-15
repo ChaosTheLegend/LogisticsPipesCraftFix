@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import logisticspipes.interfaces.routing.ISaveState;
 import net.minecraft.item.ItemStack;
@@ -14,6 +13,7 @@ import net.minecraft.world.World;
 
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifier;
 
 class PatternStackBufferHandler implements ISaveState {
@@ -136,19 +136,14 @@ class PatternStackBufferHandler implements ISaveState {
 
     public void dropContents(World world, int x, int y, int z) {
         if (MainProxy.isServer(world)) {
-            for (List<IPatternStack> patternStacks : bufferedIngredients.values()) {
-                // we need to drop stack by stack in case we stored a higher stack count than possible (otherwise we
-                // could get a 256 stack of oak planks)
+            for (List<IPatternStack> patternStacks : new ArrayList<>(bufferedIngredients.values())) {
                 for (IPatternStack patternStack : patternStacks) {
-                    var item = patternStack.getItem();
-                    var maxStackSize = new ItemStack(item, 0).getMaxStackSize();
-                    while (patternStack.getAmount() > 0) {
-                        ItemStack toDrop = new ItemStack(item);
-                        toDrop.stackSize = Math.min(patternStack.getAmount(), maxStackSize);
-                        patternStack.addAmount(-toDrop.stackSize);
+                    for (ItemStack stack : makeItemStacks(patternStack)) {
+                        ItemIdentifierInventory.dropItems(world, stack, x, y, z);
                     }
                 }
             }
+            bufferedIngredients.clear();
         }
     }
 
@@ -197,9 +192,18 @@ class PatternStackBufferHandler implements ISaveState {
      * Removes this from the
      * @param patternSlot
      */
-    public void removeAll(int patternSlot) {
-        //TODO resend the stored items
-        bufferedIngredients.remove(patternSlot);
+    public List<IPatternStack> removeAll(int patternSlot) {
+        List<IPatternStack> removed = bufferedIngredients.remove(patternSlot);
+        if (removed == null) {
+            return new ArrayList<>();
+        }
+        List<IPatternStack> copy = new ArrayList<>(removed.size());
+        for (IPatternStack stack : removed) {
+            if (stack != null && stack.getAmount() > 0) {
+                copy.add(stack.copy());
+            }
+        }
+        return copy;
     }
 
     /**
@@ -207,5 +211,25 @@ class PatternStackBufferHandler implements ISaveState {
      */
     public List<Integer> keySet() {
         return new ArrayList<>(bufferedIngredients.keySet());
+    }
+
+    static List<ItemStack> makeItemStacks(IPatternStack patternStack) {
+        List<ItemStack> stacks = new ArrayList<>();
+        if (patternStack == null || patternStack.getAmount() <= 0) {
+            return stacks;
+        }
+        ItemStack stack = patternStack.makePatternStack();
+        if (stack == null || stack.stackSize <= 0) {
+            return stacks;
+        }
+        int amount = stack.stackSize;
+        int maxStackSize = Math.max(1, stack.getMaxStackSize());
+        while (amount > 0) {
+            ItemStack split = stack.copy();
+            split.stackSize = Math.min(amount, maxStackSize);
+            stacks.add(split);
+            amount -= split.stackSize;
+        }
+        return stacks;
     }
 }

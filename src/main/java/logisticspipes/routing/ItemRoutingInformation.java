@@ -8,6 +8,7 @@ import java.util.UUID;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
+import logisticspipes.crafting.PatternTargetInformation;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.proxy.MainProxy;
@@ -17,6 +18,11 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class ItemRoutingInformation {
+
+    private static final String TARGET_INFO_TAG = "targetInfo";
+    private static final String TARGET_INFO_TYPE_TAG = "type";
+    private static final String TARGET_INFO_PATTERN = "pattern";
+    private static final String TARGET_PATTERN_SLOT_TAG = "patternSlot";
 
     public static class DelayComparator implements Comparator<ItemRoutingInformation> {
 
@@ -70,6 +76,7 @@ public class ItemRoutingInformation {
         if (stack != null) {
             setItem(ItemIdentifierStack.getFromStack(stack));
         }
+        targetInfo = readTargetInfo(nbttagcompound.getCompoundTag(TARGET_INFO_TAG));
     }
 
     public void writeToNBT(NBTTagCompound nbttagcompound) {
@@ -83,6 +90,26 @@ public class ItemRoutingInformation {
         NBTTagCompound nbttagcompound2 = new NBTTagCompound();
         getItem().makeNormalStack().writeToNBT(nbttagcompound2);
         nbttagcompound.setTag("Item", nbttagcompound2);
+        NBTTagCompound targetTag = writeTargetInfo(targetInfo);
+        if (!targetTag.hasNoTags()) {
+            nbttagcompound.setTag(TARGET_INFO_TAG, targetTag);
+        }
+    }
+
+    private IAdditionalTargetInformation readTargetInfo(NBTTagCompound tag) {
+        if (!TARGET_INFO_PATTERN.equals(tag.getString(TARGET_INFO_TYPE_TAG))) {
+            return null;
+        }
+        return new PatternTargetInformation(tag.getInteger(TARGET_PATTERN_SLOT_TAG));
+    }
+
+    private NBTTagCompound writeTargetInfo(IAdditionalTargetInformation info) {
+        NBTTagCompound tag = new NBTTagCompound();
+        if (info instanceof PatternTargetInformation) {
+            tag.setString(TARGET_INFO_TYPE_TAG, TARGET_INFO_PATTERN);
+            tag.setInteger(TARGET_PATTERN_SLOT_TAG, ((PatternTargetInformation) info).patternSlot());
+        }
+        return tag;
     }
 
     // the global LP tick in which getTickToTimeOut returns 0.
