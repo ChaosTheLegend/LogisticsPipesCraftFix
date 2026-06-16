@@ -40,6 +40,13 @@ class PatternCraftingTemplateBuilder {
             if (pattern == null) {
                 continue;
             }
+            if (!module.isPatternCraftingSupported(pattern)) {
+                module.debug(
+                        "crafting template skipped slot=%d request=%s: fluid crafting upgrade missing",
+                        slot,
+                        toCraft);
+                continue;
+            }
             AbstractPattern configuredPattern = Pattern.fromStack(pattern);
             List<IPatternStack> outputs = configuredPattern.getOutputs();
             ICraftingTemplate itemTemplate = buildItemTemplate(toCraft, slot, configuredPattern, outputs);

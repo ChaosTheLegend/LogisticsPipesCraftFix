@@ -29,13 +29,25 @@ class PatternCraftingOrder {
             PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
-        this.remainingSets = (branch.getRequestType().getRequestedAmount() + this.resultAmountPerSet - 1)
-                / this.resultAmountPerSet;
         this.ingredientBranches = new ArrayList<>(branch.getSubRequests());
         this.outputOrder = outputOrder;
         this.module = module;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
+        this.remainingSets = initialRemainingSets(branch);
+    }
+
+    PatternCraftingOrder(int patternSlot, int resultAmountPerSet, int remainingSets,
+            List<PatternCraftingBranch> ingredientBranches, IOrderInfoProvider outputOrder,
+            ModuleItemCrafting module, PatternHandler patternHandler, PatternStackRequestHandler requestedIngredient) {
+        this.patternSlot = patternSlot;
+        this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
+        this.ingredientBranches = new ArrayList<>(ingredientBranches);
+        this.outputOrder = outputOrder;
+        this.module = module;
+        this.patternHandler = patternHandler;
+        this.requestedIngredient = requestedIngredient;
+        this.remainingSets = capRemainingSets(Math.max(0, remainingSets));
     }
 
     /**
@@ -46,6 +58,26 @@ class PatternCraftingOrder {
      */
     boolean isFullyRequested() {
         return remainingSets <= 0 || ingredientBranches.isEmpty();
+    }
+
+    /**
+     * Counts the recipe sets that still need ingredient requests for this staged slice.
+     * <p>
+     * Output orders may be split at amounts that are not recipe-set aligned. The extra items produced by an earlier
+     * slice remain in the adjacent inventory and can satisfy the next output order without another ingredient set, so
+     * the staged ingredient work is capped by the branch capacity that was allocated to this slice.
+     */
+    private int initialRemainingSets(PatternCraftingBranch branch) {
+        int outputSets = (branch.getRequestType().getRequestedAmount() + resultAmountPerSet - 1) / resultAmountPerSet;
+        return capRemainingSets(outputSets);
+    }
+
+    private int capRemainingSets(int sets) {
+        ItemStack pattern = module.getPatternStack(patternSlot);
+        if (pattern == null) {
+            return sets;
+        }
+        return Math.min(sets, availableSetsFromBranches(pattern));
     }
 
     /**
@@ -74,6 +106,7 @@ class PatternCraftingOrder {
      */
     int requestIngredients(ItemStack pattern, int sets) {
         int requestedSets = sets;
+        List<RequestedIngredient> requestedIngredients = new ArrayList<>();
         module.debugEvent(
                 "REQUEST",
                 "order request ingredients slot=%d requestedSetsStart=%d remainingSets=%d",
@@ -85,6 +118,7 @@ class PatternCraftingOrder {
                     ingredient.stack,
                     ingredient.stack.getAmount() * requestedSets,
                     ingredient.target);
+            requestedIngredients.add(new RequestedIngredient(ingredient, requested));
             module.debugEvent(
                     "REQUEST",
                     "order requested ingredient slot=%d ingredient=%s target=%s requested=%d amountPerSet=%d",
@@ -93,16 +127,26 @@ class PatternCraftingOrder {
                     ingredient.target,
                     requested,
                     ingredient.stack.getAmount());
-            if (ingredient.target == null) {
-                requestedIngredient.add(patternSlot, PatternStackHelper.copyWithAmount(ingredient.stack, requested));
+            requestedSets = Math.min(requestedSets, requested / ingredient.stack.getAmount());
+        }
+        for (RequestedIngredient requested : requestedIngredients) {
+            if (requested.ingredient.target == null) {
+                int reserved = Math.min(
+                        requested.amount,
+                        requested.ingredient.stack.getAmount() * requestedSets);
+                if (reserved <= 0) {
+                    continue;
+                }
+                requestedIngredient.add(
+                        patternSlot,
+                        PatternStackHelper.copyWithAmount(requested.ingredient.stack, reserved));
                 module.debugEvent(
                         "BUFFER",
                         "order reserved local requested ingredient slot=%d ingredient=%s requested=%d",
                         patternSlot,
-                        ingredient.stack,
-                        requested);
+                        requested.ingredient.stack,
+                        reserved);
             }
-            requestedSets = Math.min(requestedSets, requested / ingredient.stack.getAmount());
         }
         remainingSets -= requestedSets;
         module.debug(
@@ -220,5 +264,16 @@ class PatternCraftingOrder {
         }
         ItemIdentifier item = PatternStackHelper.getRoutingItem(ingredient);
         return item != null && branch.matches(item);
+    }
+
+    private static class RequestedIngredient {
+
+        private final PatternIngredientTarget ingredient;
+        private final int amount;
+
+        private RequestedIngredient(PatternIngredientTarget ingredient, int amount) {
+            this.ingredient = ingredient;
+            this.amount = amount;
+        }
     }
 }

@@ -73,6 +73,18 @@ final class PatternStackHelper {
         return stack instanceof PatternFluidStack;
     }
 
+    static boolean containsFluid(List<? extends IPatternStack> stacks) {
+        if (stacks == null) {
+            return false;
+        }
+        for (IPatternStack stack : stacks) {
+            if (isFluid(stack)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static boolean matches(IPatternStack stack, ItemIdentifier item) {
         if (stack == null || item == null) {
             return false;

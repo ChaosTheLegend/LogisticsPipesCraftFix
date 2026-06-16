@@ -138,7 +138,10 @@ class PatternCraftingResultExtractor {
         int maxToSend = Math.min(itemsLeft, order.getAmount());
         maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
         if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
-            maxToSend = Math.min(maxToSend, module.requestedSamePipeItemAmount(order));
+            int requested = module.requestedSamePipeItemAmount(order);
+            if (requested > 0) {
+                maxToSend = Math.min(maxToSend, requested);
+            }
         }
         return maxToSend;
     }
@@ -198,12 +201,14 @@ class PatternCraftingResultExtractor {
             accepted,
             arrived.getStackSize());
         if (arrived.getStackSize() > 0) {
-            pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
+            int unaccepted = arrived.getStackSize();
+            pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, null);
+            pipe.getItemOrderManager().sendSuccessfull(unaccepted, false, null);
             module.debugEvent(
                 "FLOW",
                 "sent unaccepted same-pipe remainder item=%s amount=%d",
                 arrived.getItem(),
-                arrived.getStackSize());
+                unaccepted);
         }
     }
 
@@ -263,7 +268,10 @@ class PatternCraftingResultExtractor {
     private int maxExtractableFluidAmount(LogisticsFluidOrder order) {
         int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
         if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
-            amountToDrain = Math.min(amountToDrain, module.requestedSamePipeFluidAmount(order));
+            int requested = module.requestedSamePipeFluidAmount(order);
+            if (requested > 0) {
+                amountToDrain = Math.min(amountToDrain, requested);
+            }
         }
         return amountToDrain;
     }
@@ -319,7 +327,8 @@ class PatternCraftingResultExtractor {
                 drained.amount);
             return;
         }
-        pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, order.getInformation());
+        pipe.sendStack(arrived.makeNormalStack(), -1, CoreRoutedPipe.ItemSendMode.Normal, null);
+        pipe.getPatternFluidOrderManager().sendSuccessfull(drained.amount, false, null);
         module.debugEvent(
             "FLOW",
             "sent unaccepted same-pipe fluid container fluid=%s amount=%d",

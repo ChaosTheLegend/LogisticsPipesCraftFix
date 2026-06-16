@@ -58,7 +58,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
     private static final String LOST_INGREDIENTS_TAG = "patternLostIngredients";
     private static final String LOST_DELAY_TAG = "delay";
+    private static final String STAGED_CRAFTING_TAG = "patternStagedCrafting";
     private static final String TARGET_PATTERN_SLOT_TAG = "targetPatternSlot";
+    private static final int RESTORED_REQUESTED_RETRY_DELAY = 8000;
+    private static final int RESTORE_DEBUG_INTERVAL = 40;
     private static final int TAG_COMPOUND = 10;
 
     private final PipeItemsPatternCraftingLogistics pipe;
@@ -78,6 +81,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private int runningCraft = -1;
     private boolean runningCraftInAdjacent = false;
     private boolean checkingBufferedOrders = false;
+    private NBTTagCompound pendingStagedCrafting;
+    private boolean pendingRequestedIngredientRestoreRetries;
+    private int stagedCraftingRestoreAttempts;
 
     public ModuleItemCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
@@ -150,6 +156,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         FluidIdentifier fluid = item != null && item.isFluidContainer() ? FluidIdentifier.get(item) : null;
         if (fluid != null) {
+            if (!supportsFluidCrafting()) {
+                debug("sink rejected fluid ingredient %s: fluid crafting upgrade missing", fluid);
+                return null;
+            }
             int room = spaceForFluid(fluid, includeInTransit);
             if (room <= 0) {
                 debug("sink rejected fluid ingredient %s includeInTransit=%s", fluid, includeInTransit);
@@ -187,6 +197,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (stack == null || stack.amount <= 0) {
             return 0;
         }
+        if (!supportsFluidCrafting()) {
+            debug("fluid sink amount rejected %s: fluid crafting upgrade missing", FluidIdentifier.get(stack));
+            return 0;
+        }
         int room = spaceForFluid(FluidIdentifier.get(stack), true);
         debug("fluid sink amount check %s amount=%d room=%d", FluidIdentifier.get(stack), stack.amount, room);
         return room >= stack.amount ? stack.amount : 0;
@@ -199,6 +213,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
     @Override
     public void tick() {
+        restoreStagedCraftingIfNeeded();
+        cancelUnsupportedFluidPatternCrafts();
+        scheduleRequestedIngredientRestoreRetriesIfReady();
         retryLostItems();
         pushBufferedIngredients();
         stagedCrafting.requestIngredients();
@@ -222,6 +239,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     public Set<ItemIdentifier> getCraftedItems() {
         Set<ItemIdentifier> crafted = new TreeSet<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
+            if (!isPatternCraftingSupported(pattern)) {
+                continue;
+            }
             AbstractPattern configuredPattern = Pattern.fromStack(pattern);
             for (IPatternStack result : configuredPattern.getOutputs()) {
                 ItemIdentifier item = PatternStackHelper.getRoutingItem(result);
@@ -268,6 +288,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         ingredientBuffer.readFromNBT(tag);
         requestedIngredient.readFromNBT(tag);
         readLostIngredientsFromNBT(tag);
+        pendingStagedCrafting = tag.hasKey(STAGED_CRAFTING_TAG)
+            ? (NBTTagCompound) tag.getCompoundTag(STAGED_CRAFTING_TAG).copy()
+            : null;
+        pendingRequestedIngredientRestoreRetries = !requestedIngredients.isEmpty();
+        stagedCraftingRestoreAttempts = 0;
     }
 
     @Override
@@ -280,6 +305,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         ingredientBuffer.writeToNBT(tag);
         requestedIngredient.writeToNBT(tag);
         writeLostIngredientsToNBT(tag);
+        if (pendingStagedCrafting != null) {
+            tag.setTag(STAGED_CRAFTING_TAG, pendingStagedCrafting.copy());
+        } else {
+            NBTTagCompound stagedTag = new NBTTagCompound();
+            stagedCrafting.writeToNBT(stagedTag);
+            tag.setTag(STAGED_CRAFTING_TAG, stagedTag);
+        }
     }
 
     @Override
@@ -297,6 +329,89 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     void debugEvent(String category, String message, Object... args) {
         debug(message, args);
         CraftingRequestDebugManager.recordPipeEvent(pipe, category, message, args);
+    }
+
+    private void restoreStagedCraftingIfNeeded() {
+        if (pendingStagedCrafting == null) {
+            return;
+        }
+        World world = pipe.getWorld();
+        if (world != null && world.isRemote) {
+            return;
+        }
+        if (stagedCrafting.restoreFromNBT(pendingStagedCrafting)) {
+            debugEvent("STAGED", "restored staged crafting state after %d attempts", stagedCraftingRestoreAttempts + 1);
+            pendingStagedCrafting = null;
+            stagedCraftingRestoreAttempts = 0;
+            return;
+        }
+        stagedCraftingRestoreAttempts++;
+        if (stagedCraftingRestoreAttempts % RESTORE_DEBUG_INTERVAL == 0) {
+            debugEvent(
+                "STAGED",
+                "waiting to restore staged crafting state attempts=%d",
+                stagedCraftingRestoreAttempts);
+        }
+    }
+
+    private void scheduleRequestedIngredientRestoreRetriesIfReady() {
+        if (!pendingRequestedIngredientRestoreRetries || pendingStagedCrafting != null) {
+            return;
+        }
+        pendingRequestedIngredientRestoreRetries = false;
+        for (Map.Entry<Integer, List<IPatternStack>> entry : requestedIngredients.entrySet()) {
+            int patternSlot = entry.getKey();
+            for (IPatternStack stack : entry.getValue()) {
+                if (stack == null || stack.getAmount() <= 0) {
+                    continue;
+                }
+                lostIngredients.add(
+                    new DelayedGeneric<>(
+                        new Pair<>(stack.copy(), new PatternTargetInformation(patternSlot)),
+                        RESTORED_REQUESTED_RETRY_DELAY));
+                debugEvent(
+                    "REQUEST",
+                    "restore queued requested ingredient retry slot=%d ingredient=%s",
+                    patternSlot,
+                    stack);
+            }
+        }
+    }
+
+    boolean supportsFluidCrafting() {
+        ISlotUpgradeManager upgradeManager = getUpgradeManager();
+        return upgradeManager != null && upgradeManager.getFluidCrafter() > 0;
+    }
+
+    boolean isPatternCraftingSupported(ItemStack pattern) {
+        return !isFluidCraftingPattern(pattern) || supportsFluidCrafting();
+    }
+
+    private boolean isFluidCraftingPattern(ItemStack pattern) {
+        if (pattern == null) {
+            return false;
+        }
+        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        return PatternStackHelper.containsFluid(configuredPattern.getInputs())
+            || PatternStackHelper.containsFluid(configuredPattern.getOutputs());
+    }
+
+    private void cancelUnsupportedFluidPatternCrafts() {
+        if (supportsFluidCrafting()) {
+            return;
+        }
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
+            if (pattern == null || !isFluidCraftingPattern(pattern)) {
+                continue;
+            }
+            if (stagedCrafting.hasPattern(slot)
+                || requestedIngredients.containsKey(slot)
+                || ingredientBuffer.asMap().containsKey(slot)) {
+                debugEvent("STAGED", "cancel fluid pattern slot=%d: fluid crafting upgrade missing", slot);
+                cancelPatternCraft(slot);
+            }
+        }
     }
 
     /**
@@ -509,6 +624,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     public List<ItemIdentifierStack> getConfiguredCraftResults() {
         List<ItemIdentifierStack> results = new ArrayList<>();
         for (ItemStack pattern : patternHandler.getConfiguredPatterns()) {
+            if (!isPatternCraftingSupported(pattern)) {
+                continue;
+            }
             AbstractPattern configuredPattern = Pattern.fromStack(pattern);
             for (IPatternStack output : configuredPattern.getOutputs()) {
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
@@ -554,6 +672,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     }
 
     private String getHudStatus(int patternSlot, ItemStack pattern) {
+        if (!isPatternCraftingSupported(pattern)) {
+            return "Waiting: fluid crafting upgrade missing";
+        }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         AdjacentTile connected = adjacentInventory.getConnected();
         int bufferedSets = completeBufferedSets(patternSlot);
@@ -993,7 +1114,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null || localIngredientAmount(pattern, item) <= 0) {
+            if (pattern == null || !isPatternCraftingSupported(pattern) || localIngredientAmount(pattern, item) <= 0) {
                 continue;
             }
             int requested = requestedIngredient.amount(slot, item);
@@ -1020,7 +1141,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
+            if (pattern == null || !isPatternCraftingSupported(pattern)
+                || patternHandler.fluidIngredientAmount(pattern, fluid) <= 0) {
                 continue;
             }
             int requested = requestedIngredient.amount(slot, fluid);
@@ -1041,6 +1163,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * Blocking modes restrict buffering to the active craft or to an empty connected inventory.
      */
     boolean canReceiveForPattern(int patternSlot) {
+        if (!isPatternCraftingSupported(patternHandler.getConfiguredPatternStack(patternSlot))) {
+            return false;
+        }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             return true;
@@ -1707,17 +1832,119 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * Places a partial request for a lost item or fluid ingredient.
      */
     private int requestLostIngredient(IPatternStack stack, IAdditionalTargetInformation info) {
-        ItemIdentifierStack item = PatternStackHelper.asSolidStack(stack);
+        int originalAmount = stack == null ? 0 : stack.getAmount();
+        IPatternStack outstanding = outstandingRequestedRetryStack(stack, info);
+        if (outstanding == null || outstanding.getAmount() <= 0) {
+            return originalAmount;
+        }
+        if (info instanceof PatternTargetInformation
+            && hasLivePatternOutputOrderForRequested(
+                ((PatternTargetInformation) info).patternSlot(),
+                outstanding)) {
+            debugEvent("REQUEST", "lost retry skipped, live pattern output still pending ingredient=%s info=%s", outstanding, info);
+            return originalAmount;
+        }
+
+        ItemIdentifierStack item = PatternStackHelper.asSolidStack(outstanding);
         if (item != null) {
             debugEvent("REQUEST", "lost retry requesting item=%s info=%s", item, info);
-            return RequestTree.requestPartial(item.clone(), pipe, info);
+            return originalAmount - outstanding.getAmount() + RequestTree.requestPartial(item.clone(), pipe, info);
         }
-        FluidIdentifier fluid = PatternStackHelper.asFluid(stack);
+        FluidIdentifier fluid = PatternStackHelper.asFluid(outstanding);
         if (fluid != null) {
-            debugEvent("REQUEST", "lost retry requesting fluid=%s amount=%d info=%s", fluid, stack.getAmount(), info);
-            return RequestTree.requestFluidPartial(fluid, stack.getAmount(), this, null, info);
+            debugEvent("REQUEST", "lost retry requesting fluid=%s amount=%d info=%s", fluid, outstanding.getAmount(), info);
+            return originalAmount - outstanding.getAmount()
+                + RequestTree.requestFluidPartial(fluid, outstanding.getAmount(), this, null, info);
         }
         return 0;
+    }
+
+    private IPatternStack outstandingRequestedRetryStack(IPatternStack stack, IAdditionalTargetInformation info) {
+        if (!(info instanceof PatternTargetInformation) || stack == null || stack.getAmount() <= 0) {
+            return stack;
+        }
+        int patternSlot = ((PatternTargetInformation) info).patternSlot();
+        int outstanding = 0;
+        ItemIdentifierStack item = PatternStackHelper.asSolidStack(stack);
+        if (item != null) {
+            outstanding = requestedIngredient.amount(patternSlot, item.getItem());
+        } else {
+            FluidIdentifier fluid = PatternStackHelper.asFluid(stack);
+            if (fluid != null) {
+                outstanding = requestedIngredient.amount(patternSlot, fluid);
+            }
+        }
+        return PatternStackHelper.copyWithAmount(stack, Math.min(stack.getAmount(), outstanding));
+    }
+
+    private boolean hasLivePatternOutputOrderForRequested(int patternSlot, IPatternStack stack) {
+        int outstanding = stack == null ? 0 : stack.getAmount();
+        if (outstanding <= 0) {
+            return false;
+        }
+        int covered = 0;
+        for (IRouter router : SimpleServiceLocator.routerManager.getRouters()) {
+            if (router == null || !(router.getPipe() instanceof PipeItemsPatternCraftingLogistics)) {
+                continue;
+            }
+            PipeItemsPatternCraftingLogistics patternPipe = (PipeItemsPatternCraftingLogistics) router.getPipe();
+            covered += liveItemOutputAmountFor(patternPipe, patternSlot, stack);
+            covered += liveFluidOutputAmountFor(patternPipe, patternSlot, stack);
+            if (covered >= outstanding) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int liveItemOutputAmountFor(PipeItemsPatternCraftingLogistics patternPipe, int patternSlot,
+                                        IPatternStack stack) {
+        ItemIdentifierStack item = PatternStackHelper.asSolidStack(stack);
+        if (item == null) {
+            return 0;
+        }
+        int amount = 0;
+        for (LogisticsItemOrder order : patternPipe.getItemOrderManager()) {
+            if (order.isFinished()
+                || !item.getItem().equalsForCrafting(order.getResource().getItem())
+                || !isOrderTargetingThisPattern(order, patternSlot)) {
+                continue;
+            }
+            amount += Math.max(0, order.getAmount());
+        }
+        return amount;
+    }
+
+    private int liveFluidOutputAmountFor(PipeItemsPatternCraftingLogistics patternPipe, int patternSlot,
+                                         IPatternStack stack) {
+        FluidIdentifier fluid = PatternStackHelper.asFluid(stack);
+        if (fluid == null) {
+            return 0;
+        }
+        int amount = 0;
+        for (LogisticsFluidOrder order : patternPipe.getPatternFluidOrderManager()) {
+            if (order.isFinished()
+                || !fluid.equals(order.getFluid())
+                || !isOrderTargetingThisPattern(order, patternSlot)) {
+                continue;
+            }
+            amount += Math.max(0, order.getAmount());
+        }
+        return amount;
+    }
+
+    private boolean isOrderTargetingThisPattern(LogisticsItemOrder order, int patternSlot) {
+        return order.getDestination() != null
+            && order.getDestination().getRouter() == getRouter()
+            && order.getInformation() instanceof PatternTargetInformation
+            && ((PatternTargetInformation) order.getInformation()).patternSlot() == patternSlot;
+    }
+
+    private boolean isOrderTargetingThisPattern(LogisticsFluidOrder order, int patternSlot) {
+        return order.getDestination() != null
+            && order.getDestination().getRouter() == getRouter()
+            && order.getInformation() instanceof PatternTargetInformation
+            && ((PatternTargetInformation) order.getInformation()).patternSlot() == patternSlot;
     }
 
     private void readLostIngredientsFromNBT(NBTTagCompound tag) {

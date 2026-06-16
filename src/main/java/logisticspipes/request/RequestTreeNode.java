@@ -267,7 +267,7 @@ public class RequestTreeNode {
             IOrderInfoProvider result;
             if (isStagedCraftingPromise(promise)) {
                 IPromise promiseCopy = promise.copy();
-                PatternCraftingBranch stagedBranch = branch.copyAndReserve(promise.getAmount());
+                PatternCraftingBranch stagedBranch = branch.copyForAmount(promise.getAmount());
                 stagedBranch.reserveProviderPromises();
                 result = ((IStagedCraftingProvider) promise.getProvider()).fullFillStagedCrafting(
                         promiseCopy,
@@ -276,9 +276,14 @@ public class RequestTreeNode {
                         stagedBranch);
                 if (result == null) {
                     stagedBranch.releaseProviderPromises();
+                } else {
+                    branch.reserve(promise.getAmount());
                 }
             } else {
                 result = promise.fullFill(requestType.copyForDisplayWith(promise.getAmount()), info);
+                if (result != null) {
+                    branch.reserve(promise.getAmount());
+                }
             }
             if (result != null) {
                 list.add(result);
