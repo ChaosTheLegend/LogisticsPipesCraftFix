@@ -1,5 +1,7 @@
 package logisticspipes.pipes;
 
+import buildcraft.transport.TravelingItem;
+import cpw.mods.fml.common.Optional;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModulePatternCrafting;
@@ -29,6 +31,7 @@ import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.pipes.basic.fluid.FluidRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.proxy.buildcraft.LPRoutedBCTravelingItem;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
@@ -110,17 +113,28 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
 
             @Override
             public boolean canPipeConnect(TileEntity tile, ForgeDirection dir) {
-                if (super.canPipeConnect(tile, dir)) {
-                    return true;
-                }
                 if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
+                    return super.canPipeConnect(tile, dir);
+                }
+                if (tile instanceof IInventory || tile instanceof IFluidHandler) {
                     return false;
                 }
-                if (tile instanceof IFluidHandler handler) {
-                    return handler.getTankInfo(dir.getOpposite()) != null
-                            && handler.getTankInfo(dir.getOpposite()).length > 0;
+                return super.canPipeConnect(tile, dir);
+            }
+
+            /**
+             * Accepts routed BuildCraft transport items while ignoring passive items pushed by foreign pipes.
+             * <p>
+             * Pattern crafting ingredients must arrive with routing information so the module can match them to the
+             * staged order that reserved the buffer space.
+             */
+            @Override
+            @Optional.Method(modid = "BuildCraft|Transport")
+            public void injectItem(TravelingItem item, ForgeDirection inputOrientation) {
+                if (item instanceof LPRoutedBCTravelingItem
+                    || LPRoutedBCTravelingItem.restoreFromExtraNBTData(item) != null) {
+                    super.injectItem(item, inputOrientation);
                 }
-                return false;
             }
         }, item);
         module = new ModulePatternCrafting(this);
@@ -147,7 +161,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             return false;
         }
         if (tile instanceof IInventory || tile instanceof IFluidHandler) {
-            return !targetSelector.isSelectedInventory(tile, dir);
+            return true;
         }
         return true;
     }
@@ -434,10 +448,21 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     /**
      * Returns normalized inventories connected to a routed pipe.
      * <p>
+     * Pattern crafting pipes keep their selected target transport-disconnected so other blocks cannot push untracked
+     * items into them. Their selected target is still counted here so the shared-inventory guard keeps working for
+     * adjacent crafters.
+     * <p>
      * Inventory wrappers are normalized through {@link InventoryHelper} to match the old CoreRoutedPipe comparison.
      */
     private List<IInventory> getConnectedInventories(CoreRoutedPipe pipe) {
         List<IInventory> inventories = new ArrayList<>();
+        if (pipe instanceof PipeItemsPatternCraftingLogistics patternPipe) {
+            AdjacentTile selected = patternPipe.getConnectedInventoryTile();
+            if (selected != null && selected.tile instanceof IInventory) {
+                inventories.add(InventoryHelper.getInventory((IInventory) selected.tile));
+            }
+            return inventories;
+        }
         for (AdjacentTile tile : pipe.getConnectedEntities()) {
             if (tile.tile instanceof IInventory) {
                 inventories.add(InventoryHelper.getInventory((IInventory) tile.tile));

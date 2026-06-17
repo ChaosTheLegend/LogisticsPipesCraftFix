@@ -1,10 +1,11 @@
 package logisticspipes.crafting;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.WorldUtil;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
@@ -13,12 +14,10 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.IFluidHandler;
 
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.AdjacentTile;
-import logisticspipes.utils.WorldUtil;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Maintains the adjacent inventory or fluid handler selected as the pattern crafting target.
@@ -57,15 +56,6 @@ public class PatternCraftingTargetSelector {
      */
     public void clearCache() {
         cachedConnectedInventory = null;
-    }
-
-    /**
-     * Checks whether a neighboring tile is the selected crafting target side.
-     */
-    public boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
-        AdjacentTile selected = getConnectedInventoryTile();
-        return selected != null && selected.tile == tile
-                && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
     }
 
     /**
@@ -130,7 +120,7 @@ public class PatternCraftingTargetSelector {
     }
 
     /**
-     * Checks that the cached target still exists on the selected side and remains connectable.
+     * Checks that the cached target still exists on the selected side and can still be used by pattern crafting.
      */
     private boolean isCachedConnectedInventoryValid() {
         return cachedConnectedInventory != null && cachedConnectedInventory.orientation == connectedInventoryDirection
@@ -161,7 +151,7 @@ public class PatternCraftingTargetSelector {
     }
 
     /**
-     * Lists every adjacent side that can be used as a pattern crafting target.
+     * Lists every adjacent side that can be used as a direct pattern crafting target.
      */
     private List<AdjacentTile> getSelectableAdjacentInventories() {
         List<AdjacentTile> inventories = new ArrayList<>();
@@ -199,19 +189,12 @@ public class PatternCraftingTargetSelector {
     }
 
     /**
-     * Finds the side currently occupied by a neighboring tile.
-     */
-    private ForgeDirection getDirectionTo(TileEntity tile) {
-        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
-            if (getAdjacentTile(direction) == tile) {
-                return direction;
-            }
-        }
-        return ForgeDirection.UNKNOWN;
-    }
-
-    /**
-     * Checks whether a neighboring tile is a non-pipe inventory or tank that the pattern pipe may connect to.
+     * Checks whether a neighboring tile is a non-pipe inventory or tank that the pattern pipe may use as crafting
+     * target.
+     * <p>
+     * This deliberately does not require a pipe transport connection. Pattern crafting inserts and extracts through
+     * direct inventory/fluid handlers, while the transport connection to inventories and tanks stays closed so other
+     * blocks cannot push untracked items into the pipe.
      */
     private boolean isSelectableInventory(TileEntity tile, ForgeDirection direction) {
         boolean hasInventory = tile instanceof IInventory && ((IInventory) tile).getSizeInventory() > 0;
@@ -219,8 +202,7 @@ public class PatternCraftingTargetSelector {
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
         return (hasInventory || hasTank) && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
-                && !pipe.isSideBlocked(direction, false)
-                && pipe.transport.canPipeConnect(tile, direction);
+            && !pipe.isSideBlocked(direction, false);
     }
 
     /**
