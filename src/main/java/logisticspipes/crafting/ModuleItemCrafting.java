@@ -484,7 +484,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (stagedCrafting.hasPattern(slot)
                 || requestedIngredients.containsKey(slot)
                 || ingredientBuffer.asMap().containsKey(slot)) {
-                debugEvent("STAGED", "cancel fluid pattern slot=%d: fluid crafting upgrade missing", slot);
+                debugEventThrottled("STAGED", "cancel fluid pattern slot=%d: fluid crafting upgrade missing", slot);
                 cancelPatternCraft(slot);
             }
         }
