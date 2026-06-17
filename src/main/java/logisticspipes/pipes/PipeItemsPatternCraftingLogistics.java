@@ -216,6 +216,16 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return targetSelector.getConnectedInventoryTile();
     }
 
+    /**
+     * Returns whether the selected adjacent crafting target should be drawn as connected.
+     * <p>
+     * The actual transport connection stays closed so foreign blocks cannot push passive items into this pipe.
+     */
+    public boolean shouldRenderCraftingTargetConnection(ForgeDirection side) {
+        AdjacentTile selected = getConnectedInventoryTile();
+        return selected != null && selected.orientation == side;
+    }
+
     public boolean isPatternSatelliteLinked(int satelliteId) {
         return linkedPatternSatelliteIds.contains(satelliteId);
     }

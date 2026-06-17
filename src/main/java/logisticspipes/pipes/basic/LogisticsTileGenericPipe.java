@@ -236,7 +236,7 @@ public class LogisticsTileGenericPipe extends TileEntity
         if (refreshRenderState) {
             // Pipe connections;
             for (ForgeDirection o : ForgeDirection.VALID_DIRECTIONS) {
-                renderState.pipeConnectionMatrix.setConnected(o, pipeConnectionsBuffer[o.ordinal()]);
+                renderState.pipeConnectionMatrix.setConnected(o, shouldRenderPipeConnection(o));
                 renderState.pipeConnectionMatrix.setBCConnected(o, pipeBCConnectionsBuffer[o.ordinal()]);
                 renderState.pipeConnectionMatrix.setTDConnected(o, pipeTDConnectionsBuffer[o.ordinal()]);
             }
@@ -275,6 +275,15 @@ public class LogisticsTileGenericPipe extends TileEntity
             SimpleServiceLocator.openComputersProxy.addToNetwork(this);
         }
         debug.end();
+    }
+
+    /**
+     * Returns the visual connection state for one side without changing the server-side transport connection.
+     */
+    private boolean shouldRenderPipeConnection(ForgeDirection side) {
+        return pipeConnectionsBuffer[side.ordinal()]
+            || (pipe instanceof PipeItemsPatternCraftingLogistics patternPipe
+            && patternPipe.shouldRenderCraftingTargetConnection(side));
     }
 
     @Override
