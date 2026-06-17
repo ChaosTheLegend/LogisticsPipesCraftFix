@@ -1,0 +1,32 @@
+package logisticspipes.network.packets.gui;
+
+import net.minecraft.entity.player.EntityPlayer;
+
+import logisticspipes.crafting.PatternContainer;
+import logisticspipes.network.abstractpackets.IntegerCoordinatesPacket;
+import logisticspipes.network.abstractpackets.ModernPacket;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
+
+public class PatternPipeSelectPacket extends IntegerCoordinatesPacket {
+
+    public PatternPipeSelectPacket(int id) {
+        super(id);
+    }
+
+    @Override
+    public void processPacket(EntityPlayer player) {
+        LogisticsTileGenericPipe tile = getPipe(player.worldObj);
+        if (tile == null || !(tile.pipe instanceof PipeItemsPatternCraftingLogistics)) {
+            return;
+        }
+        if (player.openContainer instanceof PatternContainer) {
+            ((PatternContainer) player.openContainer).setSelectedPatternSlot(getInteger());
+        }
+    }
+
+    @Override
+    public ModernPacket template() {
+        return new PatternPipeSelectPacket(getId());
+    }
+}

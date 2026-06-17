@@ -9,17 +9,20 @@ import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.Pattern;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
+import logisticspipes.network.abstractpackets.CoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
 @Accessors(chain = true)
-public class PatternSatelliteAssignmentPacket extends ModernPacket {
+public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
 
     @Getter
     @Setter
-    private int inventorySlot;
+    private int patternSlot;
     @Getter
     @Setter
     private int inputSlot;
@@ -30,13 +33,14 @@ public class PatternSatelliteAssignmentPacket extends ModernPacket {
     @Setter
     private String satelliteUuid = "";
 
-    public PatternSatelliteAssignmentPacket(int id) {
+    public PatternPipeSatelliteAssignmentPacket(int id) {
         super(id);
     }
 
     @Override
     public void readData(LPDataInputStream data) throws IOException {
-        inventorySlot = data.readInt();
+        super.readData(data);
+        patternSlot = data.readInt();
         inputSlot = data.readInt();
         satelliteId = data.readInt();
         satelliteUuid = data.readUTF();
@@ -44,15 +48,17 @@ public class PatternSatelliteAssignmentPacket extends ModernPacket {
 
     @Override
     public void processPacket(EntityPlayer player) {
-        if (inventorySlot < 0 || inventorySlot >= player.inventory.mainInventory.length) {
+        LogisticsTileGenericPipe tile = getPipe(player.worldObj);
+        if (tile == null || !(tile.pipe instanceof PipeItemsPatternCraftingLogistics)) {
             return;
         }
-        ItemStack pattern = player.inventory.mainInventory[inventorySlot];
+        PipeItemsPatternCraftingLogistics pipe = (PipeItemsPatternCraftingLogistics) tile.pipe;
+        ItemStack pattern = pipe.getPatternModule().getPatternItemStack(patternSlot);
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
         Pattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
-        player.inventory.markDirty();
+        pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();
         }
@@ -60,7 +66,8 @@ public class PatternSatelliteAssignmentPacket extends ModernPacket {
 
     @Override
     public void writeData(LPDataOutputStream data) throws IOException {
-        data.writeInt(inventorySlot);
+        super.writeData(data);
+        data.writeInt(patternSlot);
         data.writeInt(inputSlot);
         data.writeInt(satelliteId);
         data.writeUTF(satelliteUuid == null ? "" : satelliteUuid);
@@ -68,6 +75,6 @@ public class PatternSatelliteAssignmentPacket extends ModernPacket {
 
     @Override
     public ModernPacket template() {
-        return new PatternSatelliteAssignmentPacket(getId());
+        return new PatternPipeSatelliteAssignmentPacket(getId());
     }
 }

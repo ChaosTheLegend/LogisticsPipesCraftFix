@@ -163,10 +163,16 @@ public class PatternCraftingHudState {
 
         private ItemIdentifierStack stack;
         private int requestedAmount;
+        private int slot;
 
         public OutputInfo(ItemIdentifierStack stack, int requestedAmount) {
+            this(stack, requestedAmount, -1);
+        }
+
+        public OutputInfo(ItemIdentifierStack stack, int requestedAmount, int slot) {
             this.stack = stack;
             this.requestedAmount = Math.max(0, requestedAmount);
+            this.slot = slot;
         }
 
         public ItemIdentifierStack getStack() {
@@ -177,13 +183,18 @@ public class PatternCraftingHudState {
             return requestedAmount;
         }
 
+        public int getSlot() {
+            return slot;
+        }
+
         private void writeData(LPDataOutputStream data) throws IOException {
             data.writeItemIdentifierStack(stack);
             data.writeInt(requestedAmount);
+            data.writeInt(slot);
         }
 
         private static OutputInfo readData(LPDataInputStream data) throws IOException {
-            return new OutputInfo(data.readItemIdentifierStack(), data.readInt());
+            return new OutputInfo(data.readItemIdentifierStack(), data.readInt(), data.readInt());
         }
 
         @Override
@@ -195,12 +206,12 @@ public class PatternCraftingHudState {
                 return false;
             }
             OutputInfo that = (OutputInfo) o;
-            return requestedAmount == that.requestedAmount && stack.equals(that.stack);
+            return requestedAmount == that.requestedAmount && slot == that.slot && stack.equals(that.stack);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(stack, requestedAmount);
+            return Objects.hash(stack, requestedAmount, slot);
         }
     }
 
@@ -208,10 +219,16 @@ public class PatternCraftingHudState {
 
         private ItemIdentifierStack stack;
         private int bufferedAmount;
+        private int slot;
 
         public IngredientInfo(ItemIdentifierStack stack, int bufferedAmount) {
+            this(stack, bufferedAmount, -1);
+        }
+
+        public IngredientInfo(ItemIdentifierStack stack, int bufferedAmount, int slot) {
             this.stack = stack;
             this.bufferedAmount = Math.max(0, bufferedAmount);
+            this.slot = slot;
         }
 
         public ItemIdentifierStack getStack() {
@@ -222,13 +239,18 @@ public class PatternCraftingHudState {
             return bufferedAmount;
         }
 
+        public int getSlot() {
+            return slot;
+        }
+
         private void writeData(LPDataOutputStream data) throws IOException {
             data.writeItemIdentifierStack(stack);
             data.writeInt(bufferedAmount);
+            data.writeInt(slot);
         }
 
         private static IngredientInfo readData(LPDataInputStream data) throws IOException {
-            return new IngredientInfo(data.readItemIdentifierStack(), data.readInt());
+            return new IngredientInfo(data.readItemIdentifierStack(), data.readInt(), data.readInt());
         }
 
         @Override
@@ -240,12 +262,12 @@ public class PatternCraftingHudState {
                 return false;
             }
             IngredientInfo that = (IngredientInfo) o;
-            return bufferedAmount == that.bufferedAmount && stack.equals(that.stack);
+            return bufferedAmount == that.bufferedAmount && slot == that.slot && stack.equals(that.stack);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(stack, bufferedAmount);
+            return Objects.hash(stack, bufferedAmount, slot);
         }
     }
 }

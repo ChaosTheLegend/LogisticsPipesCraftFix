@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -24,7 +25,12 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     public static final int CLEAR_BUTTON_ID = 0;
     public static final int MULTIPLE_BUTTON_ID = 1;
     public static final int ORE_DICT_BUTTON_ID = 2;
-    private static final int SATELLITE_BUTTON_OFFSET = 100;
+    private static final int INGREDIENT_LEFT = 25;
+    private static final int INGREDIENT_TOP = 16;
+    private static final int OUTPUT_LEFT = 115;
+    private static final int OUTPUT_TOP = 34;
+    private static final int SLOT_SIZE = 18;
+    private static final int SATELLITE_ICON_SIZE = 7;
 
     public PatternGui(EntityPlayer player, IInventory inventory) {
         this(player, inventory, Collections.emptyList());
@@ -48,27 +54,12 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     }
 
     private void addActionButtons() {
-        GuiButton clearButton = new GuiButton(CLEAR_BUTTON_ID, guiLeft + 100, guiTop + 20, 50, 5, "X");
+        GuiButton clearButton = new SmallGuiButton(CLEAR_BUTTON_ID, guiLeft + 100, guiTop + 18, 46, 12, "Clear");
         addButton(clearButton);
 
-        GuiButton multiplierButton = new GuiButton(MULTIPLE_BUTTON_ID, guiLeft + 100, guiTop + 30, 50, 5, "2x");
+        GuiButton multiplierButton = new SmallGuiButton(MULTIPLE_BUTTON_ID, guiLeft + 100, guiTop + 34, 46, 12, "2x");
         addButton(multiplierButton);
 
-        GuiButton oreDictButton = new GuiButton(ORE_DICT_BUTTON_ID, guiLeft + 100, guiTop + 40, 50, 5, "d");
-        addButton(oreDictButton);
-
-        for (int slot = 0; slot < getInputSize(); slot++) {
-            int x = slot % 3;
-            int y = slot / 3;
-            GuiButton satelliteButton = new SmallGuiButton(
-                    SATELLITE_BUTTON_OFFSET + slot,
-                    guiLeft + 25 + x * 18,
-                    guiTop + 70 + y * 8,
-                    16,
-                    8,
-                    satelliteButtonLabel(slot));
-            addButton(satelliteButton);
-        }
     }
 
     @Override
@@ -77,12 +68,14 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 92);
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
-                GuiGraphics.drawSlotBackground(mc, guiLeft + 25 + x * 18, guiTop + 16 + y * 18);
+                GuiGraphics.drawSlotBackground(mc, guiLeft + INGREDIENT_LEFT + x * SLOT_SIZE,
+                        guiTop + INGREDIENT_TOP + y * SLOT_SIZE);
             }
         }
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
-            GuiGraphics.drawSlotBackground(mc, guiLeft + 115 + i * 18, guiTop + 34);
+            GuiGraphics.drawSlotBackground(mc, guiLeft + OUTPUT_LEFT + i * SLOT_SIZE, guiTop + OUTPUT_TOP);
         }
+        drawSatelliteIcons();
         mc.fontRenderer.drawString("Pattern", guiLeft + 8, guiTop + 6, 0x404040);
     }
 
@@ -92,6 +85,18 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         if (!hasSubGui()) {
             drawSatelliteButtonTooltip(mouseX, mouseY);
         }
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        if (mouseButton == 0 && !hasSubGui()) {
+            int inputSlot = getSatelliteHotspotSlot(mouseX, mouseY);
+            if (inputSlot >= 0) {
+                openSatelliteSelector(inputSlot);
+                return;
+            }
+        }
+        super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
     public int getInventorySlot() {
@@ -117,10 +122,6 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 break;
 
         }
-        if (button.id >= SATELLITE_BUTTON_OFFSET && button.id < SATELLITE_BUTTON_OFFSET + getInputSize()) {
-            int inputSlot = button.id - SATELLITE_BUTTON_OFFSET;
-            openSatelliteSelector(inputSlot);
-        }
     }
 
     private void openSatelliteSelector(int inputSlot) {
@@ -131,79 +132,82 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                         inputSlot,
                         currentSatelliteId,
                         satellites,
-                        satelliteId -> setSatelliteForInputSlot(inputSlot, satelliteId)));
+                        (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId,
+                                satelliteUuid)));
     }
 
-    private void setSatelliteForInputSlot(int inputSlot, int satelliteId) {
+    private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid) {
         Pattern.fromStack(patternInventory.getPatternStack())
-                .setSatelliteIdForInputSlot(inputSlot, satelliteId);
-        updateSatelliteButtonLabels();
+                .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         MainProxy.sendPacketToServer(
                 PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot()).setInputSlot(inputSlot)
-                        .setSatelliteId(satelliteId));
-    }
-
-    private void updateSatelliteButtonLabels() {
-        for (Object entry : buttonList) {
-            GuiButton button = (GuiButton) entry;
-            if (button.id >= SATELLITE_BUTTON_OFFSET && button.id < SATELLITE_BUTTON_OFFSET + getInputSize()) {
-                button.displayString = satelliteButtonLabel(button.id - SATELLITE_BUTTON_OFFSET);
-            }
-        }
+                        .setSatelliteId(satelliteId)
+                        .setSatelliteUuid(satelliteUuid));
     }
 
     private void drawSatelliteButtonTooltip(int mouseX, int mouseY) {
-        for (Object entry : buttonList) {
-            GuiButton button = (GuiButton) entry;
-            if (!button.visible
-                    || button.id < SATELLITE_BUTTON_OFFSET
-                    || button.id >= SATELLITE_BUTTON_OFFSET + getInputSize()
-                    || mouseX < button.xPosition
-                    || mouseX >= button.xPosition + button.width
-                    || mouseY < button.yPosition
-                    || mouseY >= button.yPosition + button.height) {
-                continue;
-            }
-            int inputSlot = button.id - SATELLITE_BUTTON_OFFSET;
-            int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
-            List<String> tooltip = new ArrayList<>();
-            if (satelliteId <= 0) {
-                tooltip.add("Local inventory");
-            } else {
-                PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId);
-                tooltip.add("Pattern satellite #" + satelliteId);
-                if (satellite != null) {
-                    tooltip.add("Dim " + satellite.getDimension() + " at " + satellite.getX() + ", "
-                            + satellite.getY() + ", " + satellite.getZ());
-                    tooltip.add(satellite.getDistance() >= 0 ? satellite.getDistance() + "m away" : "Other dimension");
-                    if (satellite.isFavorite()) {
-                        tooltip.add("Stored on memory chip");
-                    }
-                } else {
-                    tooltip.add("Not loaded in this GUI snapshot");
-                }
-            }
-            GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
+        int inputSlot = getSatelliteHotspotSlot(mouseX, mouseY);
+        if (inputSlot < 0) {
             return;
         }
+        int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
+        String satelliteUuid = Pattern.fromStack(patternInventory.getPatternStack())
+                .getSatelliteUuidForInputSlot(inputSlot);
+        List<String> tooltip = new ArrayList<>();
+        if (satelliteId <= 0 && satelliteUuid.isEmpty()) {
+            tooltip.add("Local inventory");
+        } else {
+            PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid);
+            tooltip.add("Pattern satellite " + (satellite == null ? "#" + satelliteId : satellite.displayName()));
+            if (satellite != null) {
+                tooltip.add("Dim " + satellite.dimension() + " at " + satellite.x() + ", "
+                        + satellite.y() + ", " + satellite.z());
+                tooltip.add(satellite.distance() >= 0 ? satellite.distance() + "m away" : "Other dimension");
+                if (satellite.favorite()) {
+                    tooltip.add("Stored on memory chip");
+                }
+            } else {
+                tooltip.add("Not loaded in this GUI snapshot");
+            }
+        }
+        GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
     }
 
-    private PatternSatelliteInfo getSatelliteInfo(int satelliteId) {
+    private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid) {
         for (PatternSatelliteInfo satellite : satellites) {
-            if (satellite.getId() == satelliteId) {
+            if ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
+                    || (satelliteUuid.isEmpty() && satellite.id() == satelliteId)) {
                 return satellite;
             }
         }
         return null;
     }
 
-    private String satelliteButtonLabel(int inputSlot) {
-        int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
-        if (satelliteId <= 0) {
-            return "-";
+    private void drawSatelliteIcons() {
+        for (int inputSlot = 0; inputSlot < getInputSize(); inputSlot++) {
+            int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
+            String satelliteUuid = Pattern.fromStack(patternInventory.getPatternStack())
+                    .getSatelliteUuidForInputSlot(inputSlot);
+            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
+            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+            boolean assigned = satelliteId > 0 || !satelliteUuid.isEmpty();
+            Gui.drawRect(x, y, x + SATELLITE_ICON_SIZE, y + SATELLITE_ICON_SIZE,
+                    assigned ? 0xff2b6ee8 : 0xff777777);
+            mc.fontRenderer.drawString(assigned ? "S" : "+", x + 1, y, 0xffffff);
         }
-        return satelliteId <= 999 ? Integer.toString(satelliteId) : "+";
+    }
+
+    private int getSatelliteHotspotSlot(int mouseX, int mouseY) {
+        for (int inputSlot = 0; inputSlot < getInputSize(); inputSlot++) {
+            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
+            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+            if (mouseX >= x && mouseX < x + SATELLITE_ICON_SIZE
+                    && mouseY >= y && mouseY < y + SATELLITE_ICON_SIZE) {
+                return inputSlot;
+            }
+        }
+        return -1;
     }
 
     public int getInputSize() {

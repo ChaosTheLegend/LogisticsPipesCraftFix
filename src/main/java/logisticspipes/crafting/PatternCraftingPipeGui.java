@@ -1,33 +1,70 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Slot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
 
 import logisticspipes.network.PacketHandler;
+import logisticspipes.network.packets.crafting.PatternPipeSatelliteAssignmentPacket;
 import logisticspipes.network.packets.gui.PatternCraftingPipeCancel;
 import logisticspipes.network.packets.gui.PatternCraftingPipeMode;
+import logisticspipes.network.packets.gui.PatternPipeSelectPacket;
+import logisticspipes.network.packets.gui.PatternPipeSlotActionPacket;
+import logisticspipes.network.packets.gui.PatternSlotActionPacket;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.renderer.PatternItemRenderer;
-import logisticspipes.utils.gui.DummyContainer;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
+import logisticspipes.utils.string.StringUtils;
 
 public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
 
     private static final int MODE_BUTTON = 0;
-    private static final int CANCEL_BUTTON_BASE = 10;
+    private static final int CLEAR_BUTTON = 1;
+    private static final int MULTIPLY_BUTTON = 2;
+    private static final int CANCEL_BUTTON = 3;
+    private static final int TAB_BUTTON_BASE = 100;
+
+    private static final int TAB_LEFT = 32;
+    private static final int TAB_TOP = 20;
+    private static final int TAB_SELECT_TOP = 40;
+    private static final int INGREDIENT_LEFT = 26;
+    private static final int INGREDIENT_TOP = 56;
+    private static final int OUTPUT_LEFT = 116;
+    private static final int OUTPUT_TOP = 74;
+    private static final int PLAYER_INV_LEFT = 32;
+    private static final int PLAYER_INV_TOP = 138;
+    private static final int SLOT_SIZE = 18;
+    private static final int SATELLITE_ICON_SIZE = 7;
+    private static final int BUFFER_BLUE = 0xff55aaff;
 
     private final PipeItemsPatternCraftingLogistics pipe;
+    private final PipePatternInventory editedPatternInventory;
+    private final List<PatternSatelliteInfo> satellites;
+    private int selectedPatternSlot;
+    private boolean watching;
 
-    public PatternCraftingPipeGui(EntityPlayer player, PipeItemsPatternCraftingLogistics pipe) {
-        super(176, 166, 0, 0);
+    public PatternCraftingPipeGui(EntityPlayer player, PipeItemsPatternCraftingLogistics pipe, int selectedPatternSlot,
+            List<PatternSatelliteInfo> satellites) {
+        super(238, 220, 0, 0);
         this.pipe = pipe;
-        DummyContainer dummy = new DummyContainer(player.inventory, pipe.getPatternModule().getPatternInventory());
+        this.selectedPatternSlot = Math.max(0, Math.min(8, selectedPatternSlot));
+        this.satellites = satellites == null ? Collections.emptyList() : new ArrayList<>(satellites);
+        editedPatternInventory = new PipePatternInventory(pipe, this.selectedPatternSlot);
+        PatternContainer dummy = new PatternContainer(player.inventory, editedPatternInventory);
+        PatternGuiProvider.addPatternSlots(dummy, INGREDIENT_LEFT + 1, INGREDIENT_TOP + 1, OUTPUT_LEFT + 1,
+                OUTPUT_TOP + 1);
         PatternCraftingPipeGuiProvider.addPatternSlots(dummy, pipe);
-        dummy.addNormalSlotsForPlayerInventory(8, 84);
+        dummy.addNormalSlotsForPlayerInventory(PLAYER_INV_LEFT, PLAYER_INV_TOP);
         inventorySlots = dummy;
     }
 
@@ -35,19 +72,35 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     public void initGui() {
         super.initGui();
         buttonList.clear();
-        GuiButton modeButton = new SmallGuiButton(MODE_BUTTON, guiLeft + 8, guiTop + 66, 70, 12, modeLabel());
+        GuiButton modeButton = new SmallGuiButton(MODE_BUTTON, guiLeft + 166, guiTop + 54, 62, 12, modeLabel());
         modeButton.enabled = !pipe.isBlockingModeFixed();
         buttonList.add(modeButton);
+        buttonList.add(new SmallGuiButton(CLEAR_BUTTON, guiLeft + 166, guiTop + 70, 62, 12, "Clear"));
+        buttonList.add(new SmallGuiButton(MULTIPLY_BUTTON, guiLeft + 166, guiTop + 86, 62, 12, "2x"));
+        buttonList.add(new SmallGuiButton(CANCEL_BUTTON, guiLeft + 166, guiTop + 102, 62, 12, "Cancel"));
         for (int slot = 0; slot < 9; slot++) {
             buttonList.add(new SmallGuiButton(
-                    CANCEL_BUTTON_BASE + slot,
-                    guiLeft + 8 + slot * 18,
-                    guiTop + 50,
+                    TAB_BUTTON_BASE + slot,
+                    guiLeft + TAB_LEFT + slot * SLOT_SIZE,
+                    guiTop + TAB_SELECT_TOP,
                     16,
-                    10,
-                    "x"));
+                    8,
+                    Integer.toString(slot + 1)));
         }
-        updateCancelButtons();
+        updateButtons();
+        if (!watching) {
+            pipe.startWatching();
+            watching = true;
+        }
+    }
+
+    @Override
+    public void onGuiClosed() {
+        if (watching) {
+            pipe.stopWatching();
+            watching = false;
+        }
+        super.onGuiClosed();
     }
 
     @Override
@@ -62,23 +115,70 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternCraftingPipeMode.class).setMode(next.ordinal())
                             .setTilePos(pipe.container));
-        } else if (button.id >= CANCEL_BUTTON_BASE && button.id < CANCEL_BUTTON_BASE + 9) {
-            int slot = button.id - CANCEL_BUTTON_BASE;
+        } else if (button.id == CLEAR_BUTTON) {
+            AbstractPattern pattern = Pattern.fromStack(editedPatternInventory.getPatternStack());
+            pattern.clear();
+            sendPatternAction(PatternSlotActionPacket.Action.CLEAR);
+        } else if (button.id == MULTIPLY_BUTTON) {
+            AbstractPattern pattern = Pattern.fromStack(editedPatternInventory.getPatternStack());
+            pattern.multiply(2);
+            sendPatternAction(PatternSlotActionPacket.Action.MULTIPLY_TWO);
+        } else if (button.id == CANCEL_BUTTON) {
             MainProxy.sendPacketToServer(
-                    PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(slot)
+                    PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(selectedPatternSlot)
                             .setTilePos(pipe.container));
+        } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {
+            selectPatternSlot(button.id - TAB_BUTTON_BASE);
         }
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        updateCancelButtons();
+        updateButtons();
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
-        GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 84);
+        GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + PLAYER_INV_LEFT, guiTop + PLAYER_INV_TOP);
         for (int i = 0; i < 9; i++) {
-            GuiGraphics.drawSlotBackground(mc, guiLeft + 7 + i * 18, guiTop + 27);
+            GuiGraphics.drawSlotBackground(mc, guiLeft + TAB_LEFT + i * SLOT_SIZE - 1, guiTop + TAB_TOP - 1);
         }
+        drawSelectedTabFrame();
+        for (int y = 0; y < 3; y++) {
+            for (int x = 0; x < 3; x++) {
+                GuiGraphics.drawSlotBackground(mc, guiLeft + INGREDIENT_LEFT + x * SLOT_SIZE,
+                        guiTop + INGREDIENT_TOP + y * SLOT_SIZE);
+            }
+        }
+        for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
+            GuiGraphics.drawSlotBackground(mc, guiLeft + OUTPUT_LEFT + i * SLOT_SIZE, guiTop + OUTPUT_TOP);
+        }
+        drawSatelliteIcons();
         mc.fontRenderer.drawString("Pattern Crafting Pipe", guiLeft + 8, guiTop + 6, 0x404040);
+        drawStatusPanel();
+    }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        super.drawScreen(mouseX, mouseY, partialTicks);
+        if (!hasSubGui()) {
+            drawHudAmounts();
+            drawSatelliteTooltip(mouseX, mouseY);
+        }
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        if (!hasSubGui()) {
+            int satelliteSlot = getSatelliteHotspotSlot(mouseX, mouseY);
+            if (mouseButton == 0 && satelliteSlot >= 0) {
+                openSatelliteSelector(satelliteSlot);
+                return;
+            }
+            int tabSlot = getTabSlot(mouseX, mouseY);
+            if (mouseButton == 0 && tabSlot >= 0 && mc.thePlayer.inventory.getItemStack() == null) {
+                selectPatternSlot(tabSlot);
+                return;
+            }
+        }
+        super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
     @Override
@@ -90,6 +190,179 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         } finally {
             PatternItemRenderer.clearForceResultRender();
         }
+    }
+
+    private void selectPatternSlot(int slot) {
+        selectedPatternSlot = Math.max(0, Math.min(8, slot));
+        editedPatternInventory.setPatternSlot(selectedPatternSlot);
+        if (inventorySlots instanceof PatternContainer) {
+            ((PatternContainer) inventorySlots).setSelectedPatternSlot(selectedPatternSlot);
+        }
+        MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(PatternPipeSelectPacket.class).setInteger(selectedPatternSlot)
+                        .setTilePos(pipe.container));
+    }
+
+    private void openSatelliteSelector(int inputSlot) {
+        AbstractPattern pattern = Pattern.fromStack(editedPatternInventory.getPatternStack());
+        setSubGui(
+                new PatternSatelliteSelectorGui(
+                        inputSlot,
+                        pattern.getSatelliteIdForInputSlot(inputSlot),
+                        satellites,
+                        (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId,
+                                satelliteUuid)));
+    }
+
+    private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid) {
+        Pattern.fromStack(editedPatternInventory.getPatternStack())
+                .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        PatternPipeSatelliteAssignmentPacket packet = PacketHandler.getPacket(PatternPipeSatelliteAssignmentPacket.class);
+        packet.setTilePos(pipe.container);
+        packet.setPatternSlot(selectedPatternSlot);
+        packet.setInputSlot(inputSlot);
+        packet.setSatelliteId(satelliteId);
+        packet.setSatelliteUuid(satelliteUuid);
+        MainProxy.sendPacketToServer(packet);
+    }
+
+    private void sendPatternAction(PatternSlotActionPacket.Action action) {
+        PatternPipeSlotActionPacket packet = PacketHandler.getPacket(PatternPipeSlotActionPacket.class);
+        packet.setTilePos(pipe.container);
+        packet.setPatternSlot(selectedPatternSlot);
+        packet.setAction(action.ordinal());
+        MainProxy.sendPacketToServer(packet);
+    }
+
+    private void drawSelectedTabFrame() {
+        int x = guiLeft + TAB_LEFT + selectedPatternSlot * SLOT_SIZE - 2;
+        int y = guiTop + TAB_TOP - 2;
+        Gui.drawRect(x, y, x + 20, y + 2, 0xff55aaff);
+        Gui.drawRect(x, y + 19, x + 20, y + 21, 0xff55aaff);
+        Gui.drawRect(x, y, x + 2, y + 21, 0xff55aaff);
+        Gui.drawRect(x + 18, y, x + 20, y + 21, 0xff55aaff);
+    }
+
+    private void drawStatusPanel() {
+        PatternCraftingHudState.PatternInfo info = getSelectedPatternInfo();
+        String status = info == null ? "Empty" : info.getStatus();
+        mc.fontRenderer.drawString("Mode: " + modeLabel(), guiLeft + 166, guiTop + 122, 0x404040);
+        List<String> lines = mc.fontRenderer.listFormattedStringToWidth(status == null ? "" : status, 62);
+        for (int i = 0; i < Math.min(3, lines.size()); i++) {
+            mc.fontRenderer.drawString(lines.get(i), guiLeft + 166, guiTop + 134 + i * 9, 0x404040);
+        }
+    }
+
+    private void drawHudAmounts() {
+        PatternCraftingHudState.PatternInfo info = getSelectedPatternInfo();
+        if (info == null) {
+            return;
+        }
+        for (PatternCraftingHudState.IngredientInfo ingredient : info.getIngredients()) {
+            if (ingredient.getBufferedAmount() > 0 && ingredient.getSlot() >= 0) {
+                int x = guiLeft + INGREDIENT_LEFT + (ingredient.getSlot() % 3) * SLOT_SIZE;
+                int y = guiTop + INGREDIENT_TOP + (ingredient.getSlot() / 3) * SLOT_SIZE;
+                drawAmount(ingredient.getBufferedAmount(), x, y);
+            }
+        }
+        for (PatternCraftingHudState.OutputInfo output : info.getOutputs()) {
+            if (output.getRequestedAmount() > 0 && output.getSlot() >= 0) {
+                int x = guiLeft + OUTPUT_LEFT + output.getSlot() * SLOT_SIZE;
+                int y = guiTop + OUTPUT_TOP;
+                drawAmount(output.getRequestedAmount(), x, y);
+            }
+        }
+    }
+
+    private void drawAmount(int amount, int x, int y) {
+        String amountString = StringUtils.getFormatedStackSize(amount, true);
+        mc.fontRenderer.drawStringWithShadow(
+                amountString,
+                x + 17 - mc.fontRenderer.getStringWidth(amountString),
+                y - 2,
+                BUFFER_BLUE);
+    }
+
+    private PatternCraftingHudState.PatternInfo getSelectedPatternInfo() {
+        for (PatternCraftingHudState.PatternInfo info : pipe.getHudState().getPatterns()) {
+            if (info.getSlot() == selectedPatternSlot) {
+                return info;
+            }
+        }
+        return null;
+    }
+
+    private void drawSatelliteIcons() {
+        AbstractPattern pattern = Pattern.fromStack(editedPatternInventory.getPatternStack());
+        for (int inputSlot = 0; inputSlot < Pattern.INGREDIENT_SLOTS; inputSlot++) {
+            int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
+            String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
+            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
+            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+            boolean assigned = satelliteId > 0 || !satelliteUuid.isEmpty();
+            Gui.drawRect(x, y, x + SATELLITE_ICON_SIZE, y + SATELLITE_ICON_SIZE,
+                    assigned ? 0xff2b6ee8 : 0xff777777);
+            mc.fontRenderer.drawString(assigned ? "S" : "+", x + 1, y, 0xffffff);
+        }
+    }
+
+    private void drawSatelliteTooltip(int mouseX, int mouseY) {
+        int inputSlot = getSatelliteHotspotSlot(mouseX, mouseY);
+        if (inputSlot < 0) {
+            return;
+        }
+        AbstractPattern pattern = Pattern.fromStack(editedPatternInventory.getPatternStack());
+        int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
+        String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
+        List<String> tooltip = new ArrayList<>();
+        if (satelliteId <= 0 && satelliteUuid.isEmpty()) {
+            tooltip.add("Local inventory");
+        } else {
+            PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid);
+            tooltip.add("Pattern satellite " + (satellite == null ? "#" + satelliteId : satellite.displayName()));
+            if (satellite != null) {
+                tooltip.add("Dim " + satellite.dimension() + " at " + satellite.x() + ", " + satellite.y() + ", "
+                        + satellite.z());
+                tooltip.add(satellite.distance() >= 0 ? satellite.distance() + "m away" : "Other dimension");
+                if (satellite.favorite()) {
+                    tooltip.add("Stored on memory chip");
+                }
+            }
+        }
+        GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
+    }
+
+    private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid) {
+        for (PatternSatelliteInfo satellite : satellites) {
+            if ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
+                    || (satelliteUuid.isEmpty() && satellite.id() == satelliteId)) {
+                return satellite;
+            }
+        }
+        return null;
+    }
+
+    private int getSatelliteHotspotSlot(int mouseX, int mouseY) {
+        for (int inputSlot = 0; inputSlot < Pattern.INGREDIENT_SLOTS; inputSlot++) {
+            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
+            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+            if (mouseX >= x && mouseX < x + SATELLITE_ICON_SIZE
+                    && mouseY >= y && mouseY < y + SATELLITE_ICON_SIZE) {
+                return inputSlot;
+            }
+        }
+        return -1;
+    }
+
+    private int getTabSlot(int mouseX, int mouseY) {
+        for (int slot = 0; slot < 9; slot++) {
+            int x = guiLeft + TAB_LEFT + slot * SLOT_SIZE - 1;
+            int y = guiTop + TAB_TOP - 1;
+            if (mouseX >= x && mouseX < x + SLOT_SIZE && mouseY >= y && mouseY < y + SLOT_SIZE) {
+                return slot;
+            }
+        }
+        return -1;
     }
 
     private String modeLabel() {
@@ -104,17 +377,22 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         }
     }
 
-    private void updateCancelButtons() {
+    private void updateButtons() {
+        ItemStack pattern = editedPatternInventory.getPatternStack();
         for (Object buttonObject : buttonList) {
             if (!(buttonObject instanceof GuiButton)) {
                 continue;
             }
             GuiButton button = (GuiButton) buttonObject;
-            if (button.id < CANCEL_BUTTON_BASE || button.id >= CANCEL_BUTTON_BASE + 9) {
-                continue;
+            if (button.id == MODE_BUTTON) {
+                button.displayString = modeLabel();
+                button.enabled = !pipe.isBlockingModeFixed();
+            } else if (button.id == CLEAR_BUTTON || button.id == MULTIPLY_BUTTON || button.id == CANCEL_BUTTON) {
+                button.enabled = pattern != null;
+            } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {
+                int slot = button.id - TAB_BUTTON_BASE;
+                button.enabled = slot != selectedPatternSlot;
             }
-            int slot = button.id - CANCEL_BUTTON_BASE;
-            button.enabled = pipe.getPatternModule().getPatternStack(slot) != null;
         }
     }
 }

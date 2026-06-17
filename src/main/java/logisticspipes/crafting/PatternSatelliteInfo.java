@@ -3,27 +3,18 @@ package logisticspipes.crafting;
 import java.io.IOException;
 import java.util.Locale;
 
+import com.github.bsideup.jabel.Desugar;
+
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 
-public class PatternSatelliteInfo {
+@Desugar
+public record PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite,
+        String uuid, String displayName) {
 
-    private final int id;
-    private final int x;
-    private final int y;
-    private final int z;
-    private final int dimension;
-    private final int distance;
-    private final boolean favorite;
-
-    public PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite) {
-        this.id = id;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.dimension = dimension;
-        this.distance = distance;
-        this.favorite = favorite;
+    public PatternSatelliteInfo {
+        uuid = uuid == null ? "" : uuid;
+        displayName = displayName == null || displayName.trim().isEmpty() ? Integer.toString(id) : displayName.trim();
     }
 
     public int getId() {
@@ -54,10 +45,19 @@ public class PatternSatelliteInfo {
         return favorite;
     }
 
+    public String getUuid() {
+        return uuid;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
     public String getSearchText() {
-        return ("#" + id + " s" + id + " satellite " + id + " d" + dimension + " dim " + dimension
-                + " " + x + " " + y + " " + z + " " + x + "," + y + "," + z
-                + (favorite ? " favorite chip memory" : "")).toLowerCase(Locale.ROOT);
+        return (displayName + " #" + id + " s" + id + " satellite " + id + " " + uuid + " d" + dimension
+            + " dim " + dimension
+            + " " + x + " " + y + " " + z + " " + x + "," + y + "," + z
+            + (favorite ? " favorite chip memory" : "")).toLowerCase(Locale.ROOT);
     }
 
     public void writeData(LPDataOutputStream data) throws IOException {
@@ -68,16 +68,20 @@ public class PatternSatelliteInfo {
         data.writeInt(dimension);
         data.writeInt(distance);
         data.writeBoolean(favorite);
+        data.writeUTF(uuid);
+        data.writeUTF(displayName);
     }
 
     public static PatternSatelliteInfo readData(LPDataInputStream data) throws IOException {
         return new PatternSatelliteInfo(
-                data.readInt(),
-                data.readInt(),
-                data.readInt(),
-                data.readInt(),
-                data.readInt(),
-                data.readInt(),
-                data.readBoolean());
+            data.readInt(),
+            data.readInt(),
+            data.readInt(),
+            data.readInt(),
+            data.readInt(),
+            data.readInt(),
+            data.readBoolean(),
+            data.readUTF(),
+            data.readUTF());
     }
 }

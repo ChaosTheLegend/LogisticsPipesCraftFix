@@ -20,6 +20,13 @@ public class PatternContainer extends DummyContainer {
         super(playerInventory, dummyInventory);
     }
 
+    public void setSelectedPatternSlot(int patternSlot) {
+        if (_dummyInventory instanceof PipePatternInventory) {
+            ((PipePatternInventory) _dummyInventory).setPatternSlot(patternSlot);
+            detectAndSendChanges();
+        }
+    }
+
     @Override
     public void handleDummyClick(Slot slot, int slotId, ItemStack currentlyEquippedStack, int mouseButton, int isShift,
             EntityPlayer entityplayer) {

@@ -16,6 +16,7 @@ public abstract class AbstractPattern {
 
     private static final String ITEMS_TAG = "patternItems";
     private static final String SATELLITE_TARGETS_TAG = "patternSatelliteTargets";
+    private static final String SATELLITE_TARGET_UUIDS_TAG = "patternSatelliteTargetUuids";
     private static final String CRAFTING_PATTERN_TAG = "patternCraftingType";
 
     private final ItemStack patternStack;
@@ -135,7 +136,19 @@ public abstract class AbstractPattern {
         return slot < targets.length ? Math.max(0, targets[slot]) : 0;
     }
 
+    public String getSatelliteUuidForInputSlot(int slot) {
+        if (patternStack == null || slot < 0 || slot >= getIngredientSlotCount() || !patternStack.hasTagCompound()) {
+            return "";
+        }
+        NBTTagCompound targets = patternStack.getTagCompound().getCompoundTag(SATELLITE_TARGET_UUIDS_TAG);
+        return targets.getString(Integer.toString(slot));
+    }
+
     public void setSatelliteIdForInputSlot(int slot, int satelliteId) {
+        setSatelliteTargetForInputSlot(slot, satelliteId, "");
+    }
+
+    public void setSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid) {
         if (patternStack == null || slot < 0 || slot >= getIngredientSlotCount()) {
             return;
         }
@@ -145,6 +158,13 @@ public abstract class AbstractPattern {
         System.arraycopy(existing, 0, targets, 0, Math.min(existing.length, targets.length));
         targets[slot] = Math.max(0, satelliteId);
         root.setIntArray(SATELLITE_TARGETS_TAG, targets);
+        NBTTagCompound uuidTargets = root.getCompoundTag(SATELLITE_TARGET_UUIDS_TAG);
+        if (satelliteUuid == null || satelliteUuid.isEmpty()) {
+            uuidTargets.removeTag(Integer.toString(slot));
+        } else {
+            uuidTargets.setString(Integer.toString(slot), satelliteUuid);
+        }
+        root.setTag(SATELLITE_TARGET_UUIDS_TAG, uuidTargets);
     }
 
     public boolean isCraftingPattern() {

@@ -12,7 +12,9 @@ import java.util.TreeSet;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.ChatComponentTranslation;
@@ -87,6 +89,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     }
 
     private static final String LINKED_PATTERN_SATELLITES_TAG = "linkedPatternSatelliteIds";
+    private static final String LINKED_PATTERN_SATELLITE_UUIDS_TAG = "linkedPatternSatelliteUuids";
 
     private final ModuleItemCrafting module;
     private final LogisticsFluidOrderManager fluidOrderManager;
@@ -99,6 +102,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     private final HUDPatternCrafting HUD = new HUDPatternCrafting(this);
     private boolean doContentUpdate = true;
     private final Set<Integer> linkedPatternSatelliteIds = new TreeSet<>();
+    private final Set<String> linkedPatternSatelliteUuids = new TreeSet<>();
 
     public PipeItemsPatternCraftingLogistics(Item item) {
         super(new PipeFluidTransportLogistics() {
@@ -154,12 +158,24 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                 && entityplayer.getCurrentEquippedItem().getItem() == LogisticsPipes.LogisticsMemoryChip) {
             if (MainProxy.isServer(entityplayer.worldObj)) {
                 if (settings == null || settings.openGui) {
-                    int added = addLinkedPatternSatelliteIds(
-                            ItemMemoryChip.getPatternSatelliteIds(entityplayer.getCurrentEquippedItem()));
-                    entityplayer.addChatComponentMessage(
-                            new ChatComponentText(
-                                    added == 0 ? "No new pattern satellites linked"
-                                            : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
+                    ItemMemoryChip.PatternSatelliteMode mode = ItemMemoryChip
+                            .getPatternSatelliteMode(entityplayer.getCurrentEquippedItem());
+                    if (mode == ItemMemoryChip.PatternSatelliteMode.APPLY_LAST_TO_RECIPE) {
+                        int changed = applyLastMemorySatelliteToRecipe(entityplayer.getCurrentEquippedItem());
+                        entityplayer.addChatComponentMessage(
+                                new ChatComponentText(
+                                        changed == 0 ? "No pattern ingredients changed"
+                                                : "Assigned " + changed + " ingredient slot"
+                                                        + (changed == 1 ? "" : "s") + " to the last satellite"));
+                    } else {
+                        int added = addLinkedPatternSatellites(
+                                ItemMemoryChip.getPatternSatellites(entityplayer.getCurrentEquippedItem()));
+                        entityplayer.addChatComponentMessage(
+                                new ChatComponentText(
+                                        added == 0 ? "No new pattern satellites linked"
+                                                : "Linked " + added + " pattern satellite"
+                                                        + (added == 1 ? "" : "s")));
+                    }
                 } else {
                     entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
                 }
@@ -189,6 +205,13 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return linkedPatternSatelliteIds.contains(satelliteId);
     }
 
+    public boolean isPatternSatelliteLinked(String satelliteUuid, int satelliteId) {
+        if (satelliteUuid != null && !satelliteUuid.isEmpty() && linkedPatternSatelliteUuids.contains(satelliteUuid)) {
+            return true;
+        }
+        return satelliteId > 0 && isPatternSatelliteLinked(satelliteId);
+    }
+
     public PipeItemsPatternSatelliteLogistics getLinkedPatternSatellite(int satelliteId) {
         if (!isPatternSatelliteLinked(satelliteId)) {
             return null;
@@ -196,17 +219,30 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return PipeItemsPatternSatelliteLogistics.findById(satelliteId);
     }
 
+    public PipeItemsPatternSatelliteLogistics getLinkedPatternSatellite(String satelliteUuid, int satelliteId) {
+        if (satelliteUuid != null && !satelliteUuid.isEmpty() && linkedPatternSatelliteUuids.contains(satelliteUuid)) {
+            PipeItemsPatternSatelliteLogistics satellite = PipeItemsPatternSatelliteLogistics.findByUuid(satelliteUuid);
+            if (satellite != null) {
+                return satellite;
+            }
+        }
+        return getLinkedPatternSatellite(satelliteId);
+    }
+
     public Collection<Integer> getLinkedPatternSatelliteIds() {
         return new ArrayList<>(linkedPatternSatelliteIds);
     }
 
-    private int addLinkedPatternSatelliteIds(int[] satelliteIds) {
+    private int addLinkedPatternSatellites(List<ItemMemoryChip.StoredPatternSatellite> satellites) {
         int added = 0;
-        if (satelliteIds == null) {
+        if (satellites == null) {
             return added;
         }
-        for (int satelliteId : satelliteIds) {
-            if (satelliteId > 0 && linkedPatternSatelliteIds.add(satelliteId)) {
+        for (ItemMemoryChip.StoredPatternSatellite satellite : satellites) {
+            if (satellite.id() > 0 && linkedPatternSatelliteIds.add(satellite.id())) {
+                added++;
+            }
+            if (!satellite.uuid().isEmpty() && linkedPatternSatelliteUuids.add(satellite.uuid())) {
                 added++;
             }
         }
@@ -214,6 +250,28 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             refreshRender(false);
         }
         return added;
+    }
+
+    private int applyLastMemorySatelliteToRecipe(ItemStack memoryChip) {
+        int satelliteId = ItemMemoryChip.getLastPatternSatelliteId(memoryChip);
+        String satelliteUuid = ItemMemoryChip.getLastPatternSatelliteUuid(memoryChip);
+        if (satelliteId <= 0 && (satelliteUuid == null || satelliteUuid.isEmpty())) {
+            return 0;
+        }
+        List<ItemMemoryChip.StoredPatternSatellite> satellites = new ArrayList<>();
+        satellites.add(new ItemMemoryChip.StoredPatternSatellite(
+                satelliteId,
+                satelliteUuid,
+                ItemMemoryChip.getLastPatternSatelliteName(memoryChip)));
+        addLinkedPatternSatellites(satellites);
+        int changed = module.assignSatelliteToAllPatternIngredients(satelliteId, satelliteUuid);
+        if (changed > 0) {
+            doContentUpdate = true;
+            if (container != null) {
+                container.markDirty();
+            }
+        }
+        return changed;
     }
 
     public void refreshSelectedInventoryConnection() {
@@ -466,6 +524,13 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             satelliteIds[index++] = satelliteId;
         }
         nbttagcompound.setIntArray(LINKED_PATTERN_SATELLITES_TAG, satelliteIds);
+        NBTTagList satelliteUuids = new NBTTagList();
+        for (String satelliteUuid : linkedPatternSatelliteUuids) {
+            NBTTagCompound uuidTag = new NBTTagCompound();
+            uuidTag.setString("uuid", satelliteUuid);
+            satelliteUuids.appendTag(uuidTag);
+        }
+        nbttagcompound.setTag(LINKED_PATTERN_SATELLITE_UUIDS_TAG, satelliteUuids);
     }
 
     @Override
@@ -476,6 +541,14 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         for (int satelliteId : nbttagcompound.getIntArray(LINKED_PATTERN_SATELLITES_TAG)) {
             if (satelliteId > 0) {
                 linkedPatternSatelliteIds.add(satelliteId);
+            }
+        }
+        linkedPatternSatelliteUuids.clear();
+        NBTTagList satelliteUuids = nbttagcompound.getTagList(LINKED_PATTERN_SATELLITE_UUIDS_TAG, 10);
+        for (int i = 0; i < satelliteUuids.tagCount(); i++) {
+            String satelliteUuid = satelliteUuids.getCompoundTagAt(i).getString("uuid");
+            if (!satelliteUuid.isEmpty()) {
+                linkedPatternSatelliteUuids.add(satelliteUuid);
             }
         }
     }

@@ -174,8 +174,9 @@ public class HUDPatternCrafting extends BasicHUDGui {
     private void renderIngredients(Minecraft mc, ItemStackRenderer renderer, List<IngredientInfo> ingredients) {
         for (int i = 0; i < Math.min(ingredients.size(), 9); i++) {
             IngredientInfo ingredient = ingredients.get(i);
-            int x = INGREDIENT_LEFT + (i % 3) * SLOT_SIZE;
-            int y = INGREDIENT_TOP + (i / 3) * SLOT_SIZE;
+            int slot = ingredient.getSlot() >= 0 ? ingredient.getSlot() : i;
+            int x = INGREDIENT_LEFT + (slot % 3) * SLOT_SIZE;
+            int y = INGREDIENT_TOP + (slot / 3) * SLOT_SIZE;
             renderStack(renderer, ingredient.getStack(), x, y);
             if (ingredient.getBufferedAmount() > 0) {
                 drawHudAmount(mc, ingredient.getBufferedAmount(), x, y);
@@ -193,7 +194,10 @@ public class HUDPatternCrafting extends BasicHUDGui {
         int outputCount = Math.min(pattern.getOutputs().size(), 3);
         int firstY = getFirstOutputY(outputCount);
         for (int i = 0; i < outputCount; i++) {
-            renderSlotBackground(mc, OUTPUT_LEFT, firstY + i * SLOT_SIZE);
+            OutputInfo output = pattern.getOutputs().get(i);
+            int slot = output.getSlot() >= 0 ? output.getSlot() : i;
+            int y = output.getSlot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + i * SLOT_SIZE;
+            renderSlotBackground(mc, OUTPUT_LEFT, y);
         }
     }
 
@@ -206,10 +210,12 @@ public class HUDPatternCrafting extends BasicHUDGui {
         int firstY = getFirstOutputY(outputCount);
         for (int i = 0; i < outputCount; i++) {
             OutputInfo output = outputs.get(i);
-            int y = firstY + i * SLOT_SIZE;
-            renderStack(renderer, output.getStack(), OUTPUT_LEFT, y);
+            int slot = output.getSlot() >= 0 ? output.getSlot() : i;
+            int x = OUTPUT_LEFT;
+            int y = output.getSlot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + slot * SLOT_SIZE;
+            renderStack(renderer, output.getStack(), x, y);
             if (output.getRequestedAmount() > 0) {
-                drawHudAmount(mc, output.getRequestedAmount(), OUTPUT_LEFT, y);
+                drawHudAmount(mc, output.getRequestedAmount(), x, y);
             }
         }
     }

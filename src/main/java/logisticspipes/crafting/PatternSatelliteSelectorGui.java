@@ -19,7 +19,7 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
     public interface SelectionHandler {
 
-        void selectSatellite(int satelliteId);
+        void selectSatellite(int satelliteId, String satelliteUuid);
     }
 
     private static final int PREVIOUS_PAGE_BUTTON = 0;
@@ -113,7 +113,8 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
                 List<Row> rows = getFilteredRows();
                 int index = page * VISIBLE_ROWS + rowIndex;
                 if (index < rows.size()) {
-                    handler.selectSatellite(rows.get(index).satelliteId);
+                    Row row = rows.get(index);
+                    handler.selectSatellite(row.satelliteId, row.satelliteUuid);
                     exitGui();
                     return;
                 }
@@ -165,7 +166,8 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
             return;
         }
         int index = Math.min(page * VISIBLE_ROWS, rows.size() - 1);
-        handler.selectSatellite(rows.get(index).satelliteId);
+        Row row = rows.get(index);
+        handler.selectSatellite(row.satelliteId, row.satelliteUuid);
         exitGui();
     }
 
@@ -205,9 +207,11 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     private List<Row> getFilteredRows() {
         String query = searchField == null ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
         List<Row> rows = new ArrayList<>();
-        addRowIfMatching(rows, new Row(0, "Local inventory", "local none no satellite 0"), query);
+        addRowIfMatching(rows, new Row(0, "", "Local inventory", "local none no satellite 0"), query);
         for (PatternSatelliteInfo satellite : satellites) {
-            addRowIfMatching(rows, new Row(satellite.getId(), formatSatellite(satellite), satellite.getSearchText()),
+            addRowIfMatching(
+                    rows,
+                    new Row(satellite.id(), satellite.uuid(), formatSatellite(satellite), satellite.getSearchText()),
                     query);
         }
         return rows;
@@ -230,20 +234,22 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     }
 
     private String formatSatellite(PatternSatelliteInfo satellite) {
-        String prefix = satellite.isFavorite() ? "* " : "";
-        String distance = satellite.getDistance() >= 0 ? satellite.getDistance() + "m" : "other dim";
-        return prefix + "#" + satellite.getId() + " " + distance + " D" + satellite.getDimension() + " ("
-                + satellite.getX() + "," + satellite.getY() + "," + satellite.getZ() + ")";
+        String prefix = satellite.favorite() ? "* " : "";
+        String distance = satellite.distance() >= 0 ? satellite.distance() + "m" : "other dim";
+        return prefix + satellite.displayName() + " " + distance + " D" + satellite.dimension() + " ("
+                + satellite.x() + "," + satellite.y() + "," + satellite.z() + ")";
     }
 
     private static class Row {
 
         private final int satelliteId;
+        private final String satelliteUuid;
         private final String display;
         private final String search;
 
-        private Row(int satelliteId, String display, String search) {
+        private Row(int satelliteId, String satelliteUuid, String display, String search) {
             this.satelliteId = satelliteId;
+            this.satelliteUuid = satelliteUuid;
             this.display = display;
             this.search = search;
         }

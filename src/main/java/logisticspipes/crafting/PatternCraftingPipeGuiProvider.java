@@ -1,8 +1,11 @@
 package logisticspipes.crafting;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
 import logisticspipes.LogisticsPipes;
 import logisticspipes.network.LPDataInputStream;
@@ -16,6 +19,9 @@ import logisticspipes.utils.gui.DummyContainer;
 public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider {
 
     private int blockingMode;
+    private int selectedPatternSlot;
+    private List<PatternSatelliteInfo> satellites = new ArrayList<>();
+    private PatternCraftingHudState hudState = PatternCraftingHudState.empty();
 
     public PatternCraftingPipeGuiProvider(int id) {
         super(id);
@@ -35,7 +41,8 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
         PipeItemsPatternCraftingLogistics.BlockingMode[] values = PipeItemsPatternCraftingLogistics.BlockingMode
                 .values();
         pipe.setBlockingMode(values[Math.max(0, Math.min(values.length - 1, blockingMode))]);
-        return new PatternCraftingPipeGui(player, pipe);
+        pipe.setHudState(hudState);
+        return new PatternCraftingPipeGui(player, pipe, selectedPatternSlot, satellites);
     }
 
     @Override
@@ -44,9 +51,15 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
         if (pipe == null) {
             return null;
         }
-        DummyContainer dummy = new DummyContainer(player.inventory, pipe.getPatternModule().getPatternInventory());
+        selectedPatternSlot = findInitialPatternSlot(pipe);
+        satellites = PipeItemsPatternSatelliteLogistics.getKnownSatellitesFor(player);
+        hudState = pipe.getPatternModule().getHudState();
+        PatternContainer dummy = new PatternContainer(
+                player.inventory,
+                new PipePatternInventory(pipe, selectedPatternSlot));
+        PatternGuiProvider.addPatternSlots(dummy, 27, 57, 117, 75);
         addPatternSlots(dummy, pipe);
-        dummy.addNormalSlotsForPlayerInventory(8, 84);
+        dummy.addNormalSlotsForPlayerInventory(32, 138);
         return dummy;
     }
 
@@ -55,10 +68,20 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
             dummy.addRestrictedSlot(
                     i,
                     pipe.getPatternModule().getPatternInventory(),
-                    8 + i * 18,
-                    28,
+                    32 + i * 18,
+                    20,
                     stack -> stack != null && stack.getItem() == LogisticsPipes.LogisticsPattern);
         }
+    }
+
+    private int findInitialPatternSlot(PipeItemsPatternCraftingLogistics pipe) {
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack pattern = pipe.getPatternModule().getPatternItemStack(slot);
+            if (pattern != null && pattern.getItem() == LogisticsPipes.LogisticsPattern) {
+                return slot;
+            }
+        }
+        return 0;
     }
 
     private PipeItemsPatternCraftingLogistics getPatternPipe(EntityPlayer player) {
@@ -78,11 +101,17 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
     public void writeData(LPDataOutputStream data) throws IOException {
         super.writeData(data);
         data.writeInt(blockingMode);
+        data.writeInt(selectedPatternSlot);
+        data.writeList(satellites, (stream, satellite) -> satellite.writeData(stream));
+        hudState.writeData(data);
     }
 
     @Override
     public void readData(LPDataInputStream data) throws IOException {
         super.readData(data);
         blockingMode = data.readInt();
+        selectedPatternSlot = data.readInt();
+        satellites = data.readList(PatternSatelliteInfo::readData);
+        hudState = PatternCraftingHudState.readData(data);
     }
 }

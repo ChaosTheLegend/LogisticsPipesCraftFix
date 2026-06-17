@@ -57,13 +57,17 @@ public class PatternGuiProvider extends GuiProvider {
     }
 
     static void addPatternSlots(DummyContainer dummy) {
+        addPatternSlots(dummy, 26, 17, 116, 35);
+    }
+
+    static void addPatternSlots(DummyContainer dummy, int inputLeft, int inputTop, int outputLeft, int outputTop) {
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
-                dummy.addDummySlot(x + y * 3, 26 + x * 18, 17 + y * 18);
+                dummy.addDummySlot(x + y * 3, inputLeft + x * 18, inputTop + y * 18);
             }
         }
         for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
-            dummy.addDummySlot(Pattern.INGREDIENT_SLOTS + i, 116 + i * 18, 35);
+            dummy.addDummySlot(Pattern.INGREDIENT_SLOTS + i, outputLeft + i * 18, outputTop);
         }
     }
 

@@ -89,6 +89,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
     public ModuleItemCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
+        patternInventory.addListener(inventory -> {
+            if (pipe.container != null) {
+                pipe.container.markDirty();
+            }
+            pipe.listenedChanged();
+        });
         adjacentInventory = new AdjacentInventoryHandler(this, pipe);
         stagedCrafting = new PatternStagedCraftingCoordinator(
             this,
@@ -109,6 +115,40 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
     public ItemStack getPatternStack(int slot) {
         return patternHandler.getConfiguredPatternStack(slot);
+    }
+
+    public ItemStack getPatternItemStack(int slot) {
+        if (slot < 0 || slot >= patternInventory.getSizeInventory()) {
+            return null;
+        }
+        return patternInventory.getStackInSlot(slot);
+    }
+
+    public void markPatternInventoryDirty() {
+        patternInventory.markDirty();
+    }
+
+    public int assignSatelliteToAllPatternIngredients(int satelliteId, String satelliteUuid) {
+        int changed = 0;
+        for (int patternSlot = 0; patternSlot < patternInventory.getSizeInventory(); patternSlot++) {
+            ItemStack patternStack = patternInventory.getStackInSlot(patternSlot);
+            if (patternStack == null) {
+                continue;
+            }
+            AbstractPattern pattern = Pattern.fromStack(patternStack);
+            for (int inputSlot = 0; inputSlot < pattern.getIngredientSlotCount(); inputSlot++) {
+                IPatternStack ingredient = pattern.getPatternStackInSlot(inputSlot);
+                if (ingredient == null || !PatternStackHelper.isSolid(ingredient)) {
+                    continue;
+                }
+                pattern.setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+                changed++;
+            }
+        }
+        if (changed > 0) {
+            markPatternInventoryDirty();
+        }
+        return changed;
     }
 
     public PipeItemsPatternCraftingLogistics.BlockingMode getBlockingMode() {
@@ -722,21 +762,26 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             }
             AbstractPattern configuredPattern = Pattern.fromStack(pattern);
             PatternCraftingHudState.PatternInfo patternInfo = new PatternCraftingHudState.PatternInfo(slot);
-            for (IPatternStack ingredient : configuredPattern.getAggregatedInputs()) {
+            for (int inputSlot = 0; inputSlot < configuredPattern.getIngredientSlotCount(); inputSlot++) {
+                IPatternStack ingredient = configuredPattern.getPatternStackInSlot(inputSlot);
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(ingredient);
                 if (display != null) {
                     patternInfo.getIngredients()
                             .add(new PatternCraftingHudState.IngredientInfo(
                                     display,
-                                    ingredientBuffer.amount(slot, ingredient)));
+                                    ingredientBuffer.amount(slot, ingredient),
+                                    inputSlot));
                 }
             }
-            for (IPatternStack output : configuredPattern.getAggregatedOutputs()) {
+            for (int outputSlot = 0; outputSlot < configuredPattern.getResultSlotCount(); outputSlot++) {
+                IPatternStack output = configuredPattern
+                        .getPatternStackInSlot(configuredPattern.getResultSlotStart() + outputSlot);
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
                 if (display != null) {
                     patternInfo.getOutputs().add(new PatternCraftingHudState.OutputInfo(
                             display,
-                            stagedCrafting.remainingOutputAmount(slot, output)));
+                            stagedCrafting.remainingOutputAmount(slot, output),
+                            outputSlot));
                 }
             }
             patternInfo.setActive(slot == runningCraft);
@@ -1462,10 +1507,11 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             return null;
         }
         int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
-        if (satelliteId <= 0 || !pipe.isPatternSatelliteLinked(satelliteId)) {
+        String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
+        if (!pipe.isPatternSatelliteLinked(satelliteUuid, satelliteId)) {
             return null;
         }
-        return pipe.getLinkedPatternSatellite(satelliteId);
+        return pipe.getLinkedPatternSatellite(satelliteUuid, satelliteId);
     }
 
 
