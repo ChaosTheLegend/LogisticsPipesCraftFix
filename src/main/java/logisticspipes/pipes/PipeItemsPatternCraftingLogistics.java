@@ -230,21 +230,62 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return getLinkedPatternSatellite(satelliteId);
     }
 
+    /**
+     * Resolves a pattern satellite stored on a pattern input slot and remembers it as linked to this pipe.
+     * <p>
+     * Pattern items can be edited before they are inserted into a pattern crafting pipe. In that case the pattern NBT
+     * already contains the satellite UUID/id, but the pipe has not yet persisted that satellite in its own link list.
+     * Resolving through this method makes the saved pattern assignment enough to route ingredients.
+     */
+    public PipeItemsPatternSatelliteLogistics resolvePatternSatelliteTarget(String satelliteUuid, int satelliteId) {
+        PipeItemsPatternSatelliteLogistics satellite = findPatternSatellite(satelliteUuid, satelliteId);
+        if (satellite != null && getWorld() != null && MainProxy.isServer(getWorld())) {
+            linkPatternSatellite(satellite.satelliteId, satellite.getSatelliteUuid());
+        }
+        return satellite;
+    }
+
+    /**
+     * Adds one pattern satellite reference to the pipe's persisted link list.
+     *
+     * @return true when the pipe learned a new id or UUID
+     */
+    public boolean linkPatternSatellite(int satelliteId, String satelliteUuid) {
+        boolean added = false;
+        if (satelliteId > 0) {
+            added |= linkedPatternSatelliteIds.add(satelliteId);
+        }
+        if (satelliteUuid != null && !satelliteUuid.isEmpty()) {
+            added |= linkedPatternSatelliteUuids.add(satelliteUuid);
+        }
+        if (added) {
+            refreshRender(false);
+            if (container != null) {
+                container.markDirty();
+            }
+        }
+        return added;
+    }
+
+    private PipeItemsPatternSatelliteLogistics findPatternSatellite(String satelliteUuid, int satelliteId) {
+        if (satelliteUuid != null && !satelliteUuid.isEmpty()) {
+            PipeItemsPatternSatelliteLogistics satellite = PipeItemsPatternSatelliteLogistics.findByUuid(satelliteUuid);
+            if (satellite != null) {
+                return satellite;
+            }
+        }
+        return satelliteId > 0 ? PipeItemsPatternSatelliteLogistics.findById(satelliteId) : null;
+    }
+
     private int addLinkedPatternSatellites(List<ItemMemoryChip.StoredPatternSatellite> satellites) {
         int added = 0;
         if (satellites == null) {
             return added;
         }
         for (ItemMemoryChip.StoredPatternSatellite satellite : satellites) {
-            if (satellite.id() > 0 && linkedPatternSatelliteIds.add(satellite.id())) {
+            if (linkPatternSatellite(satellite.id(), satellite.uuid())) {
                 added++;
             }
-            if (!satellite.uuid().isEmpty() && linkedPatternSatelliteUuids.add(satellite.uuid())) {
-                added++;
-            }
-        }
-        if (added > 0) {
-            refreshRender(false);
         }
         return added;
     }

@@ -431,8 +431,7 @@ public final class CraftingRequestDebugManager {
             if (start.matches()) {
                 int amount = parseInt(start.group(2), 0);
                 int parentSlot = parseTargetSlot(start.group(3));
-                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot)
-                        : null;
+                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot) : null;
                 FlowCraft craft = new FlowCraft(pipeMessage.pipeKey, event.tick, start.group(1), amount, parentSlot);
                 if (parent == null) {
                     roots.add(craft);

@@ -39,6 +39,12 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
         satelliteUuid = data.readUTF();
     }
 
+    /**
+     * Stores a satellite assignment made inside the pattern pipe GUI.
+     * <p>
+     * Besides writing the assignment to the pattern item, this also links the selected satellite to the pipe so staged
+     * ingredient requests can resolve the selected pipe as their destination.
+     */
     @Override
     public void processPacket(EntityPlayer player) {
         LogisticsTileGenericPipe tile = getPipe(player.worldObj);
@@ -50,6 +56,7 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
             return;
         }
         ItemPattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        pipe.linkPatternSatellite(satelliteId, satelliteUuid);
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();

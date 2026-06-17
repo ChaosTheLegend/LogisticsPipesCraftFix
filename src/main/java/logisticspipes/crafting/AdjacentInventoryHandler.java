@@ -266,14 +266,25 @@ class AdjacentInventoryHandler {
         return true;
     }
 
+    /**
+     * Simulates inserting one stack into an inventory snapshot without changing the real adjacent inventory.
+     * <p>
+     * Existing compatible stacks are filled first, then empty slots are populated. The caller uses the result to decide
+     * how many complete pattern sets can be routed before any real items are requested.
+     */
     private boolean insertIntoSnapshot(IInventory inventory, ItemStack[] snapshot, ItemStack stack) {
+        ItemIdentifier stackIdentifier = ItemIdentifier.get(stack);
+        if (stackIdentifier == null) {
+            return false;
+        }
         int remaining = stack.stackSize;
         for (int i = 0; i < snapshot.length && remaining > 0; i++) {
             ItemStack existing = snapshot[i];
-            var itemIdentifierExisting = ItemIdentifier.get(existing);
-            var itemIdentifierStack = ItemIdentifier.get(stack);
-            if (itemIdentifierStack == null || itemIdentifierExisting == null) continue;
-            if (existing == null || !itemIdentifierExisting.equalsForCrafting(itemIdentifierStack)) {
+            if (existing == null) {
+                continue;
+            }
+            ItemIdentifier existingIdentifier = ItemIdentifier.get(existing);
+            if (existingIdentifier == null || !existingIdentifier.equalsForCrafting(stackIdentifier)) {
                 continue;
             }
             int room = Math.min(inventory.getInventoryStackLimit(), existing.getMaxStackSize()) - existing.stackSize;
@@ -386,6 +397,12 @@ class AdjacentInventoryHandler {
         return connected.orientation.getOpposite();
     }
 
+    /**
+     * Counts matching items currently held by the connected inventory.
+     * <p>
+     * Blocking mode uses this to avoid inserting more than the selected pattern still lacks while another craft is
+     * active in the adjacent target.
+     */
     private int amountOf(ItemIdentifier item) {
         AdjacentTile connected = getConnected();
         if (connected == null) {
@@ -395,9 +412,14 @@ class AdjacentInventoryHandler {
         int amount = 0;
         for (int i = 0; i < inventory.getSizeInventory(); i++) {
             ItemStack stack = inventory.getStackInSlot(i);
+            if (stack == null) {
+                continue;
+            }
             ItemIdentifier identifier = ItemIdentifier.get(stack);
-            if (identifier == null) continue;
-            if (stack != null && identifier.equalsForCrafting(item)) {
+            if (identifier == null) {
+                continue;
+            }
+            if (identifier.equalsForCrafting(item)) {
                 amount += stack.stackSize;
             }
         }

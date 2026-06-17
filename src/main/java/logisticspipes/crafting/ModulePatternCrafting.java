@@ -1309,7 +1309,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      * This mirrors item capacity but measures millibuckets in the module's pattern buffer instead of item stack counts.
      */
     private int spaceForFluid(FluidIdentifier fluid, boolean includeInTransit) {
-        //TODO include in transit
+        // TODO include in transit
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
@@ -1500,7 +1500,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     int localIngredientAmount(ItemStack pattern, ItemIdentifier item) {
         int amount = 0;
         for (IPatternStack ingredient : getLocalAggregatedIngredients(pattern)) {
-            if (PatternStackHelper.matches(ingredient, FluidIdentifier.get(item))) {
+            if (PatternStackHelper.matches(ingredient, item)) {
                 amount += ingredient.getAmount();
             }
         }
@@ -1542,10 +1542,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         }
         int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
         String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
-        if (!pipe.isPatternSatelliteLinked(satelliteUuid, satelliteId)) {
-            return null;
-        }
-        return pipe.getLinkedPatternSatellite(satelliteUuid, satelliteId);
+        return pipe.resolvePatternSatelliteTarget(satelliteUuid, satelliteId);
     }
 
     /**
