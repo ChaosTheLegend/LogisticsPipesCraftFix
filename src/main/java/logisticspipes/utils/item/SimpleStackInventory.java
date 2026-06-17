@@ -227,6 +227,7 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
                 return stack.stackSize;
             }
         }
+        return 0;
     }
 
     public int addCompressed(ItemStack stack, boolean ignoreMaxStackSize) {
