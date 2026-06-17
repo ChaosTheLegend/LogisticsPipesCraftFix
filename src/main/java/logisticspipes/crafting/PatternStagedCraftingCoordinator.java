@@ -89,7 +89,8 @@ class PatternStagedCraftingCoordinator {
         int patternSlot = resolvePatternSlot(promise);
         int resultAmountPerSet = resolveResultAmountPerSet(promise, patternSlot);
 
-        module.debug(
+        module.debugEvent(
+                "STAGED",
                 "staged craft output order=%s patternSlot=%d resultAmountPerSet=%d",
                 order == null ? "<none>" : order.getAsDisplayItem(),
                 patternSlot,
@@ -117,9 +118,19 @@ class PatternStagedCraftingCoordinator {
     void writeToNBT(NBTTagCompound tag) {
         Set<IOrderInfoProvider> savedOutputOrders = Collections
                 .newSetFromMap(new IdentityHashMap<IOrderInfoProvider, Boolean>());
-        tag.setTag(STAGED_ORDERS_TAG, writeStagedOrders(savedOutputOrders));
-        tag.setTag(STANDALONE_ITEM_ORDERS_TAG, writeStandaloneItemOrders(savedOutputOrders));
-        tag.setTag(STANDALONE_FLUID_ORDERS_TAG, writeStandaloneFluidOrders(savedOutputOrders));
+        NBTTagList stagedOrders = writeStagedOrders(savedOutputOrders);
+        NBTTagList standaloneItemOrders = writeStandaloneItemOrders(savedOutputOrders);
+        NBTTagList standaloneFluidOrders = writeStandaloneFluidOrders(savedOutputOrders);
+        tag.setTag(STAGED_ORDERS_TAG, stagedOrders);
+        tag.setTag(STANDALONE_ITEM_ORDERS_TAG, standaloneItemOrders);
+        tag.setTag(STANDALONE_FLUID_ORDERS_TAG, standaloneFluidOrders);
+        module.debugEvent(
+                "PERSIST",
+                "saved staged crafting state stagedOrders=%d standaloneItems=%d standaloneFluids=%d trackedOutputOrders=%d",
+                stagedOrders.tagCount(),
+                standaloneItemOrders.tagCount(),
+                standaloneFluidOrders.tagCount(),
+                outputOrders.size());
     }
 
     boolean restoreFromNBT(NBTTagCompound tag) {
@@ -130,6 +141,12 @@ class PatternStagedCraftingCoordinator {
                     tag.getTagList(STANDALONE_ITEM_ORDERS_TAG, TAG_COMPOUND));
             List<PatternCraftingPersistence.RestoredOrder> standaloneFluidOrders = readOrders(
                     tag.getTagList(STANDALONE_FLUID_ORDERS_TAG, TAG_COMPOUND));
+            module.debugEvent(
+                    "PERSIST",
+                    "restoring staged crafting state stagedOrders=%d standaloneItems=%d standaloneFluids=%d",
+                    restoredStagedOrders.size(),
+                    standaloneItemOrders.size(),
+                    standaloneFluidOrders.size());
 
             stagedCrafts.clear();
             outputOrders.clear();
@@ -169,6 +186,7 @@ class PatternStagedCraftingCoordinator {
             }
             return true;
         } catch (PatternCraftingPersistence.RestoreNotReadyException ignored) {
+            module.debugEventThrottled("PERSIST", "restore staged crafting state postponed: routers not ready");
             return false;
         }
     }
@@ -204,18 +222,35 @@ class PatternStagedCraftingCoordinator {
     }
 
     void appendDebugState(StringBuilder out, String prefix) {
-        if (stagedCrafts.isEmpty()) {
+        if (stagedCrafts.isEmpty() && outputOrders.isEmpty()) {
             out.append(prefix).append("<none>\n");
             return;
         }
+        out.append(prefix).append("active staged orders:\n");
+        if (stagedCrafts.isEmpty()) {
+            out.append(prefix).append("  <none>\n");
+        }
         for (PatternCraftingOrder order : stagedCrafts) {
-            order.appendDebugState(out, prefix);
+            order.appendDebugState(out, prefix + "  ");
+        }
+        out.append(prefix).append("tracked output orders:\n");
+        if (outputOrders.isEmpty()) {
+            out.append(prefix).append("  <none>\n");
+        }
+        for (PatternCraftingOrder order : outputOrders) {
+            out.append(prefix).append("  - slot=").append(order.patternSlot).append(" active=")
+                    .append(stagedCrafts.contains(order)).append(" remainingSets=").append(order.remainingSets)
+                    .append(" output=")
+                    .append(order.outputOrder == null ? "<none>" : order.outputOrder.getAsDisplayItem())
+                    .append(order.outputOrder != null && order.outputOrder.isFinished() ? " finished" : "")
+                    .append("\n");
         }
     }
 
     void releaseAll() {
         for (PatternCraftingOrder order : stagedCrafts) {
-            module.debug(
+            module.debugEvent(
+                    "CANCEL",
                     "removal releases staged order slot=%d remainingSets=%d",
                     order.patternSlot,
                     order.remainingSets);
@@ -242,7 +277,8 @@ class PatternStagedCraftingCoordinator {
             }
         }
         for (PatternCraftingOrder order : ordersToCancel) {
-            module.debug(
+            module.debugEvent(
+                    "CANCEL",
                     "cancel staged order slot=%d remainingSets=%d",
                     order.patternSlot,
                     order.remainingSets);
@@ -272,10 +308,13 @@ class PatternStagedCraftingCoordinator {
         module.clearCancelledPattern(patternSlot);
         module.debugEvent(
                 "STAGED",
-                "staged craft registered slot=%d remainingSets=%d ingredientBranches=%d",
+                "staged craft registered slot=%d remainingSets=%d ingredientBranches=%d output=%s branch=%s branchRemaining=%d",
                 patternSlot,
                 stagedOrder.remainingSets,
-                stagedOrder.ingredientBranches.size());
+                stagedOrder.ingredientBranches.size(),
+                order.getAsDisplayItem(),
+                branch.getRequestType(),
+                branch.getRemainingAmount());
         scheduler.requestIngredients(patternSlot);
     }
 

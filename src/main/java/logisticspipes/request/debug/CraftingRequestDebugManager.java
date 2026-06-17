@@ -23,14 +23,14 @@ import logisticspipes.routing.order.LinkedLogisticsOrderList;
 public final class CraftingRequestDebugManager {
 
     private static final int MAX_SNAPSHOTS = 24;
-    private static final int MAX_EVENTS = 600;
+    private static final int MAX_EVENTS = 60000;
     private static final Pattern PIPE_MESSAGE_PATTERN = Pattern.compile("^(pipe=\\([^)]*\\))\\s+(.*)$");
     private static final Pattern TARGET_SLOT_PATTERN = Pattern
             .compile("PatternTargetInformation\\[patternSlot=(\\d+)]");
     private static final Pattern STAGED_START_PATTERN = Pattern
             .compile("^staged craft start promise=(.*?) amount=(\\d+) request=.* info=(.*?) branch=.*$");
     private static final Pattern STAGED_REGISTERED_PATTERN = Pattern
-            .compile("^staged craft registered slot=(\\d+) remainingSets=(\\d+) ingredientBranches=(\\d+)$");
+            .compile("^staged craft registered slot=(\\d+) remainingSets=(\\d+) ingredientBranches=(\\d+).*$");
     private static final Pattern ORDER_CREATED_PATTERN = Pattern
             .compile("^create (item|fluid) output order (?:item|fluid)=(.*?) amount=(\\d+) destination=(.*?) info=.*$");
     private static final Pattern SETS_REQUEST_PATTERN = Pattern.compile(
@@ -196,6 +196,10 @@ public final class CraftingRequestDebugManager {
         if ("REQUEST".equals(event.category)) {
             return message.startsWith("request#") || message.contains("selectedSets=0")
                     || message.startsWith("lost retry");
+        }
+        if ("SCHED".equals(event.category)) {
+            return message.contains("selectedSets=0") || message.contains("paused: no selectable sets")
+                    || message.contains("requested no sets") || message.contains("skipped:");
         }
         if ("STAGED".equals(event.category)) {
             return message.startsWith("staged craft start") || message.startsWith("staged craft rejected");
@@ -435,7 +439,7 @@ public final class CraftingRequestDebugManager {
                     return;
                 }
             }
-            if ("REQUEST".equals(event.category)) {
+            if ("REQUEST".equals(event.category) || "SCHED".equals(event.category)) {
                 if (acceptRequestEvent(pipeMessage, message)) {
                     return;
                 }

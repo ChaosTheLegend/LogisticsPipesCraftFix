@@ -53,7 +53,7 @@ class PatternStagedCraftingScheduler {
      */
     void requestIngredients(int patternSlot) {
         if (!requestingPatterns.add(patternSlot)) {
-            module.debug("request ingredients slot=%d skipped: already requesting", patternSlot);
+            module.debugEventThrottled("SCHED", "request ingredients slot=%d skipped: already requesting", patternSlot);
             return;
         }
         try {
@@ -64,8 +64,6 @@ class PatternStagedCraftingScheduler {
     }
 
     private void requestIngredientsGuarded(int patternSlot) {
-        module.debug("request ingredients slot=%d start stagedCrafts=%d", patternSlot, stagedCrafts.size());
-
         for (PatternCraftingOrder order : new ArrayList<>(stagedCrafts)) {
             if (removeFinishedOrder(order)) {
                 continue;
@@ -90,7 +88,8 @@ class PatternStagedCraftingScheduler {
         if (!order.outputOrder.isFinished()) {
             return false;
         }
-        module.debug(
+        module.debugEvent(
+                "SCHED",
                 "request ingredients slot=%d removing staged order: the order output is already satisfied",
                 order.patternSlot);
         stagedCrafts.remove(order);
@@ -101,7 +100,7 @@ class PatternStagedCraftingScheduler {
         if (pattern != null) {
             return false;
         }
-        module.debug("request ingredients slot=%d removing staged order: pattern missing", order.patternSlot);
+        module.debugEvent("SCHED", "request ingredients slot=%d removing staged order: pattern missing", order.patternSlot);
         order.releaseReservations();
         stagedCrafts.remove(order);
         return true;
@@ -111,7 +110,11 @@ class PatternStagedCraftingScheduler {
         if (!order.isFullyRequested()) {
             return false;
         }
-        module.debug("request ingredients slot=%d removing staged order: fully requested", order.patternSlot);
+        module.debugEvent(
+                "SCHED",
+                "request ingredients slot=%d removing staged order: fully requested remainingSets=%d",
+                order.patternSlot,
+                order.remainingSets);
         order.releaseReservations();
         stagedCrafts.remove(order);
         return true;
@@ -126,7 +129,9 @@ class PatternStagedCraftingScheduler {
         if (runningCraft == order.patternSlot) {
             return false;
         }
-        module.debug(
+        module.debugEventThrottled(
+                "SCHED",
+                100,
                 "request ingredients slot=%d skipped: running craft locked by slot=%d",
                 order.patternSlot,
                 runningCraft);
@@ -138,26 +143,38 @@ class PatternStagedCraftingScheduler {
         int branchSets = order.availableSetsFromBranches(pattern);
         int sets = Math.min(order.remainingSets, orderableSets);
         sets = Math.min(sets, branchSets);
+        if (sets <= 0) {
+            module.debugEventThrottled(
+                    "SCHED",
+                    100,
+                    "request ingredients slot=%d paused: no selectable sets remainingSets=%d orderableSets=%d branchSets=%d",
+                    order.patternSlot,
+                    order.remainingSets,
+                    orderableSets,
+                    branchSets);
+            return;
+        }
         module.debugEvent(
-                "REQUEST",
+                "SCHED",
                 "request ingredients slot=%d remainingSets=%d orderableSets=%d branchSets=%d selectedSets=%d",
                 order.patternSlot,
                 order.remainingSets,
                 orderableSets,
                 branchSets,
                 sets);
-        if (sets <= 0) {
-            return;
-        }
 
         int requestedSets = order.requestIngredients(pattern, sets);
         if (requestedSets <= 0) {
-            module.debug("request ingredients slot=%d requested no sets", order.patternSlot);
+            module.debugEventThrottled(
+                    "SCHED",
+                    "request ingredients slot=%d requested no sets selectedSets=%d",
+                    order.patternSlot,
+                    sets);
             return;
         }
 
         module.debugEvent(
-                "REQUEST",
+                "SCHED",
                 "request ingredients slot=%d requestedSets=%d remainingSets=%d",
                 order.patternSlot,
                 requestedSets,
@@ -180,7 +197,7 @@ class PatternStagedCraftingScheduler {
      */
     private int orderableSetsForPattern(int patternSlot, ItemStack pattern) {
         if (!module.canReceiveForPattern(patternSlot)) {
-            module.debug("orderable sets slot=%d result=0 cannot receive", patternSlot);
+            module.debugEventThrottled("SCHED", "orderable sets slot=%d result=0 cannot receive", patternSlot);
             return 0;
         }
         AdjacentTile connected = module.getConnectedInventoryTile();
@@ -193,16 +210,9 @@ class PatternStagedCraftingScheduler {
                 room += ingredient.getAmount();
             }
             room -= requestedIngredient.amount(patternSlot, ingredient);
-            module.debug(
-                    "orderable ingredient slot=%d ingredient=%s roomAfterRequested=%d amountPerSet=%d",
-                    patternSlot,
-                    ingredient,
-                    room,
-                    ingredient.getAmount());
             sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
         }
         int result = sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
-        module.debug("orderable sets slot=%d result=%d", patternSlot, result);
         return result;
     }
 }

@@ -29,12 +29,23 @@ class PatternCraftingOrder {
             PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
+        branch.attachDebugModule(module);
         this.ingredientBranches = new ArrayList<>(branch.getSubRequests());
         this.outputOrder = outputOrder;
         this.module = module;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.remainingSets = initialRemainingSets(branch);
+        module.debugEvent(
+                "REQUEST",
+                "created staged order slot=%d output=%s branch=%s branchRemaining=%d resultAmountPerSet=%d remainingSets=%d ingredientBranches=%d",
+                patternSlot,
+                outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem(),
+                branch.getRequestType(),
+                branch.getRemainingAmount(),
+                this.resultAmountPerSet,
+                this.remainingSets,
+                ingredientBranches.size());
     }
 
     PatternCraftingOrder(int patternSlot, int resultAmountPerSet, int remainingSets,
@@ -43,11 +54,23 @@ class PatternCraftingOrder {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
         this.ingredientBranches = new ArrayList<>(ingredientBranches);
+        for (PatternCraftingBranch branch : this.ingredientBranches) {
+            branch.attachDebugModule(module);
+        }
         this.outputOrder = outputOrder;
         this.module = module;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.remainingSets = capRemainingSets(Math.max(0, remainingSets));
+        module.debugEvent(
+                "REQUEST",
+                "restored staged order slot=%d output=%s restoredRemainingSets=%d cappedRemainingSets=%d resultAmountPerSet=%d ingredientBranches=%d",
+                patternSlot,
+                outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem(),
+                remainingSets,
+                this.remainingSets,
+                this.resultAmountPerSet,
+                ingredientBranches.size());
     }
 
     /**
@@ -77,7 +100,18 @@ class PatternCraftingOrder {
         if (pattern == null) {
             return sets;
         }
-        return Math.min(sets, availableSetsFromBranches(pattern));
+        int available = availableSetsFromBranches(pattern);
+        int capped = Math.min(sets, available);
+        if (capped != sets) {
+            module.debugEvent(
+                    "REQUEST",
+                    "order capped remaining sets slot=%d requestedSets=%d branchAvailableSets=%d cappedSets=%d",
+                    patternSlot,
+                    sets,
+                    available,
+                    capped);
+        }
+        return capped;
     }
 
     /**
@@ -87,17 +121,9 @@ class PatternCraftingOrder {
         int sets = Integer.MAX_VALUE;
         for (IPatternStack ingredient : patternHandler.getAggregatedInputs(pattern)) {
             int available = availableFromBranches(ingredient);
-            module.debug(
-                    "branch availability slot=%d ingredient=%s available=%d amountPerSet=%d",
-                    patternSlot,
-                    ingredient,
-                    available,
-                    ingredient.getAmount());
             sets = Math.min(sets, available / ingredient.getAmount());
         }
-        int result = sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
-        module.debug("branch availability slot=%d sets=%d", patternSlot, result);
-        return result;
+        return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 
     /**
@@ -109,10 +135,11 @@ class PatternCraftingOrder {
         List<RequestedIngredient> requestedIngredients = new ArrayList<>();
         module.debugEvent(
                 "REQUEST",
-                "order request ingredients slot=%d requestedSetsStart=%d remainingSets=%d",
+                "order request ingredients slot=%d requestedSetsStart=%d remainingSets=%d output=%s",
                 patternSlot,
                 sets,
-                remainingSets);
+                remainingSets,
+                outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem());
         for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             int requested = requestFromBranches(
                     ingredient.stack,
@@ -149,7 +176,8 @@ class PatternCraftingOrder {
             }
         }
         remainingSets -= requestedSets;
-        module.debug(
+        module.debugEvent(
+                "REQUEST",
                 "order request ingredients slot=%d requestedSetsFinal=%d remainingSets=%d",
                 patternSlot,
                 requestedSets,
@@ -161,7 +189,13 @@ class PatternCraftingOrder {
      * Releases provider reservations still owned by this staged order.
      */
     void releaseReservations() {
-        module.debug("order release reservations slot=%d branches=%d", patternSlot, ingredientBranches.size());
+        module.debugEvent(
+                "REQUEST",
+                "order release reservations slot=%d branches=%d remainingSets=%d output=%s",
+                patternSlot,
+                ingredientBranches.size(),
+                remainingSets,
+                outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem());
         for (PatternCraftingBranch branch : ingredientBranches) {
             branch.releaseProviderPromises();
         }
@@ -223,14 +257,18 @@ class PatternCraftingOrder {
             if (!branchMatches(branch, ingredient)) {
                 continue;
             }
+            int before = branch.getRemainingAmount();
             if (PatternStackHelper.isFluid(ingredient)) {
                 int branchRequested = branch.request(amount - requested);
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
-                        "branch fluid request slot=%d ingredient=%s requested=%d total=%d/%d",
+                        "branch fluid request slot=%d ingredient=%s branch=%s branchRemaining=%d->%d requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
+                        branch.getRequestType(),
+                        before,
+                        branch.getRemainingAmount(),
                         branchRequested,
                         requested,
                         amount);
@@ -242,10 +280,13 @@ class PatternCraftingOrder {
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
-                        "branch item request slot=%d ingredient=%s target=%s requested=%d total=%d/%d",
+                        "branch item request slot=%d ingredient=%s target=%s branch=%s branchRemaining=%d->%d requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
                         targetOverride,
+                        branch.getRequestType(),
+                        before,
+                        branch.getRemainingAmount(),
                         branchRequested,
                         requested,
                         amount);

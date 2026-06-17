@@ -62,12 +62,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private static final String TARGET_PATTERN_SLOT_TAG = "targetPatternSlot";
     private static final int RESTORED_REQUESTED_RETRY_DELAY = 8000;
     private static final int RESTORE_DEBUG_INTERVAL = 40;
+    private static final int DEFAULT_THROTTLE_TICKS = 40;
     private static final int TAG_COMPOUND = 10;
 
     private final PipeItemsPatternCraftingLogistics pipe;
     private final SimpleStackInventory patternInventory = new SimpleStackInventory(9, "Patterns", 1);
     private final Map<Integer, List<IPatternStack>> requestedIngredients = new HashMap<>();
     private final Set<Integer> cancelledPatternSlots = new HashSet<>();
+    private final Map<String, ThrottledDebugEvent> throttledDebugEvents = new HashMap<>();
     private final DelayQueue<DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>>> lostIngredients = new DelayQueue<>();
     private final PatternHandler patternHandler = new PatternHandler(patternInventory);
     private final AdjacentInventoryHandler adjacentInventory;
@@ -293,6 +295,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             : null;
         pendingRequestedIngredientRestoreRetries = !requestedIngredients.isEmpty();
         stagedCraftingRestoreAttempts = 0;
+        debugEvent(
+            "PERSIST",
+            "loaded module nbt bufferedSlots=%d requestedSlots=%d lostQueued=%d pendingStaged=%s runningCraft=%d adjacentBatch=%s",
+            ingredientBuffer.size(),
+            requestedIngredients.size(),
+            lostIngredients.size(),
+            pendingStagedCrafting != null,
+            runningCraft,
+            runningCraftInAdjacent);
     }
 
     @Override
@@ -312,6 +323,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             stagedCrafting.writeToNBT(stagedTag);
             tag.setTag(STAGED_CRAFTING_TAG, stagedTag);
         }
+        debugEvent(
+            "PERSIST",
+            "saved module nbt bufferedSlots=%d requestedSlots=%d lostQueued=%d pendingStaged=%s runningCraft=%d adjacentBatch=%s",
+            ingredientBuffer.size(),
+            requestedIngredients.size(),
+            lostIngredients.size(),
+            pendingStagedCrafting != null,
+            runningCraft,
+            runningCraftInAdjacent);
     }
 
     @Override
@@ -327,8 +347,64 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     }
 
     void debugEvent(String category, String message, Object... args) {
-        debug(message, args);
-        CraftingRequestDebugManager.recordPipeEvent(pipe, category, message, args);
+        recordDebugEvent(category, formatDebugMessage(message, args));
+    }
+
+    void debugEventThrottled(String category, String message, Object... args) {
+        debugEventThrottled(category, DEFAULT_THROTTLE_TICKS, message, args);
+    }
+
+    void debugEventThrottled(String category, int intervalTicks, String message, Object... args) {
+        String formatted = formatDebugMessage(message, args);
+        if (intervalTicks <= 0) {
+            recordDebugEvent(category, formatted);
+            return;
+        }
+        String key = category + "\n" + formatted;
+        long tick = currentDebugTick();
+        ThrottledDebugEvent state = throttledDebugEvents.get(key);
+        if (state != null && tick - state.lastLoggedTick < intervalTicks) {
+            state.suppressed++;
+            return;
+        }
+        if (state == null) {
+            state = new ThrottledDebugEvent();
+            throttledDebugEvents.put(key, state);
+        } else if (state.suppressed > 0) {
+            formatted = formatted + " (suppressed repeats=" + state.suppressed + ")";
+        }
+        state.lastLoggedTick = tick;
+        state.suppressed = 0;
+        recordDebugEvent(category, formatted);
+    }
+
+    private void recordDebugEvent(String category, String message) {
+        debug("%s", message);
+        CraftingRequestDebugManager.recordPipeEvent(pipe, category, message);
+    }
+
+    private String formatDebugMessage(String message, Object... args) {
+        if (args == null || args.length == 0) {
+            return message == null ? "" : message;
+        }
+        try {
+            return String.format(message, args);
+        } catch (RuntimeException ignored) {
+            StringBuilder out = new StringBuilder(message == null ? "" : message);
+            out.append(" args=");
+            for (int i = 0; i < args.length; i++) {
+                if (i > 0) {
+                    out.append(", ");
+                }
+                out.append(args[i]);
+            }
+            return out.toString();
+        }
+    }
+
+    private long currentDebugTick() {
+        World world = pipe.getWorld();
+        return world == null ? 0 : world.getTotalWorldTime();
     }
 
     private void restoreStagedCraftingIfNeeded() {
@@ -872,21 +948,34 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
         int original = item.getStackSize();
         int requested = requestedIngredient.amount(patternSlot, item.getItem());
-        int accepted = Math.min(original, Math.max(requested, spaceForArrivingIngredient(patternSlot, pattern, item.getItem())));
+        int space = spaceForArrivingIngredient(patternSlot, pattern, item.getItem());
+        int accepted = Math.min(original, Math.max(requested, space));
 
         debugEvent(
             "FLOW",
-            "item arrived slot=%d item=%s original=%d requested=%d accepted=%d",
+            "item arrived slot=%d item=%s original=%d requested=%d space=%d accepted=%d",
             patternSlot,
             item.getItem(),
             original,
             requested,
+            space,
             accepted);
         requestedIngredient.remove(
             patternSlot,
             new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
+        int requestedAfter = requestedIngredient.amount(patternSlot, item.getItem());
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
+            debugEvent(
+                "BUFFER",
+                "item buffered slot=%d item=%s accepted=%d requested=%d->%d buffered=%d completeSets=%d",
+                patternSlot,
+                item.getItem(),
+                accepted,
+                requested,
+                requestedAfter,
+                ingredientBuffer.amount(patternSlot, item.getItem()),
+                ingredientBuffer.completeSets(patternSlot, getLocalAggregatedIngredients(pattern)));
             activateRunningCraftFromBuffer(patternSlot);
             pushBufferedIngredientsFor(patternSlot);
         }
@@ -953,8 +1042,19 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             space,
             accepted);
         requestedIngredient.remove(patternSlot, new PatternFluidStack(fluid, accepted));
+        int requestedAfter = requestedIngredient.amount(patternSlot, fluid);
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternFluidStack(fluid, accepted));
+            debugEvent(
+                "BUFFER",
+                "fluid buffered slot=%d fluid=%s accepted=%d requested=%d->%d buffered=%d completeSets=%d",
+                patternSlot,
+                fluid,
+                accepted,
+                requested,
+                requestedAfter,
+                ingredientBuffer.amount(patternSlot, fluid),
+                ingredientBuffer.completeSets(patternSlot, getLocalAggregatedIngredients(pattern)));
             activateRunningCraftFromBuffer(patternSlot);
             pushBufferedIngredientsFor(patternSlot);
             routedStack.setStackSize(0);
@@ -1385,7 +1485,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private void pushBufferedIngredients() {
         AdjacentTile connected = getConnectedInventoryTile();
         if (connected == null) {
-            debug("push skipped: no connected inventory");
+            debugEventThrottled("BUFFER", "push skipped: no connected inventory bufferedSlots=%d", ingredientBuffer.size());
             return;
         }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
@@ -1410,19 +1510,26 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private void pushBufferedIngredientsFor(int patternSlot) {
         ItemStack pattern = getPatternStack(patternSlot);
         if (pattern == null) {
-            debug("push slot=%d dropped buffer: pattern missing", patternSlot);
+            debugEvent("BUFFER", "push slot=%d dropped buffer: pattern missing", patternSlot);
             ingredientBuffer.removeAll(patternSlot);
             return;
         }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && isRunningCraftLocked()
             && runningCraft != patternSlot) {
-            debug("push slot=%d skipped: running craft locked by slot=%d", patternSlot, runningCraft);
+            debugEventThrottled(
+                "BUFFER",
+                "push slot=%d skipped: running craft locked by slot=%d",
+                patternSlot,
+                runningCraft);
             return;
         }
         AdjacentTile connected = adjacentInventory.getConnected();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && !adjacentInventory.isEmpty(connected)) {
-            debug("push slot=%d skipped: blocking mode and adjacent inventory not empty", patternSlot);
+            debugEventThrottled(
+                "BUFFER",
+                "push slot=%d skipped: blocking mode and adjacent inventory not empty",
+                patternSlot);
             return;
         }
         int bufferedSets = completeBufferedSets(patternSlot);
@@ -1432,7 +1539,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         int sets = Math.min(bufferedSets, insertableSets);
         if (sets <= 0 || !adjacentInventory.insertPatternSets(pattern, sets)) {
-            debug(
+            debugEventThrottled(
+                "BUFFER",
                 "push slot=%d failed: bufferedSets=%d insertableSets=%d selectedSets=%d",
                 patternSlot,
                 bufferedSets,
@@ -1452,6 +1560,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             runningCraft = patternSlot;
             runningCraftInAdjacent = true;
         }
+        debugEvent(
+            "BUFFER",
+            "push slot=%d buffer after insert remainingSets=%d runningCraft=%d adjacentBatch=%s",
+            patternSlot,
+            ingredientBuffer.completeSets(patternSlot, getLocalAggregatedIngredients(pattern)),
+            runningCraft,
+            runningCraftInAdjacent);
         requestIngredientsForStagedCrafts();
     }
 
@@ -1471,6 +1586,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * inventory.
      */
     void requestIngredientsForStagedCrafts() {
+        debugEventThrottled(
+            "SCHED",
+            20,
+            "request staged crafts trigger bufferedSlots=%d requestedSlots=%d runningCraft=%d adjacentBatch=%s",
+            ingredientBuffer.size(),
+            requestedIngredients.size(),
+            runningCraft,
+            runningCraftInAdjacent);
         stagedCrafting.requestIngredients();
     }
 
@@ -1539,7 +1662,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         runningCraft = patternSlot;
         runningCraftInAdjacent = false;
-        debug("running craft activated from buffer slot=%d", patternSlot);
+        debugEvent("BUFFER", "running craft activated from buffer slot=%d", patternSlot);
     }
 
     /**
@@ -1567,16 +1690,16 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             return;
         }
         if (runningCraft >= 0 && getPatternStack(runningCraft) == null) {
-            debug("running craft cleared slot=%d: pattern missing", runningCraft);
+            debugEvent("BUFFER", "running craft cleared slot=%d: pattern missing", runningCraft);
             runningCraft = -1;
             runningCraftInAdjacent = false;
         }
         if (runningCraft >= 0 && runningCraftInAdjacent && (connected == null || isInventoryEmpty(connected))) {
-            debug("running craft adjacent batch finished slot=%d", runningCraft);
+            debugEvent("BUFFER", "running craft adjacent batch finished slot=%d", runningCraft);
             runningCraftInAdjacent = false;
         }
         if (runningCraft >= 0 && !runningCraftInAdjacent && completeBufferedSets(runningCraft) <= 0) {
-            debug("running craft released slot=%d: no arrived ingredients remain", runningCraft);
+            debugEvent("BUFFER", "running craft released slot=%d: no arrived ingredients remain", runningCraft);
             runningCraft = -1;
         }
         if (runningCraft < 0) {
@@ -1585,7 +1708,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (next != -1) {
                 runningCraft = next;
                 runningCraftInAdjacent = false;
-                debug("running craft selected buffered slot=%d", runningCraft);
+                debugEvent("BUFFER", "running craft selected buffered slot=%d", runningCraft);
             }
         }
     }
@@ -2001,6 +2124,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
         ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
+    }
+
+    private static class ThrottledDebugEvent {
+
+        private long lastLoggedTick = Long.MIN_VALUE;
+        private int suppressed;
     }
 
 }
