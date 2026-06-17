@@ -1,42 +1,37 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-
-class PipePatternInventory implements IInventory {
+public class PipePatternInventory implements IInventory {
 
     private final PipeItemsPatternCraftingLogistics pipe;
     private int patternSlot;
 
-    PipePatternInventory(PipeItemsPatternCraftingLogistics pipe, int patternSlot) {
+    public PipePatternInventory(PipeItemsPatternCraftingLogistics pipe, int patternSlot) {
         this.pipe = pipe;
         setPatternSlot(patternSlot);
     }
 
-    int getPatternSlot() {
-        return patternSlot;
-    }
-
-    void setPatternSlot(int patternSlot) {
+    public void setPatternSlot(int patternSlot) {
         this.patternSlot = Math.max(0, Math.min(8, patternSlot));
     }
 
-    ItemStack getPatternStack() {
+    public ItemStack getPatternStack() {
         return pipe.getPatternModule().getPatternItemStack(patternSlot);
     }
 
     @Override
     public int getSizeInventory() {
-        return Pattern.ITEM_SLOT_COUNT;
+        return ItemPattern.ITEM_SLOT_COUNT;
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        return Pattern.fromStack(getPatternStack()).getStackInSlot(slot);
+        return ItemPattern.fromStack(getPatternStack()).getStackInSlot(slot);
     }
 
     @Override
@@ -45,7 +40,7 @@ class PipePatternInventory implements IInventory {
         if (stack == null) {
             return null;
         }
-        Pattern.fromStack(getPatternStack()).setStackInSlot(slot, null);
+        ItemPattern.fromStack(getPatternStack()).setStackInSlot(slot, null);
         markDirty();
         return stack;
     }
@@ -57,7 +52,7 @@ class PipePatternInventory implements IInventory {
 
     @Override
     public void setInventorySlotContents(int slot, ItemStack stack) {
-        Pattern.fromStack(getPatternStack()).setStackInSlot(slot, stack);
+        ItemPattern.fromStack(getPatternStack()).setStackInSlot(slot, stack);
         markDirty();
     }
 

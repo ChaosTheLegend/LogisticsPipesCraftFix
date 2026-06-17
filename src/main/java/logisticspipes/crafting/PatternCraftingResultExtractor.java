@@ -1,13 +1,7 @@
 package logisticspipes.crafting;
 
-import java.util.List;
-
-import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
-
 import logisticspipes.config.Configs;
+import logisticspipes.crafting.patternStack.PatternFluidStack;
 import logisticspipes.logisticspipes.IRoutedItem;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.pipefxhandlers.Particles;
@@ -20,27 +14,33 @@ import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
 import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+
+import java.util.List;
 
 /**
  * Drains completed pattern crafting outputs from the selected adjacent inventory or fluid handler.
  * <p>
  * Normal crafting orders are routed to their requester. Extra orders have no requester, so they are sent back through
- * normal storage routing and may drop if no storage accepts them. Keeping this logic outside {@link ModuleItemCrafting}
- * keeps the module focused on request planning and buffer state.
+ * normal storage routing and may drop if no storage accepts them. Keeping this logic outside
+ * {@link ModulePatternCrafting} keeps the module focused on request planning and buffer state.
  */
 class PatternCraftingResultExtractor {
 
     private static final int MAX_EXTRACTED_ITEMS_PER_TICK = 64;
     private static final int MAX_EXTRACTED_STACKS_PER_TICK = 16;
 
-    private final ModuleItemCrafting module;
+    private final ModulePatternCrafting module;
     private final PipeItemsPatternCraftingLogistics pipe;
     private final AdjacentInventoryHandler adjacentInventory;
 
     /**
      * Creates an extractor for one pattern crafting module and its selected adjacent handlers.
      */
-    PatternCraftingResultExtractor(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
+    PatternCraftingResultExtractor(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
                                    AdjacentInventoryHandler adjacentInventory) {
         this.module = module;
         this.pipe = pipe;
@@ -85,7 +85,8 @@ class PatternCraftingResultExtractor {
         int ordersLeftToTry = orderManager.getAllOrders().size();
         boolean extractedAny = false;
 
-        while (itemsLeft > 0 && stacksLeft > 0 && ordersLeftToTry > 0
+        while (itemsLeft > 0 && stacksLeft > 0
+            && ordersLeftToTry > 0
                 && orderManager.hasOrders(ResourceType.CRAFTING, ResourceType.EXTRA)) {
             LogisticsItemOrder order = orderManager.peekAtTopRequest(ResourceType.CRAFTING, ResourceType.EXTRA);
             if (order == null) {
@@ -320,7 +321,12 @@ class PatternCraftingResultExtractor {
             module.requestIngredientsForStagedCrafts();
             return;
         }
-        module.debugEventThrottled("FLOW", 60, "extract fluid deferred fluid=%s amount=%d", order.getFluid(), amountToDrain);
+        module.debugEventThrottled(
+            "FLOW",
+            60,
+            "extract fluid deferred fluid=%s amount=%d",
+            order.getFluid(),
+            amountToDrain);
         pipe.getPatternFluidOrderManager().deferSend();
     }
 
@@ -386,8 +392,8 @@ class PatternCraftingResultExtractor {
     }
 
     private void sendExtractedFluidToLocalBuffer(LogisticsFluidOrder order, FluidStack drained) {
-        ItemIdentifierStack arrived = ItemIdentifierStack.getFromStack(
-            SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack());
+        ItemIdentifierStack arrived = ItemIdentifierStack
+            .getFromStack(SimpleServiceLocator.logisticsFluidManager.getFluidContainer(drained).makeNormalStack());
         int orderBefore = order.getAmount();
         int requestedBefore = module.requestedSamePipeFluidAmount(order);
         module.itemArrived(arrived, order.getInformation());

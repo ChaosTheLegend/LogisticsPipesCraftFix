@@ -1,20 +1,22 @@
 package logisticspipes.crafting;
 
-import java.util.*;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.TimeUnit;
-
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
-
+import logisticspipes.crafting.pattern.AbstractPattern;
+import logisticspipes.crafting.pattern.ItemPattern;
+import logisticspipes.crafting.pattern.PatternHandler;
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternFluidStack;
+import logisticspipes.crafting.patternStack.PatternItemStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.ISlotUpgradeManager;
-import logisticspipes.interfaces.routing.*;
+import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.interfaces.routing.ICraftFluids;
+import logisticspipes.interfaces.routing.ICraftItems;
+import logisticspipes.interfaces.routing.IFilter;
+import logisticspipes.interfaces.routing.IItemSpaceControl;
+import logisticspipes.interfaces.routing.IRequest;
+import logisticspipes.interfaces.routing.IRequestFluid;
+import logisticspipes.interfaces.routing.IRequestItems;
+import logisticspipes.interfaces.routing.IRequireReliableTransport;
 import logisticspipes.logistics.LogisticsManager;
 import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -44,16 +46,39 @@ import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
-import logisticspipes.utils.*;
+import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
+import logisticspipes.utils.DelayedGeneric;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.SinkReply;
 import logisticspipes.utils.SinkReply.BufferMode;
 import logisticspipes.utils.SinkReply.FixedPriority;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.SimpleStackInventory;
 import logisticspipes.utils.tuples.Pair;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.World;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
 
-public class ModuleItemCrafting extends LogisticsGuiModule
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.TimeUnit;
+
+public class ModulePatternCrafting extends LogisticsGuiModule
     implements ICraftItems, ICraftFluids, IRequestFluid, IRequireReliableTransport, IStagedCraftingProvider {
 
     private static final String LOST_INGREDIENTS_TAG = "patternLostIngredients";
@@ -87,7 +112,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private boolean pendingRequestedIngredientRestoreRetries;
     private int stagedCraftingRestoreAttempts;
 
-    public ModuleItemCrafting(PipeItemsPatternCraftingLogistics pipe) {
+    public ModulePatternCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
         patternInventory.addListener(inventory -> {
             if (pipe.container != null) {
@@ -135,10 +160,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (patternStack == null) {
                 continue;
             }
-            AbstractPattern pattern = Pattern.fromStack(patternStack);
+            AbstractPattern pattern = ItemPattern.fromStack(patternStack);
             for (int inputSlot = 0; inputSlot < pattern.getIngredientSlotCount(); inputSlot++) {
                 IPatternStack ingredient = pattern.getPatternStackInSlot(inputSlot);
-                if (ingredient == null || !PatternStackHelper.isSolid(ingredient)) {
+                if (!PatternStackHelper.isSolid(ingredient)) {
                     continue;
                 }
                 pattern.setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
@@ -170,16 +195,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             return PipeItemsPatternCraftingLogistics.BlockingMode.SMART;
         }
         return blockingMode;
-    }
-
-    @Override
-    protected ModuleCoordinatesGuiProvider getPipeGuiProvider() {
-        return NewGuiHandler.getGui(PatternCraftingPipeGuiProvider.class).setBlockingMode(getBlockingMode().ordinal());
-    }
-
-    @Override
-    protected ModuleInHandGuiProvider getInHandGuiProvider() {
-        return null;
     }
 
     /**
@@ -249,11 +264,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     }
 
     @Override
-    public LogisticsModule getSubModule(int slot) {
-        return null;
-    }
-
-    @Override
     public void tick() {
         restoreStagedCraftingIfNeeded();
         cancelUnsupportedFluidPatternCrafts();
@@ -284,7 +294,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (!isPatternCraftingSupported(pattern)) {
                 continue;
             }
-            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
             for (IPatternStack result : configuredPattern.getOutputs()) {
                 ItemIdentifier item = PatternStackHelper.getRoutingItem(result);
                 if (item != null) {
@@ -294,6 +304,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         return crafted;
     }
+
+    // ------- DEFAULT OVERRIDES ------ //
+    // region DEFAULT OVERRIDES
 
     @Override
     public boolean interestedInAttachedInventory() {
@@ -308,6 +321,30 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     @Override
     public boolean recievePassive() {
         return false;
+    }
+
+    @Override
+    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {
+    }
+
+    @Override
+    public LogisticsModule getSubModule(int slot) {
+        return null;
+    }
+
+    @Override
+    public Map<FluidIdentifier, Integer> getAvailableFluids() {
+        return Collections.emptyMap();
+    }
+
+    @Override
+    protected ModuleCoordinatesGuiProvider getPipeGuiProvider() {
+        return NewGuiHandler.getGui(PatternCraftingPipeGuiProvider.class).setBlockingMode(getBlockingMode().ordinal());
+    }
+
+    @Override
+    protected ModuleInHandGuiProvider getInHandGuiProvider() {
+        return null;
     }
 
     @Override
@@ -373,6 +410,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             runningCraft,
             runningCraftInAdjacent);
     }
+    // endregion
+
+    // ------- DEBUG ------ //
+    // region DEBUG
 
     @Override
     public void registerPosition(ModulePositionType slot, int positionInt) {
@@ -386,7 +427,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
     }
 
-    void debugEvent(String category, String message, Object... args) {
+    public void debugEvent(String category, String message, Object... args) {
         recordDebugEvent(category, formatDebugMessage(message, args));
     }
 
@@ -418,7 +459,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         recordDebugEvent(category, formatted);
     }
 
-    private void recordDebugEvent(String category, String message) {
+    public void recordDebugEvent(String category, String message) {
         debug("%s", message);
         CraftingRequestDebugManager.recordPipeEvent(pipe, category, message);
     }
@@ -446,6 +487,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         World world = pipe.getWorld();
         return world == null ? 0 : world.getTotalWorldTime();
     }
+    // endregion
 
     private void restoreStagedCraftingIfNeeded() {
         if (pendingStagedCrafting == null) {
@@ -463,10 +505,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         stagedCraftingRestoreAttempts++;
         if (stagedCraftingRestoreAttempts % RESTORE_DEBUG_INTERVAL == 0) {
-            debugEvent(
-                "STAGED",
-                "waiting to restore staged crafting state attempts=%d",
-                stagedCraftingRestoreAttempts);
+            debugEvent("STAGED", "waiting to restore staged crafting state attempts=%d", stagedCraftingRestoreAttempts);
         }
     }
 
@@ -507,12 +546,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (pattern == null) {
             return false;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         return PatternStackHelper.containsFluid(configuredPattern.getInputs())
             || PatternStackHelper.containsFluid(configuredPattern.getOutputs());
     }
 
     private void cancelUnsupportedFluidPatternCrafts() {
+        // TODO dont execute every tick
         if (supportsFluidCrafting()) {
             return;
         }
@@ -521,8 +561,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (!isFluidCraftingPattern(pattern)) {
                 continue;
             }
-            if (stagedCrafting.hasPattern(slot)
-                || requestedIngredients.containsKey(slot)
+            if (stagedCrafting.hasPattern(slot) || requestedIngredients.containsKey(slot)
                 || ingredientBuffer.asMap().containsKey(slot)) {
                 debugEventThrottled("STAGED", "cancel fluid pattern slot=%d: fluid crafting upgrade missing", slot);
                 cancelPatternCraft(slot);
@@ -616,15 +655,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     public IOrderInfoProvider fullFillStagedCrafting(IPromise promise, IResource requestType,
                                                      IAdditionalTargetInformation info, PatternCraftingBranch branch) {
         return stagedCrafting.fulfill(promise, requestType, info, branch);
-    }
-
-    @Override
-    public void getAllItems(Map<ItemIdentifier, Integer> list, List<IFilter> filter) {
-    }
-
-    @Override
-    public Map<FluidIdentifier, Integer> getAvailableFluids() {
-        return Collections.emptyMap();
     }
 
     /**
@@ -742,7 +772,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (!isPatternCraftingSupported(pattern)) {
                 continue;
             }
-            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
             for (IPatternStack output : configuredPattern.getOutputs()) {
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
                 if (display != null) {
@@ -760,14 +790,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (pattern == null) {
                 continue;
             }
-            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
             PatternCraftingHudState.PatternInfo patternInfo = new PatternCraftingHudState.PatternInfo(slot);
             for (int inputSlot = 0; inputSlot < configuredPattern.getIngredientSlotCount(); inputSlot++) {
                 IPatternStack ingredient = configuredPattern.getPatternStackInSlot(inputSlot);
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(ingredient);
                 if (display != null) {
-                    patternInfo.getIngredients()
-                            .add(new PatternCraftingHudState.IngredientInfo(
+                    patternInfo.getIngredients().add(
+                        new PatternCraftingHudState.IngredientInfo(
                                     display,
                                     ingredientBuffer.amount(slot, ingredient),
                                     inputSlot));
@@ -778,7 +808,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
                         .getPatternStackInSlot(configuredPattern.getResultSlotStart() + outputSlot);
                 ItemIdentifierStack display = PatternStackHelper.makeDisplayStack(output);
                 if (display != null) {
-                    patternInfo.getOutputs().add(new PatternCraftingHudState.OutputInfo(
+                    patternInfo.getOutputs().add(
+                        new PatternCraftingHudState.OutputInfo(
                             display,
                             stagedCrafting.remainingOutputAmount(slot, output),
                             outputSlot));
@@ -802,7 +833,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             return "Doing: crafting in target inventory";
         }
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF && runningCraft >= 0
-                && runningCraft != patternSlot && runningCraftInAdjacent && connected != null
+            && runningCraft != patternSlot
+            && runningCraftInAdjacent
+            && connected != null
                 && !isInventoryEmpty(connected)) {
             return "Waiting: blocking slot " + (runningCraft + 1) + " is crafting";
         }
@@ -826,8 +859,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         int stagedSets = stagedRemainingSets(patternSlot);
         if (stagedSets > 0) {
             if (!canReceiveForPattern(patternSlot)) {
-                return runningCraft >= 0 ? "Waiting: blocking slot " + (runningCraft + 1)
-                        : "Waiting: buffer space";
+                return runningCraft >= 0 ? "Waiting: blocking slot " + (runningCraft + 1) : "Waiting: buffer space";
             }
             return "Doing: requesting " + formatSets(stagedSets);
         }
@@ -842,13 +874,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             int buffered = ingredientBuffer.amount(patternSlot, ingredient);
             int requested = requestedIngredient.amount(patternSlot, ingredient);
 
-            if (requested <= 0)
-                continue;
+            if (requested <= 0) continue;
 
             ingredient.getAmount();
             if (buffered < ingredient.getAmount()) {
-                String status = "Waiting on " + getHudIngredientName(ingredient) + " (" + buffered + "/"
-                        + ingredient.getAmount();
+                String status = "Waiting on " + getHudIngredientName(
+                    ingredient) + " (" + buffered + "/" + ingredient.getAmount();
                 status += ", " + requested + " routed";
 
                 return status + ")";
@@ -998,9 +1029,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             requested,
             space,
             accepted);
-        requestedIngredient.remove(
-            patternSlot,
-            new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
+        requestedIngredient
+            .remove(patternSlot, new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
         int requestedAfter = requestedIngredient.amount(patternSlot, item.getItem());
         if (accepted > 0) {
             ingredientBuffer.add(patternSlot, new PatternItemStack(new ItemIdentifierStack(item.getItem(), accepted)));
@@ -1174,7 +1204,10 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         AdjacentTile connected = adjacentInventory.getConnected();
         if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && connected != null
             && adjacentInventory.isEmpty(connected)
-            && ingredientBuffer.canCompleteOneSetAfterAdding(patternSlot, getLocalAggregatedIngredients(pattern), new PatternItemStack(new ItemIdentifierStack(item, space)))) {
+            && ingredientBuffer.canCompleteOneSetAfterAdding(
+            patternSlot,
+            getLocalAggregatedIngredients(pattern),
+            new PatternItemStack(new ItemIdentifierStack(item, space)))) {
             space += localIngredientAmount(pattern, item);
         }
         debug("arrival item space slot=%d item=%s space=%d", patternSlot, item, space);
@@ -1276,6 +1309,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * This mirrors item capacity but measures millibuckets in the module's pattern buffer instead of item stack counts.
      */
     private int spaceForFluid(FluidIdentifier fluid, boolean includeInTransit) {
+        //TODO include in transit
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
@@ -1388,7 +1422,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (pattern == null) {
             return result;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
             if (stack == null || stack.getAmount() <= 0) {
@@ -1413,7 +1447,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (pattern == null || item == null) {
             return null;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
             if (!(stack instanceof PatternItemStack)
@@ -1436,7 +1470,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (pattern == null) {
             return result;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
             if (stack == null || stack.getAmount() <= 0) {
@@ -1447,8 +1481,8 @@ public class ModuleItemCrafting extends LogisticsGuiModule
                 : null;
             boolean merged = false;
             for (PatternIngredientTarget existing : result) {
-                if (existing.target == target && existing.stack.canMerge(stack)) {
-                    existing.stack.addAmount(stack.getAmount());
+                if (existing.target() == target && existing.stack().canMerge(stack)) {
+                    existing.stack().addAmount(stack.getAmount());
                     merged = true;
                     break;
                 }
@@ -1466,7 +1500,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     int localIngredientAmount(ItemStack pattern, ItemIdentifier item) {
         int amount = 0;
         for (IPatternStack ingredient : getLocalAggregatedIngredients(pattern)) {
-            if (PatternStackHelper.matches(ingredient, item)) {
+            if (PatternStackHelper.matches(ingredient, FluidIdentifier.get(item))) {
                 amount += ingredient.getAmount();
             }
         }
@@ -1477,7 +1511,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      * Checks whether one input slot is assigned to a linked and currently known pattern satellite pipe.
      */
     boolean hasLinkedSatelliteAssignment(ItemStack pattern, int inputSlot) {
-        return pattern != null && getSatelliteTargetForInputSlot(Pattern.fromStack(pattern), inputSlot) != null;
+        return pattern != null && getSatelliteTargetForInputSlot(ItemPattern.fromStack(pattern), inputSlot) != null;
     }
 
     /**
@@ -1487,7 +1521,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (pattern == null) {
             return false;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             if (getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
                 return true;
@@ -1514,7 +1548,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         return pipe.getLinkedPatternSatellite(satelliteUuid, satelliteId);
     }
 
-
     /**
      * Attempts to push complete buffered pattern sets into the selected adjacent inventory or fluid handler.
      * <p>
@@ -1524,15 +1557,17 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     private void pushBufferedIngredients() {
         AdjacentTile connected = getConnectedInventoryTile();
         if (connected == null) {
-            debugEventThrottled("BUFFER", "push skipped: no connected inventory bufferedSlots=%d", ingredientBuffer.size());
+            debugEventThrottled(
+                "BUFFER",
+                "push skipped: no connected inventory bufferedSlots=%d",
+                ingredientBuffer.size());
             return;
         }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         debug("push tick mode=%s runningCraft=%d bufferedSlots=%d", mode, runningCraft, ingredientBuffer.size());
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             for (int patternSlot : new ArrayList<>(ingredientBuffer.asMap().keySet())) {
-                if (completeBufferedSets(patternSlot) <= 0)
-                    continue;
+                if (completeBufferedSets(patternSlot) <= 0) continue;
                 pushBufferedIngredientsFor(patternSlot);
             }
             return;
@@ -1672,7 +1707,6 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         return sent;
     }
 
-
     /**
      * @return a pattern slot whose buffered arrived ingredients can be pushed as a complete set.
      */
@@ -1712,9 +1746,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (runningCraft < 0) {
             return false;
         }
-//        if (hasBufferedIngredients(runningCraft)) {
-//            return true;
-//        }
+        // if (hasBufferedIngredients(runningCraft)) {
+        // return true;
+        // }
         AdjacentTile connected = getConnectedInventoryTile();
         return runningCraftInAdjacent && connected != null && !isInventoryEmpty(connected);
     }
@@ -1873,7 +1907,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             }
             found = true;
             out.append("    slot ").append(slot).append("\n");
-            AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+            AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
             appendPatternSlots(out, configuredPattern, 0, configuredPattern.getIngredientSlotCount(), "      inputs");
             appendPatternSlots(
                 out,
@@ -1999,11 +2033,14 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         if (outstanding == null || outstanding.getAmount() <= 0) {
             return originalAmount;
         }
-        if (info instanceof PatternTargetInformation
-            && hasLivePatternOutputOrderForRequested(
+        if (info instanceof PatternTargetInformation && hasLivePatternOutputOrderForRequested(
                 ((PatternTargetInformation) info).patternSlot(),
                 outstanding)) {
-            debugEvent("REQUEST", "lost retry skipped, live pattern output still pending ingredient=%s info=%s", outstanding, info);
+            debugEvent(
+                "REQUEST",
+                "lost retry skipped, live pattern output still pending ingredient=%s info=%s",
+                outstanding,
+                info);
             return originalAmount;
         }
 
@@ -2014,7 +2051,12 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         FluidIdentifier fluid = PatternStackHelper.asFluid(outstanding);
         if (fluid != null) {
-            debugEvent("REQUEST", "lost retry requesting fluid=%s amount=%d info=%s", fluid, outstanding.getAmount(), info);
+            debugEvent(
+                "REQUEST",
+                "lost retry requesting fluid=%s amount=%d info=%s",
+                fluid,
+                outstanding.getAmount(),
+                info);
             return originalAmount - outstanding.getAmount()
                 + RequestTree.requestFluidPartial(fluid, outstanding.getAmount(), this, null, info);
         }
@@ -2066,8 +2108,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         int amount = 0;
         for (LogisticsItemOrder order : patternPipe.getItemOrderManager()) {
-            if (order.isFinished()
-                || !item.getItem().equalsForCrafting(order.getResource().getItem())
+            if (order.isFinished() || !item.getItem().equalsForCrafting(order.getResource().getItem())
                 || !isOrderTargetingThisPattern(order, patternSlot)) {
                 continue;
             }
@@ -2084,8 +2125,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         int amount = 0;
         for (LogisticsFluidOrder order : patternPipe.getPatternFluidOrderManager()) {
-            if (order.isFinished()
-                || !fluid.equals(order.getFluid())
+            if (order.isFinished() || !fluid.equals(order.getFluid())
                 || !isOrderTargetingThisPattern(order, patternSlot)) {
                 continue;
             }
@@ -2095,15 +2135,13 @@ public class ModuleItemCrafting extends LogisticsGuiModule
     }
 
     private boolean isOrderTargetingThisPattern(LogisticsItemOrder order, int patternSlot) {
-        return order.getDestination() != null
-            && order.getDestination().getRouter() == getRouter()
+        return order.getDestination() != null && order.getDestination().getRouter() == getRouter()
             && order.getInformation() instanceof PatternTargetInformation
             && ((PatternTargetInformation) order.getInformation()).patternSlot() == patternSlot;
     }
 
     private boolean isOrderTargetingThisPattern(LogisticsFluidOrder order, int patternSlot) {
-        return order.getDestination() != null
-            && order.getDestination().getRouter() == getRouter()
+        return order.getDestination() != null && order.getDestination().getRouter() == getRouter()
             && order.getInformation() instanceof PatternTargetInformation
             && ((PatternTargetInformation) order.getInformation()).patternSlot() == patternSlot;
     }

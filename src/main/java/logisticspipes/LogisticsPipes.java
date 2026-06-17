@@ -4,29 +4,6 @@
  */
 package logisticspipes;
 
-import java.lang.reflect.Field;
-import java.util.Calendar;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import net.minecraft.block.Block;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.CraftingManager;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.util.ForgeDirection;
-
-import org.apache.logging.log4j.Logger;
-
 import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
@@ -49,8 +26,8 @@ import logisticspipes.commands.chathelper.LPChatListener;
 import logisticspipes.config.Configs;
 import logisticspipes.config.PlayerConfig;
 import logisticspipes.crafting.ItemMemoryChip;
-import logisticspipes.crafting.Pattern;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.requesttable.RequestTablePipe;
 import logisticspipes.items.ItemDisk;
 import logisticspipes.items.ItemHUDArmor;
@@ -71,7 +48,38 @@ import logisticspipes.logistics.LogisticsManager;
 import logisticspipes.network.GuiHandler;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.network.PacketHandler;
-import logisticspipes.pipes.*;
+import logisticspipes.pipes.PipeBlockRequestTable;
+import logisticspipes.pipes.PipeFluidBasic;
+import logisticspipes.pipes.PipeFluidExtractor;
+import logisticspipes.pipes.PipeFluidInsertion;
+import logisticspipes.pipes.PipeFluidProvider;
+import logisticspipes.pipes.PipeFluidRequestLogistics;
+import logisticspipes.pipes.PipeFluidSatellite;
+import logisticspipes.pipes.PipeFluidSupplierMk2;
+import logisticspipes.pipes.PipeItemsApiaristAnalyser;
+import logisticspipes.pipes.PipeItemsApiaristSink;
+import logisticspipes.pipes.PipeItemsBasicLogistics;
+import logisticspipes.pipes.PipeItemsCraftingLogistics;
+import logisticspipes.pipes.PipeItemsCraftingLogisticsMk2;
+import logisticspipes.pipes.PipeItemsCraftingLogisticsMk3;
+import logisticspipes.pipes.PipeItemsFirewall;
+import logisticspipes.pipes.PipeItemsFluidSupplier;
+import logisticspipes.pipes.PipeItemsInvSysConnector;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.PipeItemsProviderLogistics;
+import logisticspipes.pipes.PipeItemsProviderLogisticsMk2;
+import logisticspipes.pipes.PipeItemsRemoteOrdererLogistics;
+import logisticspipes.pipes.PipeItemsRequestLogistics;
+import logisticspipes.pipes.PipeItemsRequestLogisticsMk2;
+import logisticspipes.pipes.PipeItemsSatelliteLogistics;
+import logisticspipes.pipes.PipeItemsSupplierLogistics;
+import logisticspipes.pipes.PipeItemsSystemDestinationLogistics;
+import logisticspipes.pipes.PipeItemsSystemEntranceLogistics;
+import logisticspipes.pipes.PipeLogisticsChassiMk1;
+import logisticspipes.pipes.PipeLogisticsChassiMk2;
+import logisticspipes.pipes.PipeLogisticsChassiMk3;
+import logisticspipes.pipes.PipeLogisticsChassiMk4;
+import logisticspipes.pipes.PipeLogisticsChassiMk5;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.pipes.basic.CoreUnroutedPipe;
 import logisticspipes.pipes.basic.LogisticsBlockGenericPipe;
@@ -124,6 +132,27 @@ import logisticspipes.ticks.ServerPacketBufferHandlerThread;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.InventoryUtilFactory;
 import logisticspipes.utils.RoutedItemHelper;
+import net.minecraft.block.Block;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.CraftingManager;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.client.MinecraftForgeClient;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.ForgeDirection;
+import org.apache.logging.log4j.Logger;
+
+import java.lang.reflect.Field;
+import java.util.Calendar;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 // @formatter:off
 // CHECKSTYLE:OFF
@@ -509,7 +538,7 @@ public class LogisticsPipes {
                 LogisticsPipes.LogisticsPipeControllerItem,
                 LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
 
-        LogisticsPipes.LogisticsPattern = new Pattern();
+        LogisticsPipes.LogisticsPattern = new ItemPattern();
         LogisticsPipes.LogisticsPattern.setUnlocalizedName("logisticsPattern");
         GameRegistry
                 .registerItem(LogisticsPipes.LogisticsPattern, LogisticsPipes.LogisticsPattern.getUnlocalizedName());

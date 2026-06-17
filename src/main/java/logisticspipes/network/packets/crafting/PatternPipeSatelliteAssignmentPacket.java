@@ -1,12 +1,7 @@
 package logisticspipes.network.packets.crafting;
 
-import java.io.IOException;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
 import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -16,21 +11,19 @@ import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
+import java.io.IOException;
+
+@Setter
+@Getter
 @Accessors(chain = true)
 public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
 
-    @Getter
-    @Setter
     private int patternSlot;
-    @Getter
-    @Setter
     private int inputSlot;
-    @Getter
-    @Setter
     private int satelliteId;
-    @Getter
-    @Setter
     private String satelliteUuid = "";
 
     public PatternPipeSatelliteAssignmentPacket(int id) {
@@ -49,15 +42,14 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
     @Override
     public void processPacket(EntityPlayer player) {
         LogisticsTileGenericPipe tile = getPipe(player.worldObj);
-        if (tile == null || !(tile.pipe instanceof PipeItemsPatternCraftingLogistics)) {
+        if (tile == null || !(tile.pipe instanceof PipeItemsPatternCraftingLogistics pipe)) {
             return;
         }
-        PipeItemsPatternCraftingLogistics pipe = (PipeItemsPatternCraftingLogistics) tile.pipe;
         ItemStack pattern = pipe.getPatternModule().getPatternItemStack(patternSlot);
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
-        Pattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        ItemPattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();

@@ -1,19 +1,23 @@
 package logisticspipes.crafting;
 
+import com.github.bsideup.jabel.Desugar;
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.utils.item.ItemIdentifierStack;
-
+@Getter
 public class PatternCraftingHudState {
 
-    private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode;
-    private List<PatternInfo> patterns;
+    private final PipeItemsPatternCraftingLogistics.BlockingMode blockingMode;
+    private final List<PatternInfo> patterns;
 
     public PatternCraftingHudState() {
         this(PipeItemsPatternCraftingLogistics.BlockingMode.OFF, new ArrayList<>());
@@ -24,21 +28,13 @@ public class PatternCraftingHudState {
     }
 
     public PatternCraftingHudState(PipeItemsPatternCraftingLogistics.BlockingMode blockingMode,
-            List<PatternInfo> patterns) {
+                                   List<PatternInfo> patterns) {
         this.blockingMode = blockingMode == null ? PipeItemsPatternCraftingLogistics.BlockingMode.OFF : blockingMode;
         this.patterns = patterns == null ? new ArrayList<>() : patterns;
     }
 
     public static PatternCraftingHudState empty() {
         return new PatternCraftingHudState();
-    }
-
-    public PipeItemsPatternCraftingLogistics.BlockingMode getBlockingMode() {
-        return blockingMode;
-    }
-
-    public List<PatternInfo> getPatterns() {
-        return patterns;
     }
 
     public void writeData(LPDataOutputStream data) throws IOException {
@@ -48,10 +44,8 @@ public class PatternCraftingHudState {
 
     public static PatternCraftingHudState readData(LPDataInputStream data) throws IOException {
         PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = data
-                .readEnum(PipeItemsPatternCraftingLogistics.BlockingMode.class);
-        return new PatternCraftingHudState(
-                blockingMode,
-                data.readList(PatternInfo::readData));
+            .readEnum(PipeItemsPatternCraftingLogistics.BlockingMode.class);
+        return new PatternCraftingHudState(blockingMode, data.readList(PatternInfo::readData));
     }
 
     @Override
@@ -59,10 +53,9 @@ public class PatternCraftingHudState {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof PatternCraftingHudState)) {
+        if (!(o instanceof PatternCraftingHudState that)) {
             return false;
         }
-        PatternCraftingHudState that = (PatternCraftingHudState) o;
         return blockingMode == that.blockingMode && patterns.equals(that.patterns);
     }
 
@@ -71,20 +64,22 @@ public class PatternCraftingHudState {
         return Objects.hash(blockingMode, patterns);
     }
 
+    @Getter
     public static class PatternInfo {
 
-        private int slot;
-        private List<IngredientInfo> ingredients;
-        private List<OutputInfo> outputs;
+        private final int slot;
+        private final List<IngredientInfo> ingredients;
+        private final List<OutputInfo> outputs;
         private String status;
+        @Setter
         private boolean active;
 
         public PatternInfo(int slot) {
             this(slot, new ArrayList<>(), new ArrayList<>(), "", false);
         }
 
-        private PatternInfo(int slot, List<IngredientInfo> ingredients, List<OutputInfo> outputs,
-                String status, boolean active) {
+        private PatternInfo(int slot, List<IngredientInfo> ingredients, List<OutputInfo> outputs, String status,
+                            boolean active) {
             this.slot = slot;
             this.ingredients = ingredients == null ? new ArrayList<>() : ingredients;
             this.outputs = outputs == null ? new ArrayList<>() : outputs;
@@ -92,32 +87,8 @@ public class PatternCraftingHudState {
             this.active = active;
         }
 
-        public int getSlot() {
-            return slot;
-        }
-
-        public List<IngredientInfo> getIngredients() {
-            return ingredients;
-        }
-
-        public List<OutputInfo> getOutputs() {
-            return outputs;
-        }
-
-        public String getStatus() {
-            return status;
-        }
-
         public void setStatus(String status) {
             this.status = status == null ? "" : status;
-        }
-
-        public boolean isActive() {
-            return active;
-        }
-
-        public void setActive(boolean active) {
-            this.active = active;
         }
 
         private void writeData(LPDataOutputStream data) throws IOException {
@@ -130,11 +101,11 @@ public class PatternCraftingHudState {
 
         private static PatternInfo readData(LPDataInputStream data) throws IOException {
             return new PatternInfo(
-                    data.readInt(),
-                    data.readList(IngredientInfo::readData),
-                    data.readList(OutputInfo::readData),
-                    data.readUTF(),
-                    data.readBoolean());
+                data.readInt(),
+                data.readList(IngredientInfo::readData),
+                data.readList(OutputInfo::readData),
+                data.readUTF(),
+                data.readBoolean());
         }
 
         @Override
@@ -142,15 +113,13 @@ public class PatternCraftingHudState {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof PatternInfo)) {
+            if (!(o instanceof PatternInfo that)) {
                 return false;
             }
-            PatternInfo that = (PatternInfo) o;
-            return slot == that.slot
-                    && active == that.active
-                    && ingredients.equals(that.ingredients)
-                    && outputs.equals(that.outputs)
-                    && status.equals(that.status);
+            return slot == that.slot && active == that.active
+                && ingredients.equals(that.ingredients)
+                && outputs.equals(that.outputs)
+                && status.equals(that.status);
         }
 
         @Override
@@ -159,32 +128,13 @@ public class PatternCraftingHudState {
         }
     }
 
-    public static class OutputInfo {
-
-        private ItemIdentifierStack stack;
-        private int requestedAmount;
-        private int slot;
-
-        public OutputInfo(ItemIdentifierStack stack, int requestedAmount) {
-            this(stack, requestedAmount, -1);
-        }
+    @Desugar
+    public record OutputInfo(ItemIdentifierStack stack, int requestedAmount, int slot) {
 
         public OutputInfo(ItemIdentifierStack stack, int requestedAmount, int slot) {
             this.stack = stack;
             this.requestedAmount = Math.max(0, requestedAmount);
             this.slot = slot;
-        }
-
-        public ItemIdentifierStack getStack() {
-            return stack;
-        }
-
-        public int getRequestedAmount() {
-            return requestedAmount;
-        }
-
-        public int getSlot() {
-            return slot;
         }
 
         private void writeData(LPDataOutputStream data) throws IOException {
@@ -202,45 +152,21 @@ public class PatternCraftingHudState {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof OutputInfo)) {
+            if (!(o instanceof OutputInfo that)) {
                 return false;
             }
-            OutputInfo that = (OutputInfo) o;
             return requestedAmount == that.requestedAmount && slot == that.slot && stack.equals(that.stack);
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(stack, requestedAmount, slot);
-        }
     }
 
-    public static class IngredientInfo {
-
-        private ItemIdentifierStack stack;
-        private int bufferedAmount;
-        private int slot;
-
-        public IngredientInfo(ItemIdentifierStack stack, int bufferedAmount) {
-            this(stack, bufferedAmount, -1);
-        }
+    @Desugar
+    public record IngredientInfo(ItemIdentifierStack stack, int bufferedAmount, int slot) {
 
         public IngredientInfo(ItemIdentifierStack stack, int bufferedAmount, int slot) {
             this.stack = stack;
             this.bufferedAmount = Math.max(0, bufferedAmount);
             this.slot = slot;
-        }
-
-        public ItemIdentifierStack getStack() {
-            return stack;
-        }
-
-        public int getBufferedAmount() {
-            return bufferedAmount;
-        }
-
-        public int getSlot() {
-            return slot;
         }
 
         private void writeData(LPDataOutputStream data) throws IOException {
@@ -258,16 +184,11 @@ public class PatternCraftingHudState {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof IngredientInfo)) {
+            if (!(o instanceof IngredientInfo that)) {
                 return false;
             }
-            IngredientInfo that = (IngredientInfo) o;
             return bufferedAmount == that.bufferedAmount && slot == that.slot && stack.equals(that.stack);
         }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(stack, bufferedAmount, slot);
-        }
     }
 }

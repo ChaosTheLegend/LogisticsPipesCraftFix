@@ -4,7 +4,9 @@ import logisticspipes.interfaces.routing.IProvideFluids;
 import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.utils.FluidIdentifier;
+import lombok.Getter;
 
+@Getter
 public class PatternFluidCraftingPromise extends FluidLogisticsPromise {
 
     private final int patternSlot;
@@ -15,14 +17,6 @@ public class PatternFluidCraftingPromise extends FluidLogisticsPromise {
         super(fluid, amount, sender, ResourceType.CRAFTING);
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = resultAmountPerSet;
-    }
-
-    public int getPatternSlot() {
-        return patternSlot;
-    }
-
-    public int getResultAmountPerSet() {
-        return resultAmountPerSet;
     }
 
     /**

@@ -1,12 +1,11 @@
 package logisticspipes.network.packets.gui;
 
-import net.minecraft.entity.player.EntityPlayer;
-
-import logisticspipes.crafting.PatternContainer;
+import logisticspipes.crafting.pattern.PatternContainer;
 import logisticspipes.network.abstractpackets.IntegerCoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
+import net.minecraft.entity.player.EntityPlayer;
 
 public class PatternPipeSelectPacket extends IntegerCoordinatesPacket {
 

@@ -1,15 +1,7 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.util.EnumChatFormatting;
-
+import logisticspipes.crafting.PatternSatelliteInfo;
+import logisticspipes.crafting.PatternSatelliteSelectorGui;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.PatternSatelliteAssignmentPacket;
 import logisticspipes.network.packets.gui.PatternSlotActionPacket;
@@ -17,6 +9,15 @@ import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.util.EnumChatFormatting;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class PatternGui extends LogisticsBaseGuiScreen {
 
@@ -31,10 +32,6 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     private static final int OUTPUT_TOP = 34;
     private static final int SLOT_SIZE = 18;
     private static final int SATELLITE_ICON_SIZE = 7;
-
-    public PatternGui(EntityPlayer player, IInventory inventory) {
-        this(player, inventory, Collections.emptyList());
-    }
 
     public PatternGui(EntityPlayer player, IInventory inventory, List<PatternSatelliteInfo> satellites) {
         super(176, 174, 0, 0);
@@ -68,11 +65,13 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + 92);
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
-                GuiGraphics.drawSlotBackground(mc, guiLeft + INGREDIENT_LEFT + x * SLOT_SIZE,
+                GuiGraphics.drawSlotBackground(
+                    mc,
+                    guiLeft + INGREDIENT_LEFT + x * SLOT_SIZE,
                         guiTop + INGREDIENT_TOP + y * SLOT_SIZE);
             }
         }
-        for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
+        for (int i = 0; i < ItemPattern.RESULT_SLOTS; i++) {
             GuiGraphics.drawSlotBackground(mc, guiLeft + OUTPUT_LEFT + i * SLOT_SIZE, guiTop + OUTPUT_TOP);
         }
         drawSatelliteIcons();
@@ -99,22 +98,18 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
-    public int getInventorySlot() {
-        return patternInventory.getInventorySlot();
-    }
-
     @Override
     protected void actionPerformed(GuiButton button) {
         switch (button.id) {
             case CLEAR_BUTTON_ID:
-                Pattern.fromStack(patternInventory.getPatternStack()).clear();
+                ItemPattern.fromStack(patternInventory.getPatternStack()).clear();
                 MainProxy.sendPacketToServer(
                         PacketHandler.getPacket(PatternSlotActionPacket.class)
                                 .setInventorySlot(patternInventory.getInventorySlot())
                                 .setAction(PatternSlotActionPacket.Action.CLEAR.ordinal()));
                 break;
             case MULTIPLE_BUTTON_ID:
-                Pattern.fromStack(patternInventory.getPatternStack()).multiply(2);
+                ItemPattern.fromStack(patternInventory.getPatternStack()).multiply(2);
                 MainProxy.sendPacketToServer(
                         PacketHandler.getPacket(PatternSlotActionPacket.class)
                                 .setInventorySlot(patternInventory.getInventorySlot())
@@ -125,25 +120,24 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     }
 
     private void openSatelliteSelector(int inputSlot) {
-        int currentSatelliteId = Pattern.fromStack(patternInventory.getPatternStack())
+        int currentSatelliteId = ItemPattern.fromStack(patternInventory.getPatternStack())
                 .getSatelliteIdForInputSlot(inputSlot);
         setSubGui(
                 new PatternSatelliteSelectorGui(
                         inputSlot,
                         currentSatelliteId,
                         satellites,
-                        (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId,
-                                satelliteUuid)));
+                    (satelliteId,
+                     satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId, satelliteUuid)));
     }
 
     private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid) {
-        Pattern.fromStack(patternInventory.getPatternStack())
+        ItemPattern.fromStack(patternInventory.getPatternStack())
                 .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         MainProxy.sendPacketToServer(
                 PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot()).setInputSlot(inputSlot)
-                        .setSatelliteId(satelliteId)
-                        .setSatelliteUuid(satelliteUuid));
+                    .setSatelliteId(satelliteId).setSatelliteUuid(satelliteUuid));
     }
 
     private void drawSatelliteButtonTooltip(int mouseX, int mouseY) {
@@ -151,8 +145,9 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         if (inputSlot < 0) {
             return;
         }
-        int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
-        String satelliteUuid = Pattern.fromStack(patternInventory.getPatternStack())
+        int satelliteId = ItemPattern.fromStack(patternInventory.getPatternStack())
+            .getSatelliteIdForInputSlot(inputSlot);
+        String satelliteUuid = ItemPattern.fromStack(patternInventory.getPatternStack())
                 .getSatelliteUuidForInputSlot(inputSlot);
         List<String> tooltip = new ArrayList<>();
         if (satelliteId <= 0 && satelliteUuid.isEmpty()) {
@@ -161,8 +156,9 @@ public class PatternGui extends LogisticsBaseGuiScreen {
             PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid);
             tooltip.add("Pattern satellite " + (satellite == null ? "#" + satelliteId : satellite.displayName()));
             if (satellite != null) {
-                tooltip.add("Dim " + satellite.dimension() + " at " + satellite.x() + ", "
-                        + satellite.y() + ", " + satellite.z());
+                tooltip.add(
+                    "Dim " + satellite
+                        .dimension() + " at " + satellite.x() + ", " + satellite.y() + ", " + satellite.z());
                 tooltip.add(satellite.distance() >= 0 ? satellite.distance() + "m away" : "Other dimension");
                 if (satellite.favorite()) {
                     tooltip.add("Stored on memory chip");
@@ -186,14 +182,14 @@ public class PatternGui extends LogisticsBaseGuiScreen {
 
     private void drawSatelliteIcons() {
         for (int inputSlot = 0; inputSlot < getInputSize(); inputSlot++) {
-            int satelliteId = Pattern.fromStack(patternInventory.getPatternStack()).getSatelliteIdForInputSlot(inputSlot);
-            String satelliteUuid = Pattern.fromStack(patternInventory.getPatternStack())
+            int satelliteId = ItemPattern.fromStack(patternInventory.getPatternStack())
+                .getSatelliteIdForInputSlot(inputSlot);
+            String satelliteUuid = ItemPattern.fromStack(patternInventory.getPatternStack())
                     .getSatelliteUuidForInputSlot(inputSlot);
             int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
             int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
             boolean assigned = satelliteId > 0 || !satelliteUuid.isEmpty();
-            Gui.drawRect(x, y, x + SATELLITE_ICON_SIZE, y + SATELLITE_ICON_SIZE,
-                    assigned ? 0xff2b6ee8 : 0xff777777);
+            Gui.drawRect(x, y, x + SATELLITE_ICON_SIZE, y + SATELLITE_ICON_SIZE, assigned ? 0xff2b6ee8 : 0xff777777);
             mc.fontRenderer.drawString(assigned ? "S" : "+", x + 1, y, 0xffffff);
         }
     }
@@ -202,8 +198,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         for (int inputSlot = 0; inputSlot < getInputSize(); inputSlot++) {
             int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
             int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
-            if (mouseX >= x && mouseX < x + SATELLITE_ICON_SIZE
-                    && mouseY >= y && mouseY < y + SATELLITE_ICON_SIZE) {
+            if (mouseX >= x && mouseX < x + SATELLITE_ICON_SIZE && mouseY >= y && mouseY < y + SATELLITE_ICON_SIZE) {
                 return inputSlot;
             }
         }
@@ -214,7 +209,4 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         return 9;
     }
 
-    public int getOutputSize() {
-        return 3;
-    }
 }

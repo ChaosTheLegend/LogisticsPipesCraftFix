@@ -1,5 +1,9 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.patternStack;
 
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -7,11 +11,7 @@ import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
 
-import gregtech.common.items.ItemFluidDisplay;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifierStack;
-
+@Getter
 public class PatternFluidStack implements IPatternStack {
 
     private final FluidIdentifier fluid;
@@ -27,10 +27,19 @@ public class PatternFluidStack implements IPatternStack {
 
         FluidStack fluid = null;
 
-        if (stack.getItem() instanceof ItemFluidDisplay) {
+        stack.getItem();
 
-        }
+        fluid = getFluidStack(stack, fluid);
 
+        if (fluid == null) return null;
+
+        fluid = fluid.copy();
+        fluid.amount *= stack.stackSize;
+
+        return new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount);
+    }
+
+    public static FluidStack getFluidStack(ItemStack stack, FluidStack fluid) {
         if (stack.getItem() instanceof IFluidContainerItem) {
             fluid = ((IFluidContainerItem) stack.getItem()).getFluid(stack);
         } else if (FluidContainerRegistry.isContainer(stack)) {
@@ -41,13 +50,7 @@ public class PatternFluidStack implements IPatternStack {
             fluid = SimpleServiceLocator.logisticsFluidManager
                     .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
         }
-
-        if (fluid == null) return null;
-
-        fluid = fluid.copy();
-        fluid.amount *= stack.stackSize;
-
-        return new PatternFluidStack(FluidIdentifier.get(fluid), fluid.amount);
+        return fluid;
     }
 
     public static PatternFluidStack readFromNBT(NBTTagCompound tag) {
@@ -63,14 +66,6 @@ public class PatternFluidStack implements IPatternStack {
             return null;
         }
         return new PatternFluidStack(FluidIdentifier.get(stack), stack.amount);
-    }
-
-    public FluidIdentifier getFluid() {
-        return fluid;
-    }
-
-    public int getAmount() {
-        return amount;
     }
 
     @Override
@@ -89,10 +84,6 @@ public class PatternFluidStack implements IPatternStack {
     @Override
     public ItemStack makeDisplayItemStack() {
         return makeDisplayStack().makeNormalStack();
-    }
-
-    public ItemStack makeGuiStack() {
-        return fluid.getItemIdentifier().unsafeMakeNormalStack(1);
     }
 
     @Override

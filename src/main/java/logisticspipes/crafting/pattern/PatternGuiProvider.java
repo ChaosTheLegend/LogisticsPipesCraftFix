@@ -1,15 +1,16 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraft.entity.player.EntityPlayer;
-
+import logisticspipes.crafting.PatternSatelliteInfo;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractguis.GuiProvider;
 import logisticspipes.utils.gui.DummyContainer;
+import net.minecraft.entity.player.EntityPlayer;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PatternGuiProvider extends GuiProvider {
 
@@ -60,14 +61,15 @@ public class PatternGuiProvider extends GuiProvider {
         addPatternSlots(dummy, 26, 17, 116, 35);
     }
 
-    static void addPatternSlots(DummyContainer dummy, int inputLeft, int inputTop, int outputLeft, int outputTop) {
+    public static void addPatternSlots(DummyContainer dummy, int inputLeft, int inputTop, int outputLeft,
+                                       int outputTop) {
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
                 dummy.addDummySlot(x + y * 3, inputLeft + x * 18, inputTop + y * 18);
             }
         }
-        for (int i = 0; i < Pattern.RESULT_SLOTS; i++) {
-            dummy.addDummySlot(Pattern.INGREDIENT_SLOTS + i, outputLeft + i * 18, outputTop);
+        for (int i = 0; i < ItemPattern.RESULT_SLOTS; i++) {
+            dummy.addDummySlot(ItemPattern.INGREDIENT_SLOTS + i, outputLeft + i * 18, outputTop);
         }
     }
 

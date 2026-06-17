@@ -1,14 +1,8 @@
 package logisticspipes.crafting;
 
-import java.util.UUID;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.FluidStack;
-
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
-import logisticspipes.interfaces.routing.IProvideItems;
 import logisticspipes.interfaces.routing.IProvideFluids;
+import logisticspipes.interfaces.routing.IProvideItems;
 import logisticspipes.interfaces.routing.IRequestFluid;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -34,8 +28,12 @@ import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fluids.FluidStack;
+
+import java.util.UUID;
 
 final class PatternCraftingPersistence {
 
@@ -74,22 +72,19 @@ final class PatternCraftingPersistence {
     private PatternCraftingPersistence() {}
 
     static boolean writeResource(NBTTagCompound tag, IResource resource) {
-        if (resource instanceof FluidResource) {
-            FluidResource fluid = (FluidResource) resource;
+        if (resource instanceof FluidResource fluid) {
             tag.setString(KIND_TAG, FLUID_KIND);
             writeFluid(tag, fluid.getFluid(), fluid.getRequestedAmount());
             writeFluidRequester(tag, TARGET_TAG, fluid.getTarget());
             return true;
         }
-        if (resource instanceof DictResource) {
-            DictResource dict = (DictResource) resource;
+        if (resource instanceof DictResource dict) {
             tag.setString(KIND_TAG, DICT_KIND);
             writeDictResource(tag, dict);
             writeItemRequester(tag, TARGET_TAG, dict.getTarget());
             return true;
         }
-        if (resource instanceof ItemResource) {
-            ItemResource item = (ItemResource) resource;
+        if (resource instanceof ItemResource item) {
             tag.setString(KIND_TAG, ITEM_KIND);
             writeStack(tag, item.getItemStack());
             writeItemRequester(tag, TARGET_TAG, item.getTarget());
@@ -121,8 +116,7 @@ final class PatternCraftingPersistence {
     }
 
     static boolean writePromise(NBTTagCompound tag, IPromise promise) {
-        if (promise instanceof PatternFluidCraftingPromise) {
-            PatternFluidCraftingPromise pattern = (PatternFluidCraftingPromise) promise;
+        if (promise instanceof PatternFluidCraftingPromise pattern) {
             tag.setString(KIND_TAG, PATTERN_FLUID_PROMISE_KIND);
             writeFluid(tag, pattern.getLiquid(), pattern.getAmount());
             writeFluidProvider(tag, PROVIDER_TAG, pattern.getSender());
@@ -130,24 +124,21 @@ final class PatternCraftingPersistence {
             tag.setInteger(RESULT_AMOUNT_PER_SET_TAG, pattern.getResultAmountPerSet());
             return true;
         }
-        if (promise instanceof FluidExtraPromise) {
-            FluidExtraPromise extra = (FluidExtraPromise) promise;
+        if (promise instanceof FluidExtraPromise extra) {
             tag.setString(KIND_TAG, FLUID_EXTRA_PROMISE_KIND);
             writeFluid(tag, extra.getLiquid(), extra.getAmount());
             writeFluidProvider(tag, PROVIDER_TAG, extra.getSender());
             tag.setBoolean(PROVIDED_TAG, extra.isProvided());
             return true;
         }
-        if (promise instanceof FluidLogisticsPromise) {
-            FluidLogisticsPromise fluid = (FluidLogisticsPromise) promise;
+        if (promise instanceof FluidLogisticsPromise fluid) {
             tag.setString(KIND_TAG, FLUID_KIND);
             writeFluid(tag, fluid.getLiquid(), fluid.getAmount());
             writeResourceType(tag, fluid.getType());
             writeFluidProvider(tag, PROVIDER_TAG, fluid.getSender());
             return true;
         }
-        if (promise instanceof PatternCraftingPromise) {
-            PatternCraftingPromise pattern = (PatternCraftingPromise) promise;
+        if (promise instanceof PatternCraftingPromise pattern) {
             tag.setString(KIND_TAG, PATTERN_ITEM_PROMISE_KIND);
             writeStack(tag, pattern.getItemType().makeStack(pattern.getAmount()));
             writeItemProvider(tag, PROVIDER_TAG, (IProvideItems) pattern.getProvider());
@@ -155,32 +146,28 @@ final class PatternCraftingPersistence {
             tag.setInteger(RESULT_AMOUNT_PER_SET_TAG, pattern.getResultAmountPerSet());
             return true;
         }
-        if (promise instanceof LogisticsExtraDictPromise) {
-            LogisticsExtraDictPromise extra = (LogisticsExtraDictPromise) promise;
+        if (promise instanceof LogisticsExtraDictPromise extra) {
             tag.setString(KIND_TAG, DICT_EXTRA_PROMISE_KIND);
             writeDictResource(tag, extra.getResource());
             writeItemProvider(tag, PROVIDER_TAG, extra.sender);
             tag.setBoolean(PROVIDED_TAG, extra.isProvided());
             return true;
         }
-        if (promise instanceof LogisticsExtraPromise) {
-            LogisticsExtraPromise extra = (LogisticsExtraPromise) promise;
+        if (promise instanceof LogisticsExtraPromise extra) {
             tag.setString(KIND_TAG, ITEM_EXTRA_PROMISE_KIND);
             writeStack(tag, extra.getItemType().makeStack(extra.getAmount()));
             writeItemProvider(tag, PROVIDER_TAG, extra.sender);
             tag.setBoolean(PROVIDED_TAG, extra.isProvided());
             return true;
         }
-        if (promise instanceof LogisticsDictPromise) {
-            LogisticsDictPromise dict = (LogisticsDictPromise) promise;
+        if (promise instanceof LogisticsDictPromise dict) {
             tag.setString(KIND_TAG, DICT_KIND);
             writeDictResource(tag, dict.getResource());
             writeResourceType(tag, dict.getType());
             writeItemProvider(tag, PROVIDER_TAG, dict.sender);
             return true;
         }
-        if (promise instanceof LogisticsPromise) {
-            LogisticsPromise item = (LogisticsPromise) promise;
+        if (promise instanceof LogisticsPromise item) {
             tag.setString(KIND_TAG, ITEM_KIND);
             writeStack(tag, item.getItemType().makeStack(item.getAmount()));
             writeResourceType(tag, item.getType());
@@ -267,8 +254,7 @@ final class PatternCraftingPersistence {
     }
 
     static boolean writeOrder(NBTTagCompound tag, IOrderInfoProvider order) {
-        if (order instanceof LogisticsItemOrder) {
-            LogisticsItemOrder itemOrder = (LogisticsItemOrder) order;
+        if (order instanceof LogisticsItemOrder itemOrder) {
             tag.setString(KIND_TAG, ITEM_KIND);
             NBTTagCompound resourceTag = new NBTTagCompound();
             writeDictResource(resourceTag, itemOrder.getResource());
@@ -279,8 +265,7 @@ final class PatternCraftingPersistence {
             writeOrderRuntimeState(tag, itemOrder);
             return true;
         }
-        if (order instanceof LogisticsFluidOrder) {
-            LogisticsFluidOrder fluidOrder = (LogisticsFluidOrder) order;
+        if (order instanceof LogisticsFluidOrder fluidOrder) {
             tag.setString(KIND_TAG, FLUID_KIND);
             writeFluid(tag, fluidOrder.getFluid(), fluidOrder.getAmount());
             writeFluidRequester(tag, DESTINATION_TAG, fluidOrder.getDestination());
@@ -343,10 +328,9 @@ final class PatternCraftingPersistence {
     }
 
     private static void restoreOrderRuntimeState(IOrderInfoProvider order, RestoredOrder state) {
-        if (!(order instanceof LogisticsOrder)) {
+        if (!(order instanceof LogisticsOrder logisticsOrder)) {
             return;
         }
-        LogisticsOrder logisticsOrder = (LogisticsOrder) order;
         logisticsOrder.setInProgress(state.inProgress);
         logisticsOrder.setMachineProgress(state.machineProgress);
         if (state.watched) {
@@ -354,15 +338,14 @@ final class PatternCraftingPersistence {
         }
     }
 
-    private static boolean writeDictResource(NBTTagCompound tag, DictResource resource) {
+    private static void writeDictResource(NBTTagCompound tag, DictResource resource) {
         if (resource == null || !writeStack(tag, resource.getItemStack())) {
-            return false;
+            return;
         }
         tag.setBoolean(USE_OD_TAG, resource.use_od);
         tag.setBoolean(IGNORE_DMG_TAG, resource.ignore_dmg);
         tag.setBoolean(IGNORE_NBT_TAG, resource.ignore_nbt);
         tag.setBoolean(USE_CATEGORY_TAG, resource.use_category);
-        return true;
     }
 
     private static DictResource readDictResource(NBTTagCompound tag, IRequestItems target) {
@@ -579,7 +562,7 @@ final class PatternCraftingPersistence {
         private boolean watched;
         private byte machineProgress;
 
-        IOrderInfoProvider create(PipeItemsPatternCraftingLogistics pipe, ModuleItemCrafting module) {
+        IOrderInfoProvider create(PipeItemsPatternCraftingLogistics pipe, ModulePatternCrafting module) {
             IOrderInfoProvider order;
             if (itemResource != null) {
                 if (type == ResourceType.EXTRA) {

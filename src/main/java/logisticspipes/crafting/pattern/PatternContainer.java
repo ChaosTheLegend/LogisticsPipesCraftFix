@@ -1,18 +1,15 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
+import logisticspipes.crafting.patternStack.PatternFluidStack;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.gui.DummyContainer;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidContainerItem;
-
-import logisticspipes.proxy.MainProxy;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.gui.DummyContainer;
-import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PatternContainer extends DummyContainer {
 
@@ -54,7 +51,7 @@ public class PatternContainer extends DummyContainer {
     }
 
     private boolean isPatternSlot(int slotId) {
-        return slotId >= 0 && slotId < Pattern.ITEM_SLOT_COUNT;
+        return slotId >= 0 && slotId < ItemPattern.ITEM_SLOT_COUNT;
     }
 
     private FluidStack getFluidFromItem(ItemStack stack) {
@@ -62,17 +59,7 @@ public class PatternContainer extends DummyContainer {
 
         FluidStack fluid = null;
 
-        if (stack.getItem() instanceof IFluidContainerItem) {
-            fluid = ((IFluidContainerItem) stack.getItem()).getFluid(stack);
-        } else if (FluidContainerRegistry.isContainer(stack)) {
-            fluid = FluidContainerRegistry.getFluidForFilledItem(stack);
-        }
-
-        if (fluid == null) {
-            // Check if it's already a fluid container
-            fluid = SimpleServiceLocator.logisticsFluidManager
-                    .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
-        }
+        fluid = PatternFluidStack.getFluidStack(stack, fluid);
 
         if (fluid != null) {
             FluidStack fluid0 = fluid.copy();

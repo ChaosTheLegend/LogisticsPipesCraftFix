@@ -1,20 +1,21 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.ISaveState;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
-import logisticspipes.proxy.MainProxy;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifierInventory;
-import logisticspipes.utils.item.ItemIdentifier;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 class PatternStackBufferHandler implements ISaveState {
 
@@ -106,9 +107,9 @@ class PatternStackBufferHandler implements ISaveState {
         }
     }
 
-    boolean remove(int patternSlot, IPatternStack stack, int amount) {
+    void remove(int patternSlot, IPatternStack stack, int amount) {
         if (stack == null || amount <= 0) {
-            return true;
+            return;
         }
         List<IPatternStack> buffer = getBuffer(patternSlot);
         for (int i = 0; i < buffer.size() && amount > 0; i++) {
@@ -127,7 +128,6 @@ class PatternStackBufferHandler implements ISaveState {
         if (buffer.isEmpty()) {
             bufferedIngredients.remove(patternSlot);
         }
-        return amount == 0;
     }
 
     private List<IPatternStack> getBuffer(int patternSlot) {
@@ -190,7 +190,8 @@ class PatternStackBufferHandler implements ISaveState {
 
     /**
      * Removes this from the
-     * @param patternSlot
+     *
+     * @param patternSlot the slot
      */
     public List<IPatternStack> removeAll(int patternSlot) {
         List<IPatternStack> removed = bufferedIngredients.remove(patternSlot);

@@ -1,19 +1,18 @@
 package logisticspipes.crafting;
 
+import com.github.bsideup.jabel.Desugar;
+import logisticspipes.utils.gui.GuiGraphics;
+import logisticspipes.utils.gui.SmallGuiButton;
+import logisticspipes.utils.gui.SubGuiScreen;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiTextField;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiTextField;
-
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-
-import logisticspipes.utils.gui.GuiGraphics;
-import logisticspipes.utils.gui.SmallGuiButton;
-import logisticspipes.utils.gui.SubGuiScreen;
 
 public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
@@ -50,8 +49,8 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
         searchField = new GuiTextField(fontRendererObj, guiLeft + 10, guiTop + 22, xSize - 20, 14);
         searchField.setMaxStringLength(64);
         searchField.setFocused(true);
-        buttonList.add(
-                new SmallGuiButton(PREVIOUS_PAGE_BUTTON, guiLeft + xSize - 52, guiTop + ySize - 17, 20, 10, "<"));
+        buttonList
+            .add(new SmallGuiButton(PREVIOUS_PAGE_BUTTON, guiLeft + xSize - 52, guiTop + ySize - 17, 20, 10, "<"));
         buttonList.add(new SmallGuiButton(NEXT_PAGE_BUTTON, guiLeft + xSize - 29, guiTop + ySize - 17, 20, 10, ">"));
     }
 
@@ -194,8 +193,7 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     }
 
     private boolean isMouseOverRow(int index, int mouseX, int mouseY) {
-        return mouseX >= guiLeft + 10
-                && mouseX < guiLeft + xSize - 10
+        return mouseX >= guiLeft + 10 && mouseX < guiLeft + xSize - 10
                 && mouseY >= getRowY(index)
                 && mouseY < getRowY(index) + ROW_HEIGHT - 1;
     }
@@ -236,22 +234,22 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     private String formatSatellite(PatternSatelliteInfo satellite) {
         String prefix = satellite.favorite() ? "* " : "";
         String distance = satellite.distance() >= 0 ? satellite.distance() + "m" : "other dim";
-        return prefix + satellite.displayName() + " " + distance + " D" + satellite.dimension() + " ("
-                + satellite.x() + "," + satellite.y() + "," + satellite.z() + ")";
+        return prefix + satellite.displayName()
+            + " "
+            + distance
+            + " D"
+            + satellite.dimension()
+            + " ("
+            + satellite.x()
+            + ","
+            + satellite.y()
+            + ","
+            + satellite.z()
+            + ")";
     }
 
-    private static class Row {
+    @Desugar
+    private record Row(int satelliteId, String satelliteUuid, String display, String search) {
 
-        private final int satelliteId;
-        private final String satelliteUuid;
-        private final String display;
-        private final String search;
-
-        private Row(int satelliteId, String satelliteUuid, String display, String search) {
-            this.satelliteId = satelliteId;
-            this.satelliteUuid = satelliteUuid;
-            this.display = display;
-            this.search = search;
-        }
     }
 }

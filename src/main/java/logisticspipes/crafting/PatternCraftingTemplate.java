@@ -1,8 +1,6 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.interfaces.routing.ICraftFluids;
 import logisticspipes.interfaces.routing.ICraftItems;
 import logisticspipes.request.BaseCraftingTemplate;
@@ -15,6 +13,9 @@ import logisticspipes.routing.LogisticsExtraPromise;
 import logisticspipes.utils.FluidIdentifierStack;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PatternCraftingTemplate extends BaseCraftingTemplate {
 
     private final ItemIdentifierStack result;
@@ -24,7 +25,7 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
     private final int patternSlot;
 
     public PatternCraftingTemplate(ItemIdentifierStack result, ICraftItems crafter, int priority, int patternSlot) {
-        super(Pattern.INGREDIENT_SLOTS, priority);
+        super(ItemPattern.INGREDIENT_SLOTS, priority);
         this.result = result;
         this.crafter = crafter;
         this.patternSlot = patternSlot;
@@ -98,8 +99,8 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
     /**
      * Creates the staged promise for the requested item result and records the pattern slot that produced it.
      * <p>
-     * The slot and per-set result amount let {@link ModuleItemCrafting} request ingredients gradually while the output
-     * order remains visible in the normal item order manager.
+     * The slot and per-set result amount let {@link ModulePatternCrafting} request ingredients gradually while the
+     * output order remains visible in the normal item order manager.
      */
     @Override
     public IPromise generatePromise(int nCraftingSetsNeeded) {

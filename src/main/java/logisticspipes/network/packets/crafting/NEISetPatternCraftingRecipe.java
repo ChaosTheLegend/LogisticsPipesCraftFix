@@ -1,18 +1,10 @@
 package logisticspipes.network.packets.crafting;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-
 import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.AbstractPattern;
-import logisticspipes.crafting.IPatternStack;
-import logisticspipes.crafting.Pattern;
-import logisticspipes.crafting.PatternContainer;
+import logisticspipes.crafting.pattern.AbstractPattern;
+import logisticspipes.crafting.pattern.ItemPattern;
+import logisticspipes.crafting.pattern.PatternContainer;
+import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -21,6 +13,13 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
@@ -43,7 +42,6 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
         if (patternInventorySlot >= 0) {
 
             importRecipe(player, patternInventorySlot, inputs, indices, outputs);
-            return;
         }
 
         // TileEntity tile = getTile(player.worldObj, TileEntity.class);
@@ -64,7 +62,7 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
         if (patternStack == null || patternStack.getItem() != LogisticsPipes.LogisticsPattern) return;
 
         // clear pattern
-        AbstractPattern pattern = Pattern.fromStack(patternStack);
+        AbstractPattern pattern = ItemPattern.fromStack(patternStack);
         pattern.setInputsAndOutputs(inputs, indices, outputs);
 
         // reload the gui from the new pattern

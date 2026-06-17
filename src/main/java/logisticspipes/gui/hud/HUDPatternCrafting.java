@@ -1,13 +1,5 @@
 package logisticspipes.gui.hud;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-
-import org.lwjgl.opengl.GL11;
-
 import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingHudState.IngredientInfo;
 import logisticspipes.crafting.PatternCraftingHudState.OutputInfo;
@@ -21,6 +13,12 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.ItemStackRenderer;
 import logisticspipes.utils.item.ItemStackRenderer.DisplayAmount;
 import logisticspipes.utils.string.StringUtils;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import org.lwjgl.opengl.GL11;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class HUDPatternCrafting extends BasicHUDGui {
 
@@ -145,9 +143,7 @@ public class HUDPatternCrafting extends BasicHUDGui {
             renderSlotBackgrounds(mc, pattern);
         }
         ItemStackRenderer renderer = new ItemStackRenderer(0, 0, 100.0F, false, shifted, true);
-        renderer.setScaleX(ITEM_SCALE_X)
-            .setScaleY(ITEM_SCALE_Y)
-            .setScaleZ(ITEM_SCALE_Z)
+        renderer.setScaleX(ITEM_SCALE_X).setScaleY(ITEM_SCALE_Y).setScaleZ(ITEM_SCALE_Z)
             .setDisplayAmount(DisplayAmount.ALWAYS);
         renderIngredients(mc, renderer, pattern.getIngredients());
         renderOutputs(mc, renderer, pattern.getOutputs());
@@ -174,12 +170,12 @@ public class HUDPatternCrafting extends BasicHUDGui {
     private void renderIngredients(Minecraft mc, ItemStackRenderer renderer, List<IngredientInfo> ingredients) {
         for (int i = 0; i < Math.min(ingredients.size(), 9); i++) {
             IngredientInfo ingredient = ingredients.get(i);
-            int slot = ingredient.getSlot() >= 0 ? ingredient.getSlot() : i;
+            int slot = ingredient.slot() >= 0 ? ingredient.slot() : i;
             int x = INGREDIENT_LEFT + (slot % 3) * SLOT_SIZE;
             int y = INGREDIENT_TOP + (slot / 3) * SLOT_SIZE;
-            renderStack(renderer, ingredient.getStack(), x, y);
-            if (ingredient.getBufferedAmount() > 0) {
-                drawHudAmount(mc, ingredient.getBufferedAmount(), x, y);
+            renderStack(renderer, ingredient.stack(), x, y);
+            if (ingredient.bufferedAmount() > 0) {
+                drawHudAmount(mc, ingredient.bufferedAmount(), x, y);
             }
         }
     }
@@ -195,8 +191,8 @@ public class HUDPatternCrafting extends BasicHUDGui {
         int firstY = getFirstOutputY(outputCount);
         for (int i = 0; i < outputCount; i++) {
             OutputInfo output = pattern.getOutputs().get(i);
-            int slot = output.getSlot() >= 0 ? output.getSlot() : i;
-            int y = output.getSlot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + i * SLOT_SIZE;
+            int slot = output.slot() >= 0 ? output.slot() : i;
+            int y = output.slot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + i * SLOT_SIZE;
             renderSlotBackground(mc, OUTPUT_LEFT, y);
         }
     }
@@ -210,12 +206,12 @@ public class HUDPatternCrafting extends BasicHUDGui {
         int firstY = getFirstOutputY(outputCount);
         for (int i = 0; i < outputCount; i++) {
             OutputInfo output = outputs.get(i);
-            int slot = output.getSlot() >= 0 ? output.getSlot() : i;
+            int slot = output.slot() >= 0 ? output.slot() : i;
             int x = OUTPUT_LEFT;
-            int y = output.getSlot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + slot * SLOT_SIZE;
-            renderStack(renderer, output.getStack(), x, y);
-            if (output.getRequestedAmount() > 0) {
-                drawHudAmount(mc, output.getRequestedAmount(), x, y);
+            int y = output.slot() >= 0 ? OUTPUT_TOP + slot * SLOT_SIZE : firstY + slot * SLOT_SIZE;
+            renderStack(renderer, output.stack(), x, y);
+            if (output.requestedAmount() > 0) {
+                drawHudAmount(mc, output.requestedAmount(), x, y);
             }
         }
     }
@@ -261,8 +257,7 @@ public class HUDPatternCrafting extends BasicHUDGui {
         }
     }
 
-    private void drawScaledTrimmedString(FontRenderer fontRenderer, String text, int x, int y, int width,
-            float scale) {
+    private void drawScaledTrimmedString(FontRenderer fontRenderer, String text, int x, int y, int width, float scale) {
         String trimmed = trimToWidth(fontRenderer, text, Math.round(width / scale));
         drawScaledString(fontRenderer, trimmed, x, y, scale);
     }
@@ -315,15 +310,11 @@ public class HUDPatternCrafting extends BasicHUDGui {
     }
 
     private String formatMode(PipeItemsPatternCraftingLogistics.BlockingMode mode) {
-        switch (mode) {
-            case BLOCKING:
-                return "Blocking";
-            case SMART:
-                return "Smart";
-            case OFF:
-            default:
-                return "Off";
-        }
+        return switch (mode) {
+            case BLOCKING -> "Blocking";
+            case SMART -> "Smart";
+            default -> "Off";
+        };
     }
 
     private void normalizePage(int size) {

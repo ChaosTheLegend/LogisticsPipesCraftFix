@@ -1,16 +1,14 @@
 package logisticspipes.renderer;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.pattern.ItemPattern;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.IItemRenderer;
-
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
-
-import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.Pattern;
 
 public class PatternItemRenderer implements IItemRenderer {
 
@@ -35,7 +33,7 @@ public class PatternItemRenderer implements IItemRenderer {
         if (!isForceResultRender() && !isShiftPressed()) {
             return false;
         }
-        return Pattern.fromStack(itemStack).getPrimaryResultStack() != null;
+        return ItemPattern.fromStack(itemStack).getPrimaryResultStack() != null;
     }
 
     @Override
@@ -45,7 +43,7 @@ public class PatternItemRenderer implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType renderType, ItemStack itemStack, Object... data) {
-        ItemStack result = Pattern.fromStack(itemStack).getPrimaryResultStack();
+        ItemStack result = ItemPattern.fromStack(itemStack).getPrimaryResultStack();
         if (result == null) {
             return;
         }

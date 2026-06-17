@@ -1,14 +1,5 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-
-import lombok.Getter;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.request.IExtraPromise;
@@ -23,6 +14,15 @@ import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 public class PatternCraftingBranch {
 
@@ -40,18 +40,10 @@ public class PatternCraftingBranch {
     private static final String SUB_REQUESTS_TAG = "subRequests";
     private static final int TAG_COMPOUND = 10;
 
-    /**
-     * -- GETTER --
-     *  Returns the item or fluid resource represented by this branch.
-     */
     @Getter
     private final IResource requestType;
     private final IAdditionalTargetInformation info;
     private final int originalAmount;
-    /**
-     * -- GETTER --
-     *  Returns the amount of this branch that has not yet been requested or reserved.
-     */
     @Getter
     private int remainingAmount;
     private final int originalCraftingAmount;
@@ -62,7 +54,7 @@ public class PatternCraftingBranch {
     private final List<ExtraState> byproducts;
     private final List<PatternCraftingBranch> subRequests;
     private final List<IOrderInfoProvider> liveOrders = new ArrayList<>();
-    private transient ModuleItemCrafting debugModule;
+    private transient ModulePatternCrafting debugModule;
 
     /**
      * Captures the request-tree state that belongs to one staged crafting output.
@@ -101,9 +93,8 @@ public class PatternCraftingBranch {
     }
 
     private PatternCraftingBranch(IResource requestType, IAdditionalTargetInformation info, int originalAmount,
-            int remainingAmount, int originalCraftingAmount, int remainingCraftingAmount,
-            List<PromiseState> promises, List<ExtraState> extraPromises, List<ExtraState> byproducts,
-            List<PatternCraftingBranch> subRequests) {
+                                  int remainingAmount, int originalCraftingAmount, int remainingCraftingAmount, List<PromiseState> promises,
+                                  List<ExtraState> extraPromises, List<ExtraState> byproducts, List<PatternCraftingBranch> subRequests) {
         this.requestType = requestType;
         this.info = info;
         this.originalAmount = originalAmount;
@@ -124,7 +115,12 @@ public class PatternCraftingBranch {
         return Collections.unmodifiableList(subRequests);
     }
 
-    void attachDebugModule(ModuleItemCrafting module) {
+    /**
+     * The module that receives debug events from this branch
+     *
+     * @param module the module
+     */
+    void attachDebugModule(ModulePatternCrafting module) {
         debugModule = module;
         for (PatternCraftingBranch child : subRequests) {
             child.attachDebugModule(module);
@@ -198,7 +194,7 @@ public class PatternCraftingBranch {
     /**
      * Builds a live renderer node from this branch and all order references that were created from it.
      */
-    PatternCraftingMonitorNode toMonitorNode(java.util.Set<PatternCraftingOrder> visitedOrders) {
+    PatternCraftingMonitorNode toMonitorNode(Set<PatternCraftingOrder> visitedOrders) {
         int orderedAmount = getLiveOrderAmount();
         int totalAmount = Math.max(0, remainingAmount + orderedAmount);
         ItemIdentifierStack display = requestType.getDisplayItem().clone();
@@ -227,23 +223,23 @@ public class PatternCraftingBranch {
     }
 
     private void debugBranchEvent(String category, String message, Object... args) {
-        ModuleItemCrafting module = findDebugModule();
+        ModulePatternCrafting module = findDebugModule();
         if (module != null) {
             module.debugEvent(category, message, args);
         }
     }
 
-    private ModuleItemCrafting findDebugModule() {
+    private ModulePatternCrafting findDebugModule() {
         if (debugModule != null) {
             return debugModule;
         }
         for (PromiseState promise : promises) {
-            if (promise.promise.getProvider() instanceof ModuleItemCrafting) {
-                return (ModuleItemCrafting) promise.promise.getProvider();
+            if (promise.promise.getProvider() instanceof ModulePatternCrafting) {
+                return (ModulePatternCrafting) promise.promise.getProvider();
             }
         }
         for (PatternCraftingBranch child : subRequests) {
-            ModuleItemCrafting module = child.findDebugModule();
+            ModulePatternCrafting module = child.findDebugModule();
             if (module != null) {
                 return module;
             }
@@ -736,7 +732,8 @@ public class PatternCraftingBranch {
             return false;
         }
         if (first instanceof PatternCraftingPromise || candidate instanceof PatternCraftingPromise) {
-            if (!(first instanceof PatternCraftingPromise firstPattern) || !(candidate instanceof PatternCraftingPromise candidatePattern)) {
+            if (!(first instanceof PatternCraftingPromise firstPattern)
+                || !(candidate instanceof PatternCraftingPromise candidatePattern)) {
                 return false;
             }
             return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()

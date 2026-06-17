@@ -1,10 +1,9 @@
 package logisticspipes.nei;
 
-import net.minecraft.client.gui.inventory.GuiContainer;
-
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
-import logisticspipes.crafting.PatternGui;
+import logisticspipes.crafting.pattern.PatternGui;
+import net.minecraft.client.gui.inventory.GuiContainer;
 
 public class FluidPatternRecipeTransferHandler implements IOverlayHandler {
 

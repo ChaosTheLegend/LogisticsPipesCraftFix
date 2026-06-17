@@ -1,62 +1,66 @@
 package logisticspipes.crafting;
 
-import java.io.IOException;
-import java.util.Locale;
-
-import com.github.bsideup.jabel.Desugar;
-
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
+import lombok.Getter;
 
-@Desugar
-public record PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite,
-        String uuid, String displayName) {
+import java.io.IOException;
+import java.util.Locale;
+import java.util.Objects;
 
-    public PatternSatelliteInfo {
+@Getter
+public final class PatternSatelliteInfo {
+
+    private final int id;
+    private final int x;
+    private final int y;
+    private final int z;
+    private final int dimension;
+    private final int distance;
+    private final boolean favorite;
+    private final String uuid;
+    private final String displayName;
+
+    public PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite, String uuid,
+                                String displayName) {
         uuid = uuid == null ? "" : uuid;
         displayName = displayName == null || displayName.trim().isEmpty() ? Integer.toString(id) : displayName.trim();
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public int getDimension() {
-        return dimension;
-    }
-
-    public int getDistance() {
-        return distance;
-    }
-
-    public boolean isFavorite() {
-        return favorite;
-    }
-
-    public String getUuid() {
-        return uuid;
-    }
-
-    public String getDisplayName() {
-        return displayName;
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.dimension = dimension;
+        this.distance = distance;
+        this.favorite = favorite;
+        this.uuid = uuid;
+        this.displayName = displayName;
     }
 
     public String getSearchText() {
-        return (displayName + " #" + id + " s" + id + " satellite " + id + " " + uuid + " d" + dimension
-            + " dim " + dimension
-            + " " + x + " " + y + " " + z + " " + x + "," + y + "," + z
+        return (displayName + " #"
+            + id
+            + " s"
+            + id
+            + " satellite "
+            + id
+            + " "
+            + uuid
+            + " d"
+            + dimension
+            + " dim "
+            + dimension
+            + " "
+            + x
+            + " "
+            + y
+            + " "
+            + z
+            + " "
+            + x
+            + ","
+            + y
+            + ","
+            + z
             + (favorite ? " favorite chip memory" : "")).toLowerCase(Locale.ROOT);
     }
 
@@ -84,4 +88,92 @@ public record PatternSatelliteInfo(int id, int x, int y, int z, int dimension, i
             data.readUTF(),
             data.readUTF());
     }
+
+    public int id() {
+        return id;
+    }
+
+    public int x() {
+        return x;
+    }
+
+    public int y() {
+        return y;
+    }
+
+    public int z() {
+        return z;
+    }
+
+    public int dimension() {
+        return dimension;
+    }
+
+    public int distance() {
+        return distance;
+    }
+
+    public boolean favorite() {
+        return favorite;
+    }
+
+    public String uuid() {
+        return uuid;
+    }
+
+    public String displayName() {
+        return displayName;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (PatternSatelliteInfo) obj;
+        return this.id == that.id && this.x == that.x
+            && this.y == that.y
+            && this.z == that.z
+            && this.dimension == that.dimension
+            && this.distance == that.distance
+            && this.favorite == that.favorite
+            && Objects.equals(this.uuid, that.uuid)
+            && Objects.equals(this.displayName, that.displayName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, x, y, z, dimension, distance, favorite, uuid, displayName);
+    }
+
+    @Override
+    public String toString() {
+        return "PatternSatelliteInfo[" + "id="
+            + id
+            + ", "
+            + "x="
+            + x
+            + ", "
+            + "y="
+            + y
+            + ", "
+            + "z="
+            + z
+            + ", "
+            + "dimension="
+            + dimension
+            + ", "
+            + "distance="
+            + distance
+            + ", "
+            + "favorite="
+            + favorite
+            + ", "
+            + "uuid="
+            + uuid
+            + ", "
+            + "displayName="
+            + displayName
+            + ']';
+    }
+
 }

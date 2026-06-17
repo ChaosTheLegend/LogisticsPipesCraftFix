@@ -1,11 +1,10 @@
-package logisticspipes.crafting;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
+package logisticspipes.crafting.pattern;
 
 import logisticspipes.LogisticsPipes;
 import lombok.Getter;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 
 public class PatternInventory implements IInventory {
 
@@ -20,7 +19,7 @@ public class PatternInventory implements IInventory {
         this.player = player;
         this.inventorySlot = inventorySlot;
         this.patternStack = readPatternStack();
-        this.pattern = Pattern.fromStack(patternStack);
+        this.pattern = ItemPattern.fromStack(patternStack);
     }
 
     @Override
@@ -102,6 +101,6 @@ public class PatternInventory implements IInventory {
     }
 
     public void clear() {
-        Pattern.fromStack(readPatternStack()).clear();
+        ItemPattern.fromStack(readPatternStack()).clear();
     }
 }

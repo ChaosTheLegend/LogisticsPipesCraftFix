@@ -1,16 +1,18 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import net.minecraft.item.ItemStack;
-
+import logisticspipes.crafting.pattern.PatternHandler;
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import net.minecraft.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 class PatternCraftingOrder {
 
@@ -20,12 +22,12 @@ class PatternCraftingOrder {
     int remainingSets;
 
     final IOrderInfoProvider outputOrder;
-    private final ModuleItemCrafting module;
+    private final ModulePatternCrafting module;
     private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;
 
     PatternCraftingOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
-            IOrderInfoProvider outputOrder, ModuleItemCrafting module, PatternHandler patternHandler,
+                         IOrderInfoProvider outputOrder, ModulePatternCrafting module, PatternHandler patternHandler,
             PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
@@ -50,7 +52,8 @@ class PatternCraftingOrder {
 
     PatternCraftingOrder(int patternSlot, int resultAmountPerSet, int remainingSets,
             List<PatternCraftingBranch> ingredientBranches, IOrderInfoProvider outputOrder,
-            ModuleItemCrafting module, PatternHandler patternHandler, PatternStackRequestHandler requestedIngredient) {
+                         ModulePatternCrafting module, PatternHandler patternHandler,
+                         PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
         this.ingredientBranches = new ArrayList<>(ingredientBranches);
@@ -142,36 +145,33 @@ class PatternCraftingOrder {
                 outputOrder == null ? "<none>" : outputOrder.getAsDisplayItem());
         for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             int requested = requestFromBranches(
-                    ingredient.stack,
-                    ingredient.stack.getAmount() * requestedSets,
-                    ingredient.target);
+                ingredient.stack(),
+                ingredient.stack().getAmount() * requestedSets,
+                ingredient.target());
             requestedIngredients.add(new RequestedIngredient(ingredient, requested));
             module.debugEvent(
                     "REQUEST",
                     "order requested ingredient slot=%d ingredient=%s target=%s requested=%d amountPerSet=%d",
                     patternSlot,
-                    ingredient.stack,
-                    ingredient.target,
+                ingredient.stack(),
+                ingredient.target(),
                     requested,
-                    ingredient.stack.getAmount());
-            requestedSets = Math.min(requestedSets, requested / ingredient.stack.getAmount());
+                ingredient.stack().getAmount());
+            requestedSets = Math.min(requestedSets, requested / ingredient.stack().getAmount());
         }
         for (RequestedIngredient requested : requestedIngredients) {
-            if (requested.ingredient.target == null) {
-                int reserved = Math.min(
-                        requested.amount,
-                        requested.ingredient.stack.getAmount() * requestedSets);
+            if (requested.ingredient.target() == null) {
+                int reserved = Math.min(requested.amount, requested.ingredient.stack().getAmount() * requestedSets);
                 if (reserved <= 0) {
                     continue;
                 }
-                requestedIngredient.add(
-                        patternSlot,
-                        PatternStackHelper.copyWithAmount(requested.ingredient.stack, reserved));
+                requestedIngredient
+                    .add(patternSlot, PatternStackHelper.copyWithAmount(requested.ingredient.stack(), reserved));
                 module.debugEvent(
                         "BUFFER",
                         "order reserved local requested ingredient slot=%d ingredient=%s requested=%d",
                         patternSlot,
-                        requested.ingredient.stack,
+                    requested.ingredient.stack(),
                         reserved);
             }
         }

@@ -1,32 +1,30 @@
-package logisticspipes.crafting;
-
-import java.util.List;
-
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
+package logisticspipes.crafting.pattern;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.network.NewGuiHandler;
 import logisticspipes.proxy.MainProxy;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
 
-public class Pattern extends LogisticsItem {
+import java.util.List;
+
+public class ItemPattern extends LogisticsItem {
 
     public static final int INGREDIENT_SLOTS = DefaultPattern.INGREDIENT_SLOTS;
     public static final int RESULT_SLOTS = DefaultPattern.RESULT_SLOTS;
     public static final int ITEM_SLOT_COUNT = DefaultPattern.ITEM_SLOT_COUNT;
-    public static final int SLOT_COUNT = ITEM_SLOT_COUNT;
 
-    public Pattern() {
+    public ItemPattern() {
         setMaxStackSize(1);
     }
 
     public static AbstractPattern fromStack(ItemStack pattern) {
-        if (pattern != null && pattern.getItem() instanceof Pattern) {
-            return ((Pattern) pattern.getItem()).createPattern(pattern);
+        if (pattern != null && pattern.getItem() instanceof ItemPattern) {
+            return ((ItemPattern) pattern.getItem()).createPattern(pattern);
         }
         return new DefaultPattern(pattern);
     }

@@ -1,20 +1,21 @@
 package logisticspipes.network.packets.gui;
 
-import java.io.IOException;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
 import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.AbstractPattern;
-import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.pattern.AbstractPattern;
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
+import java.io.IOException;
+
+@Setter
+@Getter
 @Accessors(chain = true)
 public class PatternSlotActionPacket extends ModernPacket {
 
@@ -23,12 +24,8 @@ public class PatternSlotActionPacket extends ModernPacket {
         MULTIPLY_TWO
     }
 
-    @Getter
-    @Setter
     private int inventorySlot;
 
-    @Getter
-    @Setter
     private int action;
 
     public PatternSlotActionPacket(int id) {
@@ -50,7 +47,7 @@ public class PatternSlotActionPacket extends ModernPacket {
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         if (action == Action.CLEAR.ordinal()) {
             configuredPattern.clear();
         } else if (action == Action.MULTIPLY_TWO.ordinal()) {

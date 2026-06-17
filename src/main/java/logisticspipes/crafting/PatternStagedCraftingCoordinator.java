@@ -1,14 +1,8 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
-
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
+import logisticspipes.crafting.pattern.PatternHandler;
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
@@ -21,6 +15,14 @@ import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Owns the lifecycle of staged pattern crafting output orders.
@@ -41,7 +43,7 @@ class PatternStagedCraftingCoordinator {
     private static final String INGREDIENT_BRANCHES_TAG = "ingredientBranches";
     private static final int TAG_COMPOUND = 10;
 
-    private final ModuleItemCrafting module;
+    private final ModulePatternCrafting module;
     private final PipeItemsPatternCraftingLogistics pipe;
     private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;
@@ -49,7 +51,7 @@ class PatternStagedCraftingCoordinator {
     private final List<PatternCraftingOrder> outputOrders = new ArrayList<>();
     private final PatternStagedCraftingScheduler scheduler;
 
-    PatternStagedCraftingCoordinator(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
+    PatternStagedCraftingCoordinator(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
             PatternHandler patternHandler, PatternStackRequestHandler requestedIngredient,
             AdjacentInventoryHandler adjacentInventory) {
         this.module = module;
@@ -116,8 +118,7 @@ class PatternStagedCraftingCoordinator {
     }
 
     void writeToNBT(NBTTagCompound tag) {
-        Set<IOrderInfoProvider> savedOutputOrders = Collections
-                .newSetFromMap(new IdentityHashMap<>());
+        Set<IOrderInfoProvider> savedOutputOrders = Collections.newSetFromMap(new IdentityHashMap<>());
         NBTTagList stagedOrders = writeStagedOrders(savedOutputOrders);
         NBTTagList standaloneItemOrders = writeStandaloneItemOrders(savedOutputOrders);
         NBTTagList standaloneFluidOrders = writeStandaloneFluidOrders(savedOutputOrders);

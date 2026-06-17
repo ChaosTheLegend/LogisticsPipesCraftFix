@@ -1,15 +1,10 @@
 package logisticspipes.crafting;
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.SlotCrafting;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.nbt.NBTTagCompound;
-
 import logisticspipes.LogisticsPipes;
 import logisticspipes.blocks.LogisticsSolidTileEntity;
 import logisticspipes.blocks.crafting.AutoCraftingInventory;
+import logisticspipes.crafting.pattern.AbstractPattern;
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.interfaces.IGuiTileEntity;
 import logisticspipes.items.ItemUpgrade;
 import logisticspipes.network.NewGuiHandler;
@@ -23,6 +18,12 @@ import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.SimpleStackInventory;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.SlotCrafting;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.nbt.NBTTagCompound;
 
 public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity
         implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
@@ -320,7 +321,7 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
         if (pattern == null || sets <= 0) {
             return false;
         }
-        AbstractPattern configuredPattern = Pattern.fromStack(pattern);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
             ItemStack ingredient = configuredPattern.getStackInSlot(slot);
             if (ingredient == null) {

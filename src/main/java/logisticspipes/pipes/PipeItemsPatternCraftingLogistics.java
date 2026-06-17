@@ -1,30 +1,8 @@
 package logisticspipes.pipes;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.ChatComponentTranslation;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidHandler;
-
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
-import logisticspipes.crafting.ModuleItemCrafting;
+import logisticspipes.crafting.ModulePatternCrafting;
 import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingTargetSelector;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
@@ -69,6 +47,28 @@ import logisticspipes.utils.InventoryHelper;
 import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidHandler;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Pattern crafting pipe that can stage item and fluid ingredients while still behaving like an item crafting pipe for
@@ -91,12 +91,13 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     private static final String LINKED_PATTERN_SATELLITES_TAG = "linkedPatternSatelliteIds";
     private static final String LINKED_PATTERN_SATELLITE_UUIDS_TAG = "linkedPatternSatelliteUuids";
 
-    private final ModuleItemCrafting module;
+    private final ModulePatternCrafting module;
     private final LogisticsFluidOrderManager fluidOrderManager;
     private final PatternCraftingTargetSelector targetSelector;
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> displayList = new LinkedList<>();
     private PatternCraftingHudState oldHudState = PatternCraftingHudState.empty();
+    @Getter
     private PatternCraftingHudState hudState = PatternCraftingHudState.empty();
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     private final HUDPatternCrafting HUD = new HUDPatternCrafting(this);
@@ -115,15 +116,14 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                 if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
                     return false;
                 }
-                if (tile instanceof IFluidHandler) {
-                    IFluidHandler handler = (IFluidHandler) tile;
+                if (tile instanceof IFluidHandler handler) {
                     return handler.getTankInfo(dir.getOpposite()) != null
                             && handler.getTankInfo(dir.getOpposite()).length > 0;
                 }
                 return false;
             }
         }, item);
-        module = new ModuleItemCrafting(this);
+        module = new ModulePatternCrafting(this);
         _orderItemManager = new logisticspipes.routing.order.LogisticsItemOrderManager(this, this);
         fluidOrderManager = new LogisticsFluidOrderManager(this, this);
         targetSelector = new PatternCraftingTargetSelector(this);
@@ -165,16 +165,17 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                         entityplayer.addChatComponentMessage(
                                 new ChatComponentText(
                                         changed == 0 ? "No pattern ingredients changed"
-                                                : "Assigned " + changed + " ingredient slot"
-                                                        + (changed == 1 ? "" : "s") + " to the last satellite"));
+                                            : "Assigned " + changed
+                                            + " ingredient slot"
+                                            + (changed == 1 ? "" : "s")
+                                            + " to the last satellite"));
                     } else {
                         int added = addLinkedPatternSatellites(
                                 ItemMemoryChip.getPatternSatellites(entityplayer.getCurrentEquippedItem()));
                         entityplayer.addChatComponentMessage(
                                 new ChatComponentText(
                                         added == 0 ? "No new pattern satellites linked"
-                                                : "Linked " + added + " pattern satellite"
-                                                        + (added == 1 ? "" : "s")));
+                                            : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
                     }
                 } else {
                     entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
@@ -229,10 +230,6 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return getLinkedPatternSatellite(satelliteId);
     }
 
-    public Collection<Integer> getLinkedPatternSatelliteIds() {
-        return new ArrayList<>(linkedPatternSatelliteIds);
-    }
-
     private int addLinkedPatternSatellites(List<ItemMemoryChip.StoredPatternSatellite> satellites) {
         int added = 0;
         if (satellites == null) {
@@ -259,7 +256,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             return 0;
         }
         List<ItemMemoryChip.StoredPatternSatellite> satellites = new ArrayList<>();
-        satellites.add(new ItemMemoryChip.StoredPatternSatellite(
+        satellites.add(
+            new ItemMemoryChip.StoredPatternSatellite(
                 satelliteId,
                 satelliteUuid,
                 ItemMemoryChip.getLastPatternSatelliteName(memoryChip)));
@@ -300,21 +298,15 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         return module;
     }
 
-    public ModuleItemCrafting getPatternModule() {
+    public ModulePatternCrafting getPatternModule() {
         return module;
     }
 
-    public boolean cancelPatternCraft(int patternSlot) {
+    public void cancelPatternCraft(int patternSlot) {
         boolean changed = module.cancelPatternCraft(patternSlot);
         if (changed) {
             doContentUpdate = true;
         }
-        return changed;
-    }
-
-    @Override
-    public ItemSendMode getItemSendMode() {
-        return ItemSendMode.Normal;
     }
 
     /**
@@ -331,7 +323,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     /**
      * Disables the background side-tank transfer behavior from {@link FluidRoutedPipe}.
      * <p>
-     * The selected adjacent inventory or fluid handler is managed explicitly by {@link ModuleItemCrafting}.
+     * The selected adjacent inventory or fluid handler is managed explicitly by {@link ModulePatternCrafting}.
      */
     @Override
     public boolean canInsertFromSideToTanks() {
@@ -452,10 +444,6 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     @Override
     public List<ItemIdentifierStack> getConfiguredCraftResults() {
         return module.getConfiguredCraftResults();
-    }
-
-    public PatternCraftingHudState getHudState() {
-        return hudState;
     }
 
     @Override
@@ -607,8 +595,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                             .setPosY(getY()).setPosZ(getZ()),
                     player);
             MainProxy.sendPacketToPlayer(
-                    PacketHandler.getPacket(PatternCraftingHudContent.class).setState(module.getHudState()).setPosX(getX())
-                            .setPosY(getY()).setPosZ(getZ()),
+                PacketHandler.getPacket(PatternCraftingHudContent.class).setState(module.getHudState())
+                    .setPosX(getX()).setPosY(getY()).setPosZ(getZ()),
                     player);
         } else {
             super.playerStartWatching(player, mode);

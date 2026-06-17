@@ -1,27 +1,16 @@
 package logisticspipes.nei;
 
+import codechicken.nei.PositionedStack;
+import codechicken.nei.api.IOverlayHandler;
+import codechicken.nei.recipe.IRecipeHandler;
+import logisticspipes.crafting.pattern.PatternGui;
+import logisticspipes.crafting.patternStack.IPatternStack;
+import net.minecraft.client.gui.inventory.GuiContainer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fluids.FluidStack;
-//
-//import com.glodblock.github.nei.objecthot.OrderStack;
-//import com.glodblock.github.nei.recipes.FluidRecipe;
-
-import codechicken.nei.PositionedStack;
-import codechicken.nei.api.IOverlayHandler;
-import codechicken.nei.recipe.IRecipeHandler;
-import logisticspipes.crafting.IPatternStack;
-import logisticspipes.crafting.PatternFluidStack;
-import logisticspipes.crafting.PatternGui;
-import logisticspipes.crafting.PatternItemStack;
-import logisticspipes.network.PacketHandler;
-import logisticspipes.network.packets.crafting.NEISetPatternCraftingRecipe;
-import logisticspipes.proxy.MainProxy;
 
 public class LogisticPatternHandler implements IOverlayHandler {
 
@@ -31,54 +20,55 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
-        if (!(firstGui instanceof PatternGui gui)) return;
+        if (!(firstGui instanceof PatternGui gui)) {
+        }
 
         // we can just steal ae2 fluid implementation here for now, so we dont need to rewrite all the handlers.
-//        List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
-//        List<OrderStack<?>> out = FluidRecipe.getPackageOutputs(recipe, recipeIndex, true);
-//
-//        List<IPatternStack> inputs = new ArrayList<>();
-//        List<Integer> indices = new ArrayList<>();
-//        List<IPatternStack> outputs = new ArrayList<>();
-//
-//        for (OrderStack<?> orderStack : in) {
-//            var stack = orderStack.getStack();
-//            if (stack instanceof ItemStack itemStack) {
-//                PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
-//                if (patternSolidStack == null) continue;
-//
-//                inputs.add(patternSolidStack);
-//                indices.add(orderStack.getIndex());
-//            }
-//            if (stack instanceof FluidStack fluidStack) {
-//                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
-//                if (patternFluidStack == null) continue;
-//
-//                inputs.add(patternFluidStack);
-//                indices.add(orderStack.getIndex());
-//            }
-//        }
-//
-//        for (var outputStack : out) {
-//            if (outputStack == null) continue;
-//            var stack = outputStack.getStack();
-//            if (stack instanceof ItemStack itemStack) {
-//                PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
-//                if (patternSolidStack == null) continue;
-//                outputs.add(patternSolidStack);
-//            }
-//
-//            if (stack instanceof FluidStack fluidStack) {
-//                PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
-//                if (patternFluidStack == null) continue;
-//                outputs.add(patternFluidStack);
-//            }
-//        }
+        // List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
+        // List<OrderStack<?>> out = FluidRecipe.getPackageOutputs(recipe, recipeIndex, true);
+        //
+        // List<IPatternStack> inputs = new ArrayList<>();
+        // List<Integer> indices = new ArrayList<>();
+        // List<IPatternStack> outputs = new ArrayList<>();
+        //
+        // for (OrderStack<?> orderStack : in) {
+        // var stack = orderStack.getStack();
+        // if (stack instanceof ItemStack itemStack) {
+        // PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
+        // if (patternSolidStack == null) continue;
+        //
+        // inputs.add(patternSolidStack);
+        // indices.add(orderStack.getIndex());
+        // }
+        // if (stack instanceof FluidStack fluidStack) {
+        // PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+        // if (patternFluidStack == null) continue;
+        //
+        // inputs.add(patternFluidStack);
+        // indices.add(orderStack.getIndex());
+        // }
+        // }
+        //
+        // for (var outputStack : out) {
+        // if (outputStack == null) continue;
+        // var stack = outputStack.getStack();
+        // if (stack instanceof ItemStack itemStack) {
+        // PatternItemStack patternSolidStack = PatternItemStack.fromItemStack(itemStack);
+        // if (patternSolidStack == null) continue;
+        // outputs.add(patternSolidStack);
+        // }
+        //
+        // if (stack instanceof FluidStack fluidStack) {
+        // PatternFluidStack patternFluidStack = PatternFluidStack.fromFluidStack(fluidStack);
+        // if (patternFluidStack == null) continue;
+        // outputs.add(patternFluidStack);
+        // }
+        // }
 
-//        MainProxy.sendPacketToServer(
-//                PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
-//                        .setPatternInventorySlot(gui.getInventorySlot()).setInputs(inputs).setIndices(indices)
-//                        .setOutputs(outputs));
+        // MainProxy.sendPacketToServer(
+        // PacketHandler.getPacket(NEISetPatternCraftingRecipe.class)
+        // .setPatternInventorySlot(gui.getInventorySlot()).setInputs(inputs).setIndices(indices)
+        // .setOutputs(outputs));
 
     }
 

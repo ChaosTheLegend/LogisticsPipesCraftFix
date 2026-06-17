@@ -1,17 +1,17 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import net.minecraft.item.ItemStack;
-
+import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
+import net.minecraft.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Decides when staged pattern crafting orders may request their next ingredient sets.
@@ -21,14 +21,14 @@ import logisticspipes.utils.CacheHolder.CacheTypes;
  */
 class PatternStagedCraftingScheduler {
 
-    private final ModuleItemCrafting module;
+    private final ModulePatternCrafting module;
     private final PipeItemsPatternCraftingLogistics pipe;
     private final AdjacentInventoryHandler adjacentInventory;
     private final PatternStackRequestHandler requestedIngredient;
     private final List<PatternCraftingOrder> stagedCrafts;
     private final Set<Integer> requestingPatterns = new HashSet<>();
 
-    PatternStagedCraftingScheduler(ModuleItemCrafting module, PipeItemsPatternCraftingLogistics pipe,
+    PatternStagedCraftingScheduler(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
             AdjacentInventoryHandler adjacentInventory, PatternStackRequestHandler requestedIngredient,
             List<PatternCraftingOrder> stagedCrafts) {
         this.module = module;
@@ -125,7 +125,10 @@ class PatternStagedCraftingScheduler {
         if (pattern != null) {
             return false;
         }
-        module.debugEvent("SCHED", "request ingredients slot=%d removing staged order: pattern missing", order.patternSlot);
+        module.debugEvent(
+            "SCHED",
+            "request ingredients slot=%d removing staged order: pattern missing",
+            order.patternSlot);
         order.releaseReservations();
         stagedCrafts.remove(order);
         return true;

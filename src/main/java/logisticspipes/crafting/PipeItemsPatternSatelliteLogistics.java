@@ -1,5 +1,17 @@
 package logisticspipes.crafting;
 
+import logisticspipes.LogisticsPipes;
+import logisticspipes.pipes.PipeItemsSatelliteLogistics;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.routing.IRouter;
+import logisticspipes.security.SecuritySettings;
+import lombok.Getter;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentText;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -9,18 +21,6 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentText;
-
-import logisticspipes.LogisticsPipes;
-import logisticspipes.pipes.PipeItemsSatelliteLogistics;
-import logisticspipes.proxy.MainProxy;
-import logisticspipes.routing.IRouter;
-import logisticspipes.security.SecuritySettings;
-
 public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogistics {
 
     private static final Set<PipeItemsPatternSatelliteLogistics> ALL_PATTERN_SATELLITES = Collections
@@ -28,6 +28,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     private static final String UUID_TAG = "patternSatelliteUuid";
     private static final String NAME_TAG = "patternSatelliteName";
 
+    @Getter
     private String satelliteUuid = UUID.randomUUID().toString();
     private String satelliteName = "";
 
@@ -77,7 +78,8 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         Set<Integer> favoriteIds = getFavoriteSatelliteIds(player);
         Set<String> favoriteUuids = getFavoriteSatelliteUuids(player);
         List<PatternSatelliteInfo> satellites = new ArrayList<>();
-        int playerDimension = player != null && player.worldObj != null ? MainProxy.getDimensionForWorld(player.worldObj)
+        int playerDimension = player != null && player.worldObj != null
+            ? MainProxy.getDimensionForWorld(player.worldObj)
                 : Integer.MIN_VALUE;
         for (PipeItemsPatternSatelliteLogistics satellite : ALL_PATTERN_SATELLITES) {
             if (!isSelectableSatellite(satellite)) {
@@ -115,8 +117,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     }
 
     private static boolean isSelectableSatellite(PipeItemsPatternSatelliteLogistics satellite) {
-        return satellite != null
-                && satellite.satelliteId > 0
+        return satellite != null && satellite.satelliteId > 0
                 && satellite.container != null
                 && !satellite.container.isInvalid()
                 && satellite.getWorld() != null;
@@ -152,8 +153,8 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         return favoriteUuids;
     }
 
-    private static int getDistance(EntityPlayer player, int playerDimension, PipeItemsPatternSatelliteLogistics satellite,
-            int satelliteDimension) {
+    private static int getDistance(EntityPlayer player, int playerDimension,
+                                   PipeItemsPatternSatelliteLogistics satellite, int satelliteDimension) {
         if (player == null || playerDimension != satelliteDimension) {
             return -1;
         }
@@ -161,10 +162,6 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         double dy = satellite.getY() + 0.5D - player.posY;
         double dz = satellite.getZ() + 0.5D - player.posZ;
         return (int) Math.round(Math.sqrt(dx * dx + dy * dy + dz * dz));
-    }
-
-    public String getSatelliteUuid() {
-        return satelliteUuid;
     }
 
     public String getDisplayName() {
@@ -255,8 +252,8 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         try {
             IRouter router = getRouter();
             IRouter otherRouter = other.getRouter();
-            return router == otherRouter || (router != null && otherRouter != null
-                    && !router.getDistanceTo(otherRouter).isEmpty());
+            return router == otherRouter
+                || (router != null && otherRouter != null && !router.getDistanceTo(otherRouter).isEmpty());
         } catch (RuntimeException ignored) {
             return false;
         }

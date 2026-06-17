@@ -1,5 +1,6 @@
 package logisticspipes.crafting;
 
+import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.interfaces.routing.IRequestItems;
 
 /**
@@ -8,13 +9,6 @@ import logisticspipes.interfaces.routing.IRequestItems;
  * A null target means the ingredient is local to the pattern crafting pipe and must be buffered before the craft is
  * inserted into the adjacent target. A non-null target routes the ingredient directly to a linked pattern satellite.
  */
-class PatternIngredientTarget {
+record PatternIngredientTarget(IPatternStack stack, IRequestItems target) {
 
-    final IPatternStack stack;
-    final IRequestItems target;
-
-    PatternIngredientTarget(IPatternStack stack, IRequestItems target) {
-        this.stack = stack;
-        this.target = target;
-    }
 }

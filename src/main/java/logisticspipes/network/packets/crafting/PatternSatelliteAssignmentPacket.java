@@ -1,33 +1,26 @@
 package logisticspipes.network.packets.crafting;
 
-import java.io.IOException;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
 import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.Pattern;
+import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 
+import java.io.IOException;
+
+@Setter
+@Getter
 @Accessors(chain = true)
 public class PatternSatelliteAssignmentPacket extends ModernPacket {
 
-    @Getter
-    @Setter
     private int inventorySlot;
-    @Getter
-    @Setter
     private int inputSlot;
-    @Getter
-    @Setter
     private int satelliteId;
-    @Getter
-    @Setter
     private String satelliteUuid = "";
 
     public PatternSatelliteAssignmentPacket(int id) {
@@ -51,7 +44,7 @@ public class PatternSatelliteAssignmentPacket extends ModernPacket {
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
-        Pattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        ItemPattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         player.inventory.markDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();

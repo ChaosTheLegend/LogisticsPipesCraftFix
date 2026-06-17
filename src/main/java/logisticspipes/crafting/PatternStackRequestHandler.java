@@ -1,15 +1,16 @@
 package logisticspipes.crafting;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.ISaveState;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 class PatternStackRequestHandler implements ISaveState {
 
@@ -64,21 +65,21 @@ class PatternStackRequestHandler implements ISaveState {
     }
 
     /**
-     * Removes an amount of an Item that is stored in the request handler.
-     * Normally called on arrival of items on the pipe.
-     * <br>
+     * Removes an amount of an Item that is stored in the request handler. Normally called on arrival of items on the
+     * pipe. <br>
      * If the requested items are empty after the removal, remove the entry in the backing map
+     *
      * @param patternSlot the slot of the pattern
-     * @param stack the stack of the item
+     * @param stack       the stack of the item
      */
     void remove(int patternSlot, IPatternStack stack) {
         if (stack == null || stack.getAmount() <= 0) return;
 
-        //get the stored requested item stack
+        // get the stored requested item stack
         IPatternStack requested = requestedItemForPattern(patternSlot, stack);
         if (requested == null) return;
 
-        //make sure we cant go negative
+        // make sure we cant go negative
         int removed = Math.min(stack.getAmount(), requested.getAmount());
         requested.addAmount(-removed);
 
@@ -87,6 +88,7 @@ class PatternStackRequestHandler implements ISaveState {
 
     /**
      * Removes the entry for the given pattern, if it has no more request buffer
+     *
      * @param patternSlot the slot to check
      */
     private void removeEntryIfEmpty(int patternSlot) {

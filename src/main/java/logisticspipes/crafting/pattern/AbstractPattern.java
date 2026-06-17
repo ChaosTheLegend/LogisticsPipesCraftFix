@@ -1,32 +1,32 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternFluidStack;
+import logisticspipes.crafting.patternStack.PatternItemStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.string.ChatColor;
+import logisticspipes.utils.string.StringUtils;
+import lombok.Getter;
+import lombok.NonNull;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
-import logisticspipes.utils.item.ItemIdentifierStack;
-import logisticspipes.utils.string.ChatColor;
-import logisticspipes.utils.string.StringUtils;
-import lombok.NonNull;
+import java.util.ArrayList;
+import java.util.List;
 
+@Getter
 public abstract class AbstractPattern {
 
     private static final String ITEMS_TAG = "patternItems";
     private static final String SATELLITE_TARGETS_TAG = "patternSatelliteTargets";
     private static final String SATELLITE_TARGET_UUIDS_TAG = "patternSatelliteTargetUuids";
-    private static final String CRAFTING_PATTERN_TAG = "patternCraftingType";
 
     private final ItemStack patternStack;
 
     protected AbstractPattern(ItemStack patternStack) {
         this.patternStack = patternStack;
-    }
-
-    public ItemStack getPatternStack() {
-        return patternStack;
     }
 
     public abstract int getIngredientSlotCount();
@@ -165,21 +165,6 @@ public abstract class AbstractPattern {
             uuidTargets.setString(Integer.toString(slot), satelliteUuid);
         }
         root.setTag(SATELLITE_TARGET_UUIDS_TAG, uuidTargets);
-    }
-
-    public boolean isCraftingPattern() {
-        if (patternStack == null || !patternStack.hasTagCompound()) {
-            return false;
-        }
-        return patternStack.getTagCompound().getBoolean(CRAFTING_PATTERN_TAG);
-    }
-
-    public void setCraftingPattern(boolean isCrafting) {
-        if (patternStack == null) {
-            return;
-        }
-        NBTTagCompound root = getOrCreateTag(patternStack);
-        root.setBoolean(CRAFTING_PATTERN_TAG, isCrafting);
     }
 
     public List<IPatternStack> getInputs() {

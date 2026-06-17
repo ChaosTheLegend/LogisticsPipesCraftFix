@@ -1,5 +1,13 @@
 package logisticspipes.request.debug;
 
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.basic.CoreRoutedPipe;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.request.RequestTree;
+import logisticspipes.routing.IRouter;
+import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.routing.order.LinkedLogisticsOrderList;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -11,14 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.pipes.basic.CoreRoutedPipe;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.request.RequestTree;
-import logisticspipes.routing.IRouter;
-import logisticspipes.routing.order.IOrderInfoProvider;
-import logisticspipes.routing.order.LinkedLogisticsOrderList;
 
 public final class CraftingRequestDebugManager {
 
@@ -87,11 +87,6 @@ public final class CraftingRequestDebugManager {
 
     public static void recordPipeEvent(PipeItemsPatternCraftingLogistics pipe, String category, String message) {
         recordEvent(category, describePipe(pipe) + " " + message);
-    }
-
-    public static void recordPipeEvent(PipeItemsPatternCraftingLogistics pipe, String category, String message,
-            Object... args) {
-        recordPipeEvent(pipe, category, safeFormat(message, args));
     }
 
     /**
@@ -199,7 +194,8 @@ public final class CraftingRequestDebugManager {
         }
         if ("SCHED".equals(event.category)) {
             return message.contains("selectedSets=0") || message.contains("paused: no selectable sets")
-                    || message.contains("requested no sets") || message.contains("skipped:");
+                || message.contains("requested no sets")
+                || message.contains("skipped:");
         }
         if ("STAGED".equals(event.category)) {
             return message.startsWith("staged craft start") || message.startsWith("staged craft rejected");
@@ -333,25 +329,6 @@ public final class CraftingRequestDebugManager {
         return "pipe=(" + pipe.getX() + "," + pipe.getY() + "," + pipe.getZ() + " router=" + router + ")";
     }
 
-    private static String safeFormat(String message, Object... args) {
-        if (args == null || args.length == 0) {
-            return message == null ? "" : message;
-        }
-        try {
-            return String.format(message, args);
-        } catch (RuntimeException e) {
-            StringBuilder out = new StringBuilder(message == null ? "" : message);
-            out.append(" args=");
-            for (int i = 0; i < args.length; i++) {
-                if (i > 0) {
-                    out.append(", ");
-                }
-                out.append(args[i]);
-            }
-            return out.toString();
-        }
-    }
-
     private static String formatTime(long time) {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(time));
     }
@@ -454,7 +431,7 @@ public final class CraftingRequestDebugManager {
             if (start.matches()) {
                 int amount = parseInt(start.group(2), 0);
                 int parentSlot = parseTargetSlot(start.group(3));
-                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot, true)
+                FlowCraft parent = parentSlot >= 0 ? findLatestCraftBySlot(pipeMessage.pipeKey, parentSlot)
                         : null;
                 FlowCraft craft = new FlowCraft(pipeMessage.pipeKey, event.tick, start.group(1), amount, parentSlot);
                 if (parent == null) {
@@ -500,7 +477,7 @@ public final class CraftingRequestDebugManager {
         private boolean acceptRequestEvent(PipeMessage pipeMessage, String message) {
             Matcher sets = SETS_REQUEST_PATTERN.matcher(message);
             if (sets.matches()) {
-                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(sets.group(1), -1), true);
+                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(sets.group(1), -1));
                 if (craft == null) {
                     return false;
                 }
@@ -518,7 +495,7 @@ public final class CraftingRequestDebugManager {
                 if (requested <= 0) {
                     return true;
                 }
-                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(ingredient.group(1), -1), true);
+                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(ingredient.group(1), -1));
                 if (craft == null) {
                     return false;
                 }
@@ -533,7 +510,7 @@ public final class CraftingRequestDebugManager {
             }
             Matcher completed = COMPLETED_SLOT_PATTERN.matcher(message);
             if (completed.matches()) {
-                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(completed.group(1), -1), true);
+                FlowCraft craft = findLatestCraftBySlot(pipeMessage.pipeKey, parseInt(completed.group(1), -1));
                 if (craft != null) {
                     craft.ingredientsComplete = true;
                     return true;
@@ -552,11 +529,11 @@ public final class CraftingRequestDebugManager {
             return null;
         }
 
-        private FlowCraft findLatestCraftBySlot(String pipeKey, int patternSlot, boolean openOnly) {
+        private FlowCraft findLatestCraftBySlot(String pipeKey, int patternSlot) {
             for (int i = crafts.size() - 1; i >= 0; i--) {
                 FlowCraft craft = crafts.get(i);
                 if (samePipe(pipeKey, craft.pipeKey) && craft.patternSlot == patternSlot
-                        && (!openOnly || !craft.ingredientsComplete)) {
+                    && (!craft.ingredientsComplete)) {
                     return craft;
                 }
             }

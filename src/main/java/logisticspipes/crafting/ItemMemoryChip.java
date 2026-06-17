@@ -1,22 +1,20 @@
 package logisticspipes.crafting;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.TreeSet;
-
 import com.github.bsideup.jabel.Desugar;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.world.World;
-
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.items.LogisticsItem;
 import logisticspipes.utils.string.ChatColor;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.world.World;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.TreeSet;
 
 public class ItemMemoryChip extends LogisticsItem {
 
@@ -108,7 +106,11 @@ public class ItemMemoryChip extends LogisticsItem {
         if (satellite == null) {
             return false;
         }
-        return addPatternSatellite(stack, satellite.satelliteId, satellite.getSatelliteUuid(), satellite.getDisplayName());
+        return addPatternSatellite(
+            stack,
+            satellite.satelliteId,
+            satellite.getSatelliteUuid(),
+            satellite.getDisplayName());
     }
 
     public static boolean addPatternSatellite(ItemStack stack, int satelliteId, String satelliteUuid,
@@ -212,13 +214,10 @@ public class ItemMemoryChip extends LogisticsItem {
     }
 
     private static String formatMode(PatternSatelliteMode mode) {
-        switch (mode) {
-            case APPLY_LAST_TO_RECIPE:
-                return "Apply last satellite to recipe";
-            case FAVORITES:
-            default:
-                return "Favorites";
-        }
+        return switch (mode) {
+            case APPLY_LAST_TO_RECIPE -> "Apply last satellite to recipe";
+            default -> "Favorites";
+        };
     }
 
     private static NBTTagCompound getOrCreateTag(ItemStack stack) {

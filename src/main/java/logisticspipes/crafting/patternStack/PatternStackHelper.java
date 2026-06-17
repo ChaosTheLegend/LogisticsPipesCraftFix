@@ -1,17 +1,17 @@
-package logisticspipes.crafting;
-
-import java.util.ArrayList;
-import java.util.List;
+package logisticspipes.crafting.patternStack;
 
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 
-final class PatternStackHelper {
+import java.util.ArrayList;
+import java.util.List;
+
+public final class PatternStackHelper {
 
     private PatternStackHelper() {}
 
-    static List<IPatternStack> aggregate(List<? extends IPatternStack> stacks) {
+    public static List<IPatternStack> aggregate(List<? extends IPatternStack> stacks) {
         List<IPatternStack> result = new ArrayList<>();
         if (stacks == null) {
             return result;
@@ -23,13 +23,12 @@ final class PatternStackHelper {
     }
 
     /**
-     * Adds a stack to a list of stacks, merging if possible.
-     * If it cannot be merged, adds it to the given list.
+     * Adds a stack to a list of stacks, merging if possible. If it cannot be merged, adds it to the given list.
      *
      * @param stacks the list of stacks to add to
-     * @param stack the stack to add
+     * @param stack  the stack to add
      */
-    static void addAggregated(List<IPatternStack> stacks, IPatternStack stack) {
+    public static void addAggregated(List<IPatternStack> stacks, IPatternStack stack) {
         if (stack == null || stack.getAmount() <= 0) {
             return;
         }
@@ -42,7 +41,7 @@ final class PatternStackHelper {
         stacks.add(stack.copy());
     }
 
-    static IPatternStack copyWithAmount(IPatternStack stack, int amount) {
+    public static IPatternStack copyWithAmount(IPatternStack stack, int amount) {
         if (stack == null || amount <= 0) {
             return null;
         }
@@ -51,29 +50,29 @@ final class PatternStackHelper {
         return copy;
     }
 
-    static ItemIdentifierStack asSolidStack(IPatternStack stack) {
+    public static ItemIdentifierStack asSolidStack(IPatternStack stack) {
         if (stack instanceof PatternItemStack) {
             return ((PatternItemStack) stack).getItemIdentifierStack();
         }
         return null;
     }
 
-    static FluidIdentifier asFluid(IPatternStack stack) {
+    public static FluidIdentifier asFluid(IPatternStack stack) {
         if (stack instanceof PatternFluidStack) {
             return ((PatternFluidStack) stack).getFluid();
         }
         return null;
     }
 
-    static boolean isSolid(IPatternStack stack) {
+    public static boolean isSolid(IPatternStack stack) {
         return stack instanceof PatternItemStack;
     }
 
-    static boolean isFluid(IPatternStack stack) {
+    public static boolean isFluid(IPatternStack stack) {
         return stack instanceof PatternFluidStack;
     }
 
-    static boolean containsFluid(List<? extends IPatternStack> stacks) {
+    public static boolean containsFluid(List<? extends IPatternStack> stacks) {
         if (stacks == null) {
             return false;
         }
@@ -85,7 +84,7 @@ final class PatternStackHelper {
         return false;
     }
 
-    static boolean matches(IPatternStack stack, ItemIdentifier item) {
+    public static boolean matches(IPatternStack stack, ItemIdentifier item) {
         if (stack == null || item == null) {
             return false;
         }
@@ -100,12 +99,12 @@ final class PatternStackHelper {
         return fluid.equals(FluidIdentifier.get(item));
     }
 
-    static boolean matches(IPatternStack stack, FluidIdentifier fluid) {
+    public static boolean matches(IPatternStack stack, FluidIdentifier fluid) {
         FluidIdentifier stackFluid = asFluid(stack);
         return stackFluid != null && stackFluid.equals(fluid);
     }
 
-    static ItemIdentifier getRoutingItem(IPatternStack stack) {
+    public static ItemIdentifier getRoutingItem(IPatternStack stack) {
         ItemIdentifierStack solid = asSolidStack(stack);
         if (solid != null) {
             return solid.getItem();
@@ -114,7 +113,7 @@ final class PatternStackHelper {
         return fluid == null ? null : fluid.getItemIdentifier();
     }
 
-    static ItemIdentifierStack makeDisplayStack(IPatternStack stack) {
+    public static ItemIdentifierStack makeDisplayStack(IPatternStack stack) {
         ItemIdentifierStack solid = asSolidStack(stack);
         if (solid != null) {
             return solid.clone();

@@ -1,4 +1,4 @@
-package logisticspipes.crafting;
+package logisticspipes.crafting.pattern;
 
 import net.minecraft.item.ItemStack;
 

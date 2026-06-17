@@ -1,13 +1,9 @@
 package logisticspipes.crafting;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
 import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.pattern.PatternContainer;
+import logisticspipes.crafting.pattern.PatternGuiProvider;
+import logisticspipes.crafting.pattern.PipePatternInventory;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractguis.GuiProvider;
@@ -15,6 +11,12 @@ import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.utils.gui.DummyContainer;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider {
 
