@@ -4,6 +4,27 @@
  */
 package logisticspipes;
 
+import java.lang.reflect.Field;
+import java.util.Calendar;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+import net.minecraft.block.Block;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.CraftingManager;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.client.MinecraftForgeClient;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.ForgeDirection;
+
+import org.apache.logging.log4j.Logger;
+
 import cpw.mods.fml.client.registry.RenderingRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Loader;
@@ -168,6 +189,7 @@ import java.util.concurrent.Executors;
                 + "required-after:modularui2;"
                 + "required-after:gtnhmixins;"
                 + "required-after:NotEnoughItems;"
+                + "required-after:gtnhlib;"
                 + "after:gregtech;"
                 + "after:IC2;"
                 + "after:Forestry;"
@@ -294,14 +316,12 @@ public class LogisticsPipes {
     public static final String logisticsTileGenericPipeMapping = "logisticspipes.pipes.basic.LogisticsTileGenericPipe";
     public static CreativeTabLP LPCreativeTab = new CreativeTabLP();
     public static Logger log;
-    public static ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 
     private Queue<Runnable> postInitRun = new LinkedList<>();
     private static LPGlobalCCAccess generalAccess;
     private static PlayerConfig playerConfig;
 
     public static boolean isGTNH = false;
-    public static boolean enableVBO = false;
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
@@ -352,11 +372,6 @@ public class LogisticsPipes {
     public void preInit(FMLPreInitializationEvent evt) {
         // Gregtech New Horizons compat
         isGTNH = Loader.isModLoaded("dreamcraft") && Loader.isModLoaded("gregtech");
-        enableVBO = Loader.isModLoaded("gtnhlib");
-        try {
-            Class.forName("optifine.OptiFineForgeTweaker");
-            enableVBO = false;
-        } catch (ClassNotFoundException ignored) {}
 
         LogisticsPipes.log = evt.getModLog();
         loadClasses();

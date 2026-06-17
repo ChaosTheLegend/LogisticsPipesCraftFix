@@ -66,6 +66,7 @@ import logisticspipes.utils.SinkReply;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "Provider Module")
 public class ModuleProvider extends LogisticsSneakyDirectionModule
@@ -74,7 +75,7 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,
-            "Items to provide (or empty for all)",
+            StringUtils.translate("gui.module.ModuleProvider"),
             1);
     private ForgeDirection _sneakyDirection = ForgeDirection.UNKNOWN;
 

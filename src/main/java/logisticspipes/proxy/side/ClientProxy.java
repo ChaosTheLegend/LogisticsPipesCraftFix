@@ -457,6 +457,8 @@ public class ClientProxy implements IProxy {
             gui = (GuiLogisticsCraftingTable) firstGui;
         } else if (firstGui instanceof GuiRequestTable) {
             gui = (GuiRequestTable) firstGui;
+        } else if (firstGui instanceof GuiCraftingPipe) {
+            gui = (GuiCraftingPipe) firstGui;
         } else if (firstGui instanceof RequestTableGui) {
             gui = (RequestTableGui) firstGui;
         } else {

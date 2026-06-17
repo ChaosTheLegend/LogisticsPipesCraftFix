@@ -2,6 +2,7 @@ package logisticspipes.modules;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -31,6 +33,7 @@ import logisticspipes.blocks.crafting.LogisticsCraftingTableTileEntity;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
 import logisticspipes.interfaces.IInventoryUtil;
+import logisticspipes.interfaces.IModuleInventoryReceive;
 import logisticspipes.interfaces.IModuleWatchReciver;
 import logisticspipes.interfaces.IPipeServiceProvider;
 import logisticspipes.interfaces.ISlotUpgradeManager;
@@ -67,6 +70,7 @@ import logisticspipes.network.packets.cpipe.CraftingAdvancedSatelliteId;
 import logisticspipes.network.packets.cpipe.CraftingPipeOpenConnectedGuiPacket;
 import logisticspipes.network.packets.hud.HUDStartModuleWatchingPacket;
 import logisticspipes.network.packets.hud.HUDStopModuleWatchingPacket;
+import logisticspipes.network.packets.module.ModuleInventory;
 import logisticspipes.network.packets.pipe.*;
 import logisticspipes.pipefxhandlers.Particles;
 import logisticspipes.pipes.PipeFluidSatellite;
@@ -102,6 +106,7 @@ import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
 import logisticspipes.utils.DelayedGeneric;
 import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.SidedInventoryMinecraftAdapter;
 import logisticspipes.utils.SinkReply;
@@ -111,10 +116,12 @@ import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.string.StringUtils;
 import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
 
-public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver {
+public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver,
+        ISimpleInventoryEventHandler, IModuleInventoryReceive {
 
     private IRequestItems _invRequester;
     // private ForgeDirection _sneakyDirection = ForgeDirection.UNKNOWN;
@@ -126,7 +133,10 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     public int priority = 0;
 
     // from PipeItemsCraftingLogistics
-    protected ItemIdentifierInventory _dummyInventory = new ItemIdentifierInventory(11, "Requested items", 127);
+    protected ItemIdentifierInventory _dummyInventory = new ItemIdentifierInventory(
+            11,
+            StringUtils.translate("gui.module.requestedItems"),
+            127);
     protected ItemIdentifierInventory _liquidInventory = new ItemIdentifierInventory(
             ItemUpgrade.MAX_LIQUID_CRAFTER,
             "Fluid items",
@@ -160,6 +170,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     }
 
     public ModuleCrafter(PipeItemsCraftingLogistics parent) {
+        _dummyInventory.addListener(this);
         _service = parent;
         _invRequester = parent;
         _world = parent;
@@ -965,6 +976,51 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
         _dummyInventory.setInventorySlotContents(slot, itemstack);
     }
 
+    public void handleNEIRecipePacket(ItemStack[] content, EntityPlayer player) {
+        _dummyInventory.clearGrid();
+        for (int i = 0; i < content.length; i++) {
+            if (i < _dummyInventory.getSizeInventory()) {
+                _dummyInventory.setInventorySlotContents(i, content[i]);
+            }
+        }
+        if (player != null) {
+            MainProxy.sendPacketToPlayer(getCPipePacket(), player);
+        }
+    }
+
+    public void handleAdvancedNEIRecipePacket(List<ItemStack> inputs, List<ItemStack> outputs,
+            List<FluidStack> fluidInputs, EntityPlayer player) {
+        _dummyInventory.clearGrid();
+        int itemSlot = 0;
+        for (int i = 0; i < inputs.size() && itemSlot < 9; i++) {
+            ItemStack stack = inputs.get(i);
+            _dummyInventory.setInventorySlotContents(itemSlot++, stack);
+        }
+        if (!outputs.isEmpty()) {
+            _dummyInventory.setInventorySlotContents(9, outputs.get(0));
+            if (outputs.size() > 1) {
+                _dummyInventory.setInventorySlotContents(10, outputs.get(1));
+            }
+        }
+
+        // Populate liquids
+        _liquidInventory.clearGrid();
+        for (int i = 0; i < amount.length; i++) {
+            amount[i] = 0;
+        }
+
+        for (int i = 0; i < fluidInputs.size() && i < _liquidInventory.getSizeInventory(); i++) {
+            FluidStack fs = fluidInputs.get(i);
+            if (fs != null && fs.getFluid() != null) {
+                _liquidInventory.setInventorySlotContents(i, FluidIdentifier.get(fs).getItemIdentifier().makeStack(1));
+                amount[i] = fs.amount;
+            }
+        }
+        if (player != null) {
+            MainProxy.sendPacketToPlayer(getCPipePacket(), player);
+        }
+    }
+
     public void importFromCraftingTable(EntityPlayer player) {
         if (MainProxy.isClient(getWorld())) {
             // Send packet asking for import
@@ -1671,6 +1727,10 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     @Override
     public void startWatching(EntityPlayer player) {
         localModeWatchers.add(player);
+        MainProxy.sendPacketToPlayer(
+                PacketHandler.getPacket(ModuleInventory.class)
+                        .setIdentList(ItemIdentifierStack.getListFromInventory(_dummyInventory)).setModulePos(this),
+                player);
     }
 
     @Override
@@ -1682,6 +1742,21 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     public IHUDModuleRenderer getHUDRenderer() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void handleInvContent(Collection<ItemIdentifierStack> _allItems) {
+        _dummyInventory.handleItemIdentifierList(_allItems);
+    }
+
+    @Override
+    public void InventoryChanged(IInventory inventory) {
+        if (MainProxy.isServer(_world.getWorld())) {
+            MainProxy.sendToPlayerList(
+                    PacketHandler.getPacket(ModuleInventory.class)
+                            .setIdentList(ItemIdentifierStack.getListFromInventory(inventory)).setModulePos(this),
+                    localModeWatchers);
+        }
     }
 
     public void setBlockingMode(boolean blockingMode) {
