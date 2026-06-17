@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.Getter;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
@@ -39,9 +40,19 @@ public class PatternCraftingBranch {
     private static final String SUB_REQUESTS_TAG = "subRequests";
     private static final int TAG_COMPOUND = 10;
 
+    /**
+     * -- GETTER --
+     *  Returns the item or fluid resource represented by this branch.
+     */
+    @Getter
     private final IResource requestType;
     private final IAdditionalTargetInformation info;
     private final int originalAmount;
+    /**
+     * -- GETTER --
+     *  Returns the amount of this branch that has not yet been requested or reserved.
+     */
+    @Getter
     private int remainingAmount;
     private final int originalCraftingAmount;
     private final int originalCraftingSets;
@@ -107,13 +118,6 @@ public class PatternCraftingBranch {
     }
 
     /**
-     * Returns the item or fluid resource represented by this branch.
-     */
-    public IResource getRequestType() {
-        return requestType;
-    }
-
-    /**
      * Returns child branches that must be requested to satisfy this branch.
      */
     public List<PatternCraftingBranch> getSubRequests() {
@@ -125,13 +129,6 @@ public class PatternCraftingBranch {
         for (PatternCraftingBranch child : subRequests) {
             child.attachDebugModule(module);
         }
-    }
-
-    /**
-     * Returns the amount of this branch that has not yet been requested or reserved.
-     */
-    public int getRemainingAmount() {
-        return remainingAmount;
     }
 
     void writeToNBT(NBTTagCompound tag) {
@@ -286,9 +283,6 @@ public class PatternCraftingBranch {
                 infoOverride);
         for (int promiseIndex = 0; promiseIndex < promises.size() && requested < wanted; promiseIndex++) {
             PromiseState promiseState = promises.get(promiseIndex);
-            if (requested >= wanted) {
-                break;
-            }
             int toRequest = requestAmountForPromiseBatch(promiseIndex, wanted - requested);
             if (toRequest <= 0) {
                 continue;
@@ -307,7 +301,6 @@ public class PatternCraftingBranch {
                     wanted);
             IPromise promise = copyPromiseForAmount(promiseState.promise, toRequest);
             IResource request = copyRequestForTarget(toRequest, targetOverride);
-            IAdditionalTargetInformation targetInfo = infoOverride;
             IOrderInfoProvider result;
             boolean requestSubRequestsAfterOrder = false;
             if (promise.getType() == ResourceType.CRAFTING
@@ -323,9 +316,9 @@ public class PatternCraftingBranch {
                         stagedBranch.remainingCraftingAmount,
                         stagedBranch.subRequests.size(),
                         promise.getProvider(),
-                        targetInfo);
+                    infoOverride);
                 result = ((IStagedCraftingProvider) promise.getProvider())
-                        .fullFillStagedCrafting(promise, request, targetInfo, stagedBranch);
+                        .fullFillStagedCrafting(promise, request, infoOverride, stagedBranch);
                 if (result == null) {
                     debugBranchEvent(
                             "BRANCH",
@@ -339,7 +332,7 @@ public class PatternCraftingBranch {
                 if (promise.getType() == ResourceType.CRAFTING) {
                     requestSubRequestsAfterOrder = true;
                 }
-                result = promise.fullFill(request, targetInfo);
+                result = promise.fullFill(request, infoOverride);
             }
             if (result == null) {
                 debugBranchEvent(
@@ -403,8 +396,7 @@ public class PatternCraftingBranch {
                     new ItemIdentifierStack(((ItemResource) requestType).getItem(), amount),
                     targetOverride);
         }
-        if (requestType instanceof DictResource) {
-            DictResource source = (DictResource) requestType;
+        if (requestType instanceof DictResource source) {
             DictResource copy = new DictResource(new ItemIdentifierStack(source.getItem(), amount), targetOverride);
             copy.use_od = source.use_od;
             copy.ignore_dmg = source.ignore_dmg;
@@ -744,21 +736,17 @@ public class PatternCraftingBranch {
             return false;
         }
         if (first instanceof PatternCraftingPromise || candidate instanceof PatternCraftingPromise) {
-            if (!(first instanceof PatternCraftingPromise) || !(candidate instanceof PatternCraftingPromise)) {
+            if (!(first instanceof PatternCraftingPromise firstPattern) || !(candidate instanceof PatternCraftingPromise candidatePattern)) {
                 return false;
             }
-            PatternCraftingPromise firstPattern = (PatternCraftingPromise) first;
-            PatternCraftingPromise candidatePattern = (PatternCraftingPromise) candidate;
             return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()
                     && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
         }
         if (first instanceof PatternFluidCraftingPromise || candidate instanceof PatternFluidCraftingPromise) {
-            if (!(first instanceof PatternFluidCraftingPromise)
-                    || !(candidate instanceof PatternFluidCraftingPromise)) {
+            if (!(first instanceof PatternFluidCraftingPromise firstPattern)
+                    || !(candidate instanceof PatternFluidCraftingPromise candidatePattern)) {
                 return false;
             }
-            PatternFluidCraftingPromise firstPattern = (PatternFluidCraftingPromise) first;
-            PatternFluidCraftingPromise candidatePattern = (PatternFluidCraftingPromise) candidate;
             return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()
                     && firstPattern.getResultAmountPerSet() == candidatePattern.getResultAmountPerSet();
         }

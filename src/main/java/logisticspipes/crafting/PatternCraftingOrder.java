@@ -225,7 +225,7 @@ class PatternCraftingOrder {
                 display,
                 0,
                 display.getStackSize(),
-                outputOrder != null && (outputOrder.isInProgress() || !outputOrder.getProgresses().isEmpty()));
+            outputOrder.isInProgress() || !outputOrder.getProgresses().isEmpty());
         for (PatternCraftingBranch branch : ingredientBranches) {
             node.addChild(branch.toMonitorNode(visitedOrders));
         }

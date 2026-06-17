@@ -160,6 +160,18 @@ class PatternCraftingResultExtractor {
         int maxToSend = Math.min(itemsLeft, order.getAmount());
         maxToSend = Math.min(maxToSend, order.getResource().getItem().getMaxStackSize());
         if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            PatternCraftingOrder stagedOrder = PatternCraftingMonitorRegistry.find(order);
+            if (stagedOrder != null && !stagedOrder.isFullyRequested()) {
+                module.debugEventThrottled(
+                    "FLOW",
+                    60,
+                    "extract item deferred order=%s amount=%d: staged ingredients pending slot=%d remainingSets=%d",
+                    order.getResource().getItem(),
+                    order.getAmount(),
+                    stagedOrder.patternSlot,
+                    stagedOrder.remainingSets);
+                return 0;
+            }
             int requested = module.requestedSamePipeItemAmount(order);
             if (requested > 0) {
                 maxToSend = Math.min(maxToSend, requested);
@@ -315,6 +327,18 @@ class PatternCraftingResultExtractor {
     private int maxExtractableFluidAmount(LogisticsFluidOrder order) {
         int amountToDrain = Math.min(order.getAmount(), Configs.MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY / 2);
         if (module.isOrderDestinationThisModule(order) && order.getInformation() instanceof PatternTargetInformation) {
+            PatternCraftingOrder stagedOrder = PatternCraftingMonitorRegistry.find(order);
+            if (stagedOrder != null && !stagedOrder.isFullyRequested()) {
+                module.debugEventThrottled(
+                    "FLOW",
+                    60,
+                    "extract fluid deferred fluid=%s amount=%d: staged ingredients pending slot=%d remainingSets=%d",
+                    order.getFluid(),
+                    order.getAmount(),
+                    stagedOrder.patternSlot,
+                    stagedOrder.remainingSets);
+                return 0;
+            }
             int requested = module.requestedSamePipeFluidAmount(order);
             if (requested > 0) {
                 amountToDrain = Math.min(amountToDrain, requested);

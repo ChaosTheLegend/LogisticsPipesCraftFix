@@ -8,6 +8,8 @@ import java.util.Set;
 import net.minecraft.item.ItemStack;
 
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.routing.order.LogisticsFluidOrder;
+import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
 
@@ -88,12 +90,35 @@ class PatternStagedCraftingScheduler {
         if (!order.outputOrder.isFinished()) {
             return false;
         }
+        if (!order.isFullyRequested() && isSamePipeOutput(order)) {
+            module.debugEventThrottled(
+                    "SCHED",
+                    60,
+                    "request ingredients slot=%d kept finished same-pipe staged order until ingredients requested remainingSets=%d",
+                    order.patternSlot,
+                    order.remainingSets);
+            return false;
+        }
         module.debugEvent(
                 "SCHED",
-                "request ingredients slot=%d removing staged order: the order output is already satisfied",
-                order.patternSlot);
+                "request ingredients slot=%d removing staged order: the order output is already satisfied remainingSets=%d",
+                order.patternSlot,
+                order.remainingSets);
+        order.releaseReservations();
         stagedCrafts.remove(order);
         return true;
+    }
+
+    private boolean isSamePipeOutput(PatternCraftingOrder order) {
+        if (order.outputOrder instanceof LogisticsItemOrder itemOrder) {
+            return module.isOrderDestinationThisModule(itemOrder)
+                    && itemOrder.getInformation() instanceof PatternTargetInformation;
+        }
+        if (order.outputOrder instanceof LogisticsFluidOrder fluidOrder) {
+            return module.isOrderDestinationThisModule(fluidOrder)
+                    && fluidOrder.getInformation() instanceof PatternTargetInformation;
+        }
+        return false;
     }
 
     private boolean removeOrderWithoutPattern(PatternCraftingOrder order, ItemStack pattern) {
@@ -212,7 +237,6 @@ class PatternStagedCraftingScheduler {
             room -= requestedIngredient.amount(patternSlot, ingredient);
             sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
         }
-        int result = sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
-        return result;
+        return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
 }

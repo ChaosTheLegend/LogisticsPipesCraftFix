@@ -478,7 +478,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null || !isFluidCraftingPattern(pattern)) {
+            if (!isFluidCraftingPattern(pattern)) {
                 continue;
             }
             if (stagedCrafting.hasPattern(slot)
@@ -648,8 +648,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
      */
     @Override
     public void registerExtras(IPromise promise) {
-        if (promise instanceof FluidLogisticsPromise) {
-            FluidLogisticsPromise fluidPromise = (FluidLogisticsPromise) promise;
+        if (promise instanceof FluidLogisticsPromise fluidPromise) {
             debugEvent(
                 "EXTRA",
                 "register fluid extra %s amount=%d",
@@ -801,21 +800,15 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             if (requested <= 0)
                 continue;
 
-            if (buffered >= ingredient.getAmount() && requested <= 0) {
-                continue;
-            }
+            ingredient.getAmount();
             if (buffered < ingredient.getAmount()) {
                 String status = "Waiting on " + getHudIngredientName(ingredient) + " (" + buffered + "/"
                         + ingredient.getAmount();
-                if (requested > 0) {
-                    status += ", " + requested + " routed";
-                }
+                status += ", " + requested + " routed";
 
                 return status + ")";
             }
-            if (requested > 0) {
-                return "Waiting on " + getHudIngredientName(ingredient) + " (" + requested + " routed)";
-            }
+            return "Waiting on " + getHudIngredientName(ingredient) + " (" + requested + " routed)";
         }
         if (totalAmount(requestedIngredients.get(patternSlot)) > 0) {
             return "Waiting on ingredients";
@@ -1254,7 +1247,7 @@ public class ModuleItemCrafting extends LogisticsGuiModule
             }
             count = Math.max(count, spaceForPatternFluidIngredient(slot, pattern, fluid) - requested);
         }
-        return Math.max(0, count);
+        return count;
     }
 
     /**
@@ -2007,10 +2000,9 @@ public class ModuleItemCrafting extends LogisticsGuiModule
         }
         int covered = 0;
         for (IRouter router : SimpleServiceLocator.routerManager.getRouters()) {
-            if (router == null || !(router.getPipe() instanceof PipeItemsPatternCraftingLogistics)) {
+            if (router == null || !(router.getPipe() instanceof PipeItemsPatternCraftingLogistics patternPipe)) {
                 continue;
             }
-            PipeItemsPatternCraftingLogistics patternPipe = (PipeItemsPatternCraftingLogistics) router.getPipe();
             covered += liveItemOutputAmountFor(patternPipe, patternSlot, stack);
             covered += liveFluidOutputAmountFor(patternPipe, patternSlot, stack);
             if (covered >= outstanding) {

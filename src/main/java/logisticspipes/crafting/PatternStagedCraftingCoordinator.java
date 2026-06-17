@@ -117,7 +117,7 @@ class PatternStagedCraftingCoordinator {
 
     void writeToNBT(NBTTagCompound tag) {
         Set<IOrderInfoProvider> savedOutputOrders = Collections
-                .newSetFromMap(new IdentityHashMap<IOrderInfoProvider, Boolean>());
+                .newSetFromMap(new IdentityHashMap<>());
         NBTTagList stagedOrders = writeStagedOrders(savedOutputOrders);
         NBTTagList standaloneItemOrders = writeStandaloneItemOrders(savedOutputOrders);
         NBTTagList standaloneFluidOrders = writeStandaloneFluidOrders(savedOutputOrders);
