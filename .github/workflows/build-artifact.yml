@@ -22,10 +22,10 @@ jobs:
           cache: gradle
 
       - name: Apply Spotless formatting
-        run: .\gradlew.sh spotlessApply
+        run: ./gradlew spotlessApply
 
       - name: Build distributable jars
-        run: .\gradlew.sh assemble
+        run: ./gradlew assemble
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
