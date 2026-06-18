@@ -56,6 +56,10 @@ public class PatternPipeSlotActionPacket extends CoordinatesPacket {
             ItemPattern.toggleProcessingPattern(pattern);
             ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
                 .setSelectedPatternSlot(patternSlot).setTilePos(pipe.container).open(player);
+        } else if (action == PatternSlotActionPacket.Action.TOGGLE_ORE_DICT.ordinal()) {
+            configuredPattern.toggleOreDictSubstitution();
+        } else if (action == PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT.ordinal()) {
+            configuredPattern.toggleIgnoreNbt();
         }
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {

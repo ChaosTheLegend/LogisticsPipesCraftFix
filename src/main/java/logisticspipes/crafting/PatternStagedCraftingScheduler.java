@@ -24,17 +24,14 @@ class PatternStagedCraftingScheduler {
     private final ModulePatternCrafting module;
     private final PipeItemsPatternCraftingLogistics pipe;
     private final AdjacentInventoryHandler adjacentInventory;
-    private final PatternStackRequestHandler requestedIngredient;
     private final List<PatternCraftingOrder> stagedCrafts;
     private final Set<Integer> requestingPatterns = new HashSet<>();
 
     PatternStagedCraftingScheduler(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
-            AdjacentInventoryHandler adjacentInventory, PatternStackRequestHandler requestedIngredient,
-            List<PatternCraftingOrder> stagedCrafts) {
+                                   AdjacentInventoryHandler adjacentInventory, List<PatternCraftingOrder> stagedCrafts) {
         this.module = module;
         this.pipe = pipe;
         this.adjacentInventory = adjacentInventory;
-        this.requestedIngredient = requestedIngredient;
         this.stagedCrafts = stagedCrafts;
     }
 
@@ -246,7 +243,7 @@ class PatternStagedCraftingScheduler {
                     && adjacentInventory.isEmpty(connected)) {
                 room += ingredient.getAmount();
             }
-            room -= requestedIngredient.amount(order.patternSlot, ingredient);
+            room -= module.requestedIngredientAmount(order.patternSlot, pattern, ingredient);
             sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
         }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);

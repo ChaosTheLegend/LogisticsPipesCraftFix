@@ -62,7 +62,6 @@ class PatternStagedCraftingCoordinator {
                 module,
                 pipe,
                 adjacentInventory,
-                requestedIngredient,
                 stagedCrafts);
     }
 
@@ -167,7 +166,6 @@ class PatternStagedCraftingCoordinator {
                         restored.ingredientBranches,
                         outputOrder,
                         module,
-                        patternHandler,
                         requestedIngredient);
                 outputOrders.add(order);
                 if (!order.isFullyRequested() && !outputOrder.isFinished()) {
@@ -306,7 +304,6 @@ class PatternStagedCraftingCoordinator {
                 branch,
                 order,
                 module,
-                patternHandler,
                 requestedIngredient);
         stagedCrafts.add(stagedOrder);
         outputOrders.add(stagedOrder);

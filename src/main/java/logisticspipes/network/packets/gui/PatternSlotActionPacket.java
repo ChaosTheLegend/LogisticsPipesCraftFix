@@ -38,6 +38,10 @@ public class PatternSlotActionPacket extends ModernPacket {
         } else if (action == Action.TOGGLE_PROCESSING.ordinal()) {
             ItemPattern.toggleProcessingPattern(pattern);
             NewGuiHandler.getGui(PatternGuiProvider.class).setInventorySlot(inventorySlot).open(player);
+        } else if (action == Action.TOGGLE_ORE_DICT.ordinal()) {
+            configuredPattern.toggleOreDictSubstitution();
+        } else if (action == Action.TOGGLE_IGNORE_NBT.ordinal()) {
+            configuredPattern.toggleIgnoreNbt();
         }
         player.inventory.markDirty();
         if (player.openContainer != null) {
@@ -62,7 +66,9 @@ public class PatternSlotActionPacket extends ModernPacket {
     public enum Action {
         CLEAR,
         MULTIPLY_TWO,
-        TOGGLE_PROCESSING
+        TOGGLE_PROCESSING,
+        TOGGLE_ORE_DICT,
+        TOGGLE_IGNORE_NBT
     }
 
     @Override

@@ -53,6 +53,10 @@ public class PatternGuiProvider extends GuiProvider {
         if (pattern == null) {
             pattern = ItemPattern.fromStack(null);
         }
+        if (dummy instanceof PatternContainer) {
+            ((PatternContainer) dummy).addPatternSlots(pattern, inputLeft, inputTop, outputLeft, outputTop);
+            return;
+        }
         PatternSlotLayout layout = new PatternSlotLayout(pattern, inputLeft, inputTop, outputLeft, outputTop);
         for (int slot = 0; slot < pattern.getIngredientSlotCount(); slot++) {
             dummy.addDummySlot(slot, layout.inputX(slot), layout.inputY(slot));

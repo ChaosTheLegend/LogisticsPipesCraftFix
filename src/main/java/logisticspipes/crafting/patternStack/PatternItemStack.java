@@ -42,7 +42,7 @@ public class PatternItemStack implements IPatternStack {
     @Override
     public boolean canMerge(IPatternStack other) {
         return other instanceof PatternItemStack
-                && stack.getItem().equalsForCrafting(((PatternItemStack) other).stack.getItem());
+            && stack.getItem().equals(((PatternItemStack) other).stack.getItem());
     }
 
     @Override

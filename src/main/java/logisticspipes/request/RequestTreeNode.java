@@ -1,20 +1,5 @@
 package logisticspipes.request;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import logisticspipes.crafting.IStagedCraftingProvider;
 import logisticspipes.crafting.PatternCraftingBranch;
 import logisticspipes.interfaces.IStack;
@@ -26,6 +11,7 @@ import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
 import logisticspipes.request.RequestTree.workWeightedSorter;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.ExitRoute;
 import logisticspipes.routing.IRouter;
@@ -35,8 +21,25 @@ import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.routing.order.LinkedLogisticsOrderList;
 import logisticspipes.routing.order.LogisticsOrderManager;
+import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class RequestTreeNode {
 
@@ -87,7 +90,10 @@ public class RequestTreeNode {
     private final List<IExtraPromise> byproducts = new ArrayList<>();
     private final SortedSet<ICraftingTemplate> usedCrafters = new TreeSet<>();
     private final Set<LogisticsOrderManager<?, ?>> usedExtrasFromManager = new HashSet<>();
+    private final Map<ItemIdentifier, List<IPromise>> collectedSameItemPromises = new LinkedHashMap<>();
     private ICraftingTemplate lastCrafterTried = null;
+    private boolean collectingSameItemPromises;
+    private ItemIdentifier sameItemLockedItem;
 
     private int promiseAmount = 0;
 
@@ -121,6 +127,13 @@ public class RequestTreeNode {
     public void addPromise(IPromise promise) {
         if (!promise.matches(requestType)) {
             throw new IllegalArgumentException("wrong item");
+        }
+        if (collectingSameItemPromises && isSameItemDictRequest()) {
+            collectSameItemPromise(promise);
+            return;
+        }
+        if (isSameItemDictRequest() && !acceptSameItemPromise(promise)) {
+            return;
         }
         if (getMissingAmount() == 0) {
             throw new IllegalArgumentException("zero count needed, promises not needed.");
@@ -184,10 +197,9 @@ public class RequestTreeNode {
             if (!item.matches(promise.getItemType(), IResource.MatchSettings.NORMAL)) {
                 continue;
             }
-            if (!(promise instanceof IExtraPromise)) {
+            if (!(promise instanceof IExtraPromise epromise)) {
                 continue;
             }
-            IExtraPromise epromise = (IExtraPromise) promise;
             if (epromise.isProvided()) {
                 continue;
             }
@@ -380,6 +392,7 @@ public class RequestTreeNode {
         if (thisPipe == null) {
             return false;
         }
+        beginSameItemPromiseCollection();
         for (Pair<IProvide, List<IFilter>> provider : RequestTreeNode
                 .getProviders(requestType.getRouter(), getRequestType())) {
             if (isDone()) {
@@ -393,7 +406,67 @@ public class RequestTreeNode {
                 provider.getValue1().canProvide(this, root, provider.getValue2());
             }
         }
+        finishSameItemPromiseCollection();
         return isDone();
+    }
+
+    private void beginSameItemPromiseCollection() {
+        if (!isSameItemDictRequest()) {
+            return;
+        }
+        collectedSameItemPromises.clear();
+        collectingSameItemPromises = true;
+    }
+
+    private void finishSameItemPromiseCollection() {
+        if (!collectingSameItemPromises) {
+            return;
+        }
+        collectingSameItemPromises = false;
+        List<IPromise> selected = null;
+        for (List<IPromise> promises : collectedSameItemPromises.values()) {
+            if (totalPromiseAmount(promises) >= getMissingAmount()) {
+                selected = promises;
+                break;
+            }
+        }
+        collectedSameItemPromises.clear();
+        if (selected == null) {
+            return;
+        }
+        for (IPromise promise : selected) {
+            if (isDone()) {
+                break;
+            }
+            addPromise(promise);
+        }
+    }
+
+    private void collectSameItemPromise(IPromise promise) {
+        if (promise.getAmount() <= 0) {
+            throw new IllegalArgumentException("zero count ... again");
+        }
+        collectedSameItemPromises.computeIfAbsent(promise.getItemType(), k -> new ArrayList<>()).add(promise.copy());
+    }
+
+    private boolean isSameItemDictRequest() {
+        return requestType instanceof DictResource && ((DictResource) requestType).match_same_item;
+    }
+
+    private boolean acceptSameItemPromise(IPromise promise) {
+        if (sameItemLockedItem == null) {
+            sameItemLockedItem = promise.getItemType();
+            return true;
+        }
+        return sameItemLockedItem.equals(promise.getItemType());
+    }
+
+    private int totalPromiseAmount(List<IPromise> promises) {
+        int amount = 0;
+        for (IPromise promise : promises) {
+            amount += Math.max(0, promise.getAmount());
+        }
+        return amount;
     }
 
     private static List<Pair<IProvide, List<IFilter>>> getProviders(IRouter destination, IResource item) {

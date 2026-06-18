@@ -25,6 +25,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.nbt.NBTTagCompound;
 
+import java.util.List;
+
 public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity
         implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
 
@@ -272,7 +274,8 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
         if (stack == null || slot < 0 || slot >= INPUT_SIZE) return false;
 
         ItemStack existing = input.getStackInSlot(slot);
-        return existing == null || existing.getItem().equals(stack.getItem());
+        return existing == null
+            || ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(stack));
     }
 
     public int insertFromPatternPipe(int slot, ItemStack stack) {
@@ -314,6 +317,32 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
             remaining.stackSize -= moved;
         }
         return inserted;
+    }
+
+    public boolean insertPatternPlanFromPatternPipe(List<PatternIngredientAssignment> assignments) {
+        finishCraftIfReady();
+        if (assignments == null || assignments.isEmpty() || !canAcceptInput()) {
+            return false;
+        }
+        for (PatternIngredientAssignment assignment : assignments) {
+            ItemStack stack = assignment.stack().makePatternStack();
+            if (stack == null || roomForPatternPipeSlot(assignment.inputSlot(), stack) < stack.stackSize) {
+                return false;
+            }
+        }
+        suppressRecipeCheck = true;
+        boolean insertedAll = true;
+        for (PatternIngredientAssignment assignment : assignments) {
+            ItemStack stack = assignment.stack().makePatternStack();
+            if (insertFromPatternPipe(assignment.inputSlot(), stack) != stack.stackSize) {
+                insertedAll = false;
+            }
+        }
+        suppressRecipeCheck = false;
+        tryStartCrafting();
+        markDirty();
+        sendUpdatePayload();
+        return insertedAll;
     }
 
     public boolean insertPatternFromPatternPipe(ItemStack pattern, int sets) {

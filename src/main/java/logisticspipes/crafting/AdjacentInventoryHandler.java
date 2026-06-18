@@ -166,6 +166,82 @@ class AdjacentInventoryHandler {
         return true;
     }
 
+    boolean canInsertPatternIngredients(ItemStack pattern, List<PatternIngredientAssignment> assignments) {
+        AdjacentTile connected = getConnected();
+        if (connected == null || assignments == null || assignments.isEmpty()) {
+            return false;
+        }
+        if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity table) {
+            for (PatternIngredientAssignment assignment : assignments) {
+                ItemIdentifierStack item = PatternStackHelper.asSolidStack(assignment.stack());
+                if (item == null) {
+                    return false;
+                }
+                ItemStack stack = item.makeNormalStack();
+                if (table.roomForPatternPipeSlot(assignment.inputSlot(), stack) < stack.stackSize) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        List<ItemIdentifierStack> solidIngredients = new ArrayList<>();
+        List<PatternFluidStack> fluidIngredients = new ArrayList<>();
+        for (PatternIngredientAssignment assignment : assignments) {
+            ItemIdentifierStack item = PatternStackHelper.asSolidStack(assignment.stack());
+            if (item != null) {
+                solidIngredients.add(item.clone());
+                continue;
+            }
+            if (assignment.stack() instanceof PatternFluidStack fluid) {
+                fluidIngredients.add(fluid.copy());
+            }
+        }
+        if (!solidIngredients.isEmpty()) {
+            if (!(connected.tile instanceof IInventory)) {
+                return false;
+            }
+            if (!canFitPatternSetsDisregardingSlots(getInsertableInventory(connected), solidIngredients, 1)) {
+                return false;
+            }
+        }
+        if (!fluidIngredients.isEmpty()) {
+            if (!(connected.tile instanceof IFluidHandler handler)) {
+                return false;
+            }
+            ForgeDirection side = getFluidInsertionOrientation(connected);
+            for (PatternFluidStack fluid : fluidIngredients) {
+                FluidStack stack = fluid.makeFluidStack();
+                if (handler.fill(side, stack, false) < stack.amount) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    boolean insertPatternIngredients(ItemStack pattern, List<PatternIngredientAssignment> assignments) {
+        if (!canInsertPatternIngredients(pattern, assignments)) {
+            return false;
+        }
+        AdjacentTile connected = getConnected();
+        if (connected.tile instanceof PatternLogisticsCraftingTableTileEntity table) {
+            return table.insertPatternPlanFromPatternPipe(assignments);
+        }
+        for (PatternIngredientAssignment assignment : assignments) {
+            ItemIdentifierStack item = PatternStackHelper.asSolidStack(assignment.stack());
+            if (item != null) {
+                if (insert(pattern, item.clone()) != item.getStackSize()) {
+                    return false;
+                }
+                continue;
+            }
+            if (assignment.stack() instanceof PatternFluidStack fluid && insertFluid(fluid.copy()) != fluid.getAmount()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private int availablePatternSetsForFluids(List<PatternFluidStack> ingredients, AdjacentTile connected) {
         IFluidHandler handler = (IFluidHandler) connected.tile;
         ForgeDirection side = getFluidInsertionOrientation(connected);

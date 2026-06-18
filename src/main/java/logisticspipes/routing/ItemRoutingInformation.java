@@ -1,13 +1,5 @@
 package logisticspipes.routing;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-
 import logisticspipes.crafting.PatternTargetInformation;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
@@ -16,6 +8,13 @@ import logisticspipes.routing.order.IDistanceTracker;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 
 public class ItemRoutingInformation {
 
@@ -23,6 +22,7 @@ public class ItemRoutingInformation {
     private static final String TARGET_INFO_TYPE_TAG = "type";
     private static final String TARGET_INFO_PATTERN = "pattern";
     private static final String TARGET_PATTERN_SLOT_TAG = "patternSlot";
+    private static final String TARGET_INPUT_SLOT_TAG = "inputSlot";
 
     public static class DelayComparator implements Comparator<ItemRoutingInformation> {
 
@@ -100,14 +100,17 @@ public class ItemRoutingInformation {
         if (!TARGET_INFO_PATTERN.equals(tag.getString(TARGET_INFO_TYPE_TAG))) {
             return null;
         }
-        return new PatternTargetInformation(tag.getInteger(TARGET_PATTERN_SLOT_TAG));
+        int inputSlot = tag.hasKey(TARGET_INPUT_SLOT_TAG) ? tag.getInteger(TARGET_INPUT_SLOT_TAG)
+            : PatternTargetInformation.NO_INPUT_SLOT;
+        return new PatternTargetInformation(tag.getInteger(TARGET_PATTERN_SLOT_TAG), inputSlot);
     }
 
     private NBTTagCompound writeTargetInfo(IAdditionalTargetInformation info) {
         NBTTagCompound tag = new NBTTagCompound();
-        if (info instanceof PatternTargetInformation) {
+        if (info instanceof PatternTargetInformation patternInfo) {
             tag.setString(TARGET_INFO_TYPE_TAG, TARGET_INFO_PATTERN);
-            tag.setInteger(TARGET_PATTERN_SLOT_TAG, ((PatternTargetInformation) info).patternSlot());
+            tag.setInteger(TARGET_PATTERN_SLOT_TAG, patternInfo.patternSlot());
+            tag.setInteger(TARGET_INPUT_SLOT_TAG, patternInfo.inputSlot());
         }
         return tag;
     }

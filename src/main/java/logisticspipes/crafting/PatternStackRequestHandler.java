@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 class PatternStackRequestHandler implements ISaveState {
 
@@ -59,6 +60,16 @@ class PatternStackRequestHandler implements ISaveState {
         return amount;
     }
 
+    int amountMatching(int patternSlot, Predicate<IPatternStack> matcher) {
+        int amount = 0;
+        for (IPatternStack requested : getExistingRequested(patternSlot)) {
+            if (matcher.test(requested)) {
+                amount += requested.getAmount();
+            }
+        }
+        return amount;
+    }
+
     void add(int patternSlot, IPatternStack stack) {
         if (stack == null || stack.getAmount() <= 0) {
             return;
@@ -89,6 +100,36 @@ class PatternStackRequestHandler implements ISaveState {
 
         removeEntryIfEmpty(patternSlot);
         markChanged();
+    }
+
+    int removeMatching(int patternSlot, int amount, Predicate<IPatternStack> matcher) {
+        if (amount <= 0) {
+            return 0;
+        }
+        List<IPatternStack> requested = requestedIngredients.get(patternSlot);
+        if (requested == null) {
+            return 0;
+        }
+        int removedTotal = 0;
+        for (int i = 0; i < requested.size() && amount > 0; i++) {
+            IPatternStack stack = requested.get(i);
+            if (!matcher.test(stack)) {
+                continue;
+            }
+            int removed = Math.min(amount, stack.getAmount());
+            stack.addAmount(-removed);
+            amount -= removed;
+            removedTotal += removed;
+            if (stack.getAmount() <= 0) {
+                requested.remove(i);
+                i--;
+            }
+        }
+        removeEntryIfEmpty(patternSlot);
+        if (removedTotal > 0) {
+            markChanged();
+        }
+        return removedTotal;
     }
 
     /**

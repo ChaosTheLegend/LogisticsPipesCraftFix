@@ -28,6 +28,8 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     public static final int CLEAR_BUTTON_ID = 0;
     public static final int MULTIPLE_BUTTON_ID = 1;
     public static final int TYPE_BUTTON_ID = 2;
+    public static final int ORE_DICT_BUTTON_ID = 3;
+    public static final int IGNORE_NBT_BUTTON_ID = 4;
     private static final int INGREDIENT_LEFT = 25;
     private static final int INGREDIENT_TOP = 16;
     private static final int OUTPUT_LEFT = 115;
@@ -62,10 +64,28 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         GuiButton typeButton = new SmallGuiButton(TYPE_BUTTON_ID, guiLeft + 174, guiTop + 50, 38, 12, typeLabel());
         addButton(typeButton);
 
+        GuiButton oreDictButton = new SmallGuiButton(
+            ORE_DICT_BUTTON_ID,
+            guiLeft + 174,
+            guiTop + 66,
+            38,
+            12,
+            oreDictLabel());
+        addButton(oreDictButton);
+
+        GuiButton ignoreNbtButton = new SmallGuiButton(
+            IGNORE_NBT_BUTTON_ID,
+            guiLeft + 174,
+            guiTop + 82,
+            38,
+            12,
+            ignoreNbtLabel());
+        addButton(ignoreNbtButton);
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        updatePatternSlotLayout();
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
         GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + 8, guiTop + PLAYER_INV_TOP);
         AbstractPattern pattern = currentPattern();
@@ -85,6 +105,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         super.drawScreen(mouseX, mouseY, partialTicks);
         if (!hasSubGui()) {
             drawSatelliteButtonTooltip(mouseX, mouseY);
+            drawFlagButtonTooltip(mouseX, mouseY);
         }
     }
 
@@ -119,14 +140,63 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 break;
             case TYPE_BUTTON_ID:
                 ItemPattern.toggleProcessingPattern(patternInventory.getPatternStack());
+                updatePatternSlotLayout();
                 MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternSlotActionPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot())
                         .setAction(PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()));
                 initGui();
                 break;
+            case ORE_DICT_BUTTON_ID:
+                currentPattern().toggleOreDictSubstitution();
+                button.displayString = oreDictLabel();
+                MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(PatternSlotActionPacket.class)
+                        .setInventorySlot(patternInventory.getInventorySlot())
+                        .setAction(PatternSlotActionPacket.Action.TOGGLE_ORE_DICT.ordinal()));
+                break;
+            case IGNORE_NBT_BUTTON_ID:
+                currentPattern().toggleIgnoreNbt();
+                button.displayString = ignoreNbtLabel();
+                MainProxy.sendPacketToServer(
+                    PacketHandler.getPacket(PatternSlotActionPacket.class)
+                        .setInventorySlot(patternInventory.getInventorySlot())
+                        .setAction(PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT.ordinal()));
+                break;
 
         }
+    }
+
+    private void drawFlagButtonTooltip(int mouseX, int mouseY) {
+        GuiButton hoveredButton = getHoveredFlagButton(mouseX, mouseY);
+        if (hoveredButton == null) {
+            return;
+        }
+        List<String> tooltip = new ArrayList<>();
+        if (hoveredButton.id == ORE_DICT_BUTTON_ID) {
+            tooltip.add("OreDict substitution");
+            tooltip.add(currentPattern().isOreDictSubstitutionEnabled() ? "Enabled" : "Disabled");
+        } else if (hoveredButton.id == IGNORE_NBT_BUTTON_ID) {
+            tooltip.add("Ignore ingredient NBT");
+            tooltip.add(currentPattern().isIgnoreNbtEnabled() ? "Enabled" : "Disabled");
+        }
+        GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
+    }
+
+    private GuiButton getHoveredFlagButton(int mouseX, int mouseY) {
+        for (Object buttonObject : buttonList) {
+            if (!(buttonObject instanceof GuiButton button)) {
+                continue;
+            }
+            if (button.id != ORE_DICT_BUTTON_ID && button.id != IGNORE_NBT_BUTTON_ID) {
+                continue;
+            }
+            if (mouseX >= button.xPosition && mouseX < button.xPosition + button.width
+                && mouseY >= button.yPosition && mouseY < button.yPosition + button.height) {
+                return button;
+            }
+        }
+        return null;
     }
 
     private void openSatelliteSelector(int inputSlot) {
@@ -249,6 +319,18 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         return new PatternSlotLayout(pattern, INGREDIENT_LEFT, INGREDIENT_TOP, OUTPUT_LEFT, OUTPUT_TOP);
     }
 
+    private void updatePatternSlotLayout() {
+        if (inventorySlots instanceof PatternContainer) {
+            ((PatternContainer) inventorySlots)
+                .updatePatternSlotLayout(
+                    currentPattern(),
+                    INGREDIENT_LEFT + 1,
+                    INGREDIENT_TOP + 1,
+                    OUTPUT_LEFT + 1,
+                    OUTPUT_TOP + 1);
+        }
+    }
+
     private boolean isFluidSatelliteSlot(int inputSlot) {
         IPatternStack stack = currentPattern().getPatternStackInSlot(inputSlot);
         return PatternStackHelper.isFluid(stack);
@@ -268,6 +350,14 @@ public class PatternGui extends LogisticsBaseGuiScreen {
 
     private String typeLabel() {
         return ItemPattern.isProcessingPattern(patternInventory.getPatternStack()) ? "Craft" : "Proc";
+    }
+
+    private String oreDictLabel() {
+        return currentPattern().isOreDictSubstitutionEnabled() ? "Ore+" : "Ore-";
+    }
+
+    private String ignoreNbtLabel() {
+        return currentPattern().isIgnoreNbtEnabled() ? "NBT+" : "NBT-";
     }
 
 }

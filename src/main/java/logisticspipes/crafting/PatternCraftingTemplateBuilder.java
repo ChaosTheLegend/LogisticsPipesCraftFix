@@ -8,6 +8,7 @@ import logisticspipes.crafting.patternStack.PatternFluidStack;
 import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.request.BaseCraftingTemplate;
 import logisticspipes.request.ICraftingTemplate;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
@@ -83,7 +84,7 @@ class PatternCraftingTemplateBuilder {
                 0,
                 slot,
                 configuredPattern.getIngredientSlotCount());
-            addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
+            addPatternIngredients(template, configuredPattern, slot);
             addItemResultByproducts(template, result, outputs);
             return template;
         }
@@ -108,7 +109,7 @@ class PatternCraftingTemplateBuilder {
                     module,
                     0,
                     slot);
-            addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
+            addPatternIngredients(template, configuredPattern, slot);
             addFluidResultByproducts(template, result, outputs);
             return template;
         }
@@ -156,20 +157,47 @@ class PatternCraftingTemplateBuilder {
     /**
      * Adds every local item or fluid ingredient from a pattern to a request-tree template.
      */
-    private void addPatternIngredients(BaseCraftingTemplate template, List<IPatternStack> ingredients, int slot) {
-        for (IPatternStack ingredient : ingredients) {
+    private void addPatternIngredients(BaseCraftingTemplate template, AbstractPattern pattern, int slot) {
+        for (int inputSlot = 0; inputSlot < pattern.getIngredientSlotCount(); inputSlot++) {
+            IPatternStack ingredient = pattern.getPatternStackInSlot(inputSlot);
+            if (ingredient == null || ingredient.getAmount() <= 0) {
+                continue;
+            }
             ItemIdentifierStack item = PatternStackHelper.asSolidStack(ingredient);
             if (item != null) {
-                module.debug("template ingredient slot=%d item=%s", slot, item);
-                template.addIngredient(new ItemResource(item.clone(), module), new PatternTargetInformation(slot));
+                module.debug("template ingredient slot=%d inputSlot=%d item=%s", slot, inputSlot, item);
+                template.addIngredient(
+                    createItemIngredientResource(item, pattern),
+                    new PatternTargetInformation(slot, inputSlot));
                 continue;
             }
             if (ingredient instanceof PatternFluidStack fluid) {
-                module.debug("template ingredient slot=%d fluid=%s", slot, fluid);
+                module.debug("template ingredient slot=%d inputSlot=%d fluid=%s", slot, inputSlot, fluid);
                 template.addIngredient(
                         new FluidResource(fluid.getFluid(), fluid.getAmount(), module),
-                        new PatternTargetInformation(slot));
+                    new PatternTargetInformation(slot, inputSlot));
             }
         }
+    }
+
+    /**
+     * Converts one pattern item ingredient into the resource that the request tree should solve.
+     * <p>
+     * OreDict and NBT flags are intentionally applied only here, so later staged fulfilment follows the concrete tree
+     * that was selected.
+     */
+    private IResource createItemIngredientResource(ItemIdentifierStack item, AbstractPattern pattern) {
+        ItemIdentifierStack ingredient = item.clone();
+        boolean useOreDict = pattern.isOreDictSubstitutionEnabled()
+            && ingredient.getItem().getDictIdentifiers() != null;
+        boolean ignoreNbt = pattern.isIgnoreNbtEnabled();
+        if (!useOreDict && !ignoreNbt) {
+            return new ItemResource(ingredient, module);
+        }
+        DictResource resource = new DictResource(ingredient, module);
+        resource.use_od = useOreDict;
+        resource.ignore_nbt = ignoreNbt;
+        resource.match_same_item = useOreDict || ignoreNbt;
+        return resource;
     }
 }

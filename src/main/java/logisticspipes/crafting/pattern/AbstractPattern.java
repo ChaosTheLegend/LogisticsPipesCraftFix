@@ -24,6 +24,8 @@ public abstract class AbstractPattern {
     private static final String SATELLITE_TARGET_UUIDS_TAG = "patternSatelliteTargetUuids";
     private static final String FLUID_SATELLITE_TARGETS_TAG = "patternFluidSatelliteTargets";
     private static final String FLUID_SATELLITE_TARGET_UUIDS_TAG = "patternFluidSatelliteTargetUuids";
+    private static final String ORE_DICT_SUBSTITUTION_TAG = "patternOreDictSubstitution";
+    private static final String IGNORE_NBT_TAG = "patternIgnoreNbt";
 
     private final ItemStack patternStack;
 
@@ -129,6 +131,48 @@ public abstract class AbstractPattern {
             newList.appendTag(tag);
         }
         root.setTag(ITEMS_TAG, newList);
+    }
+
+    /**
+     * Returns whether item ingredients may be substituted by matching OreDict entries while the request tree is built.
+     */
+    public boolean isOreDictSubstitutionEnabled() {
+        return getBooleanTag(ORE_DICT_SUBSTITUTION_TAG);
+    }
+
+    /**
+     * Stores whether request-tree ingredient resources should allow OreDict substitutions for this pattern.
+     */
+    public void setOreDictSubstitutionEnabled(boolean enabled) {
+        setBooleanTag(ORE_DICT_SUBSTITUTION_TAG, enabled);
+    }
+
+    /**
+     * Toggles OreDict substitution for all item ingredients in this pattern.
+     */
+    public void toggleOreDictSubstitution() {
+        setOreDictSubstitutionEnabled(!isOreDictSubstitutionEnabled());
+    }
+
+    /**
+     * Returns whether item ingredient request resources should ignore NBT differences.
+     */
+    public boolean isIgnoreNbtEnabled() {
+        return getBooleanTag(IGNORE_NBT_TAG);
+    }
+
+    /**
+     * Stores whether request-tree ingredient resources should ignore NBT for this pattern.
+     */
+    public void setIgnoreNbtEnabled(boolean enabled) {
+        setBooleanTag(IGNORE_NBT_TAG, enabled);
+    }
+
+    /**
+     * Toggles NBT-insensitive ingredient matching for this pattern.
+     */
+    public void toggleIgnoreNbt() {
+        setIgnoreNbtEnabled(!isIgnoreNbtEnabled());
     }
 
     public int getSatelliteIdForInputSlot(int slot) {
@@ -276,6 +320,12 @@ public abstract class AbstractPattern {
                 addPatternStacksToTooltip(tooltip, getAggregatedInputs(), ChatColor.GREEN);
             });
         }
+        if (isOreDictSubstitutionEnabled()) {
+            tooltip.add(ChatColor.GRAY + "OreDict substitution enabled");
+        }
+        if (isIgnoreNbtEnabled()) {
+            tooltip.add(ChatColor.GRAY + "Ignoring ingredient NBT");
+        }
     }
 
     private void addPatternStacksToTooltip(List<String> tooltip, List<IPatternStack> stacks, ChatColor color) {
@@ -365,6 +415,22 @@ public abstract class AbstractPattern {
             }
             PatternFluidStack fluid = fluidIndex < fluids.size() ? fluids.get(fluidIndex++) : null;
             setPatternStackInSlot(slot, fluid);
+        }
+    }
+
+    private boolean getBooleanTag(String tagName) {
+        return patternStack != null && patternStack.hasTagCompound() && patternStack.getTagCompound().getBoolean(tagName);
+    }
+
+    private void setBooleanTag(String tagName, boolean enabled) {
+        if (patternStack == null) {
+            return;
+        }
+        NBTTagCompound tag = getOrCreateTag(patternStack);
+        if (enabled) {
+            tag.setBoolean(tagName, true);
+        } else {
+            tag.removeTag(tagName);
         }
     }
 

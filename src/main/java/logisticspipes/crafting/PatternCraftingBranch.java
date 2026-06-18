@@ -118,6 +118,13 @@ public class PatternCraftingBranch {
     }
 
     /**
+     * Returns the target metadata captured from the request-tree component that created this branch.
+     */
+    IAdditionalTargetInformation getTargetInformation() {
+        return info;
+    }
+
+    /**
      * The module that receives debug events from this branch
      *
      * @param module the module
@@ -417,6 +424,7 @@ public class PatternCraftingBranch {
             copy.ignore_dmg = source.ignore_dmg;
             copy.ignore_nbt = source.ignore_nbt;
             copy.use_category = source.use_category;
+            copy.match_same_item = source.match_same_item;
             return copy;
         }
         if (fluidTargetOverride != null && requestType instanceof FluidResource source) {

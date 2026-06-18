@@ -40,6 +40,8 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private static final int MULTIPLY_BUTTON = 2;
     private static final int CANCEL_BUTTON = 3;
     private static final int TYPE_BUTTON = 4;
+    private static final int ORE_DICT_BUTTON = 5;
+    private static final int IGNORE_NBT_BUTTON = 6;
     private static final int TAB_BUTTON_BASE = 100;
 
     private static final int TAB_LEFT = 32;
@@ -88,9 +90,11 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         GuiButton modeButton = new SmallGuiButton(MODE_BUTTON, guiLeft + 166, guiTop + 54, 62, 12, modeLabel());
         modeButton.enabled = !pipe.isBlockingModeFixed();
         buttonList.add(modeButton);
-        buttonList.add(new SmallGuiButton(CLEAR_BUTTON, guiLeft + 166, guiTop + 70, 62, 12, "Clear"));
-        buttonList.add(new SmallGuiButton(MULTIPLY_BUTTON, guiLeft + 166, guiTop + 86, 62, 12, "2x"));
-        buttonList.add(new SmallGuiButton(TYPE_BUTTON, guiLeft + 166, guiTop + 102, 62, 12, typeLabel()));
+        buttonList.add(new SmallGuiButton(CLEAR_BUTTON, guiLeft + 166, guiTop + 70, 30, 12, "Clear"));
+        buttonList.add(new SmallGuiButton(MULTIPLY_BUTTON, guiLeft + 198, guiTop + 70, 30, 12, "2x"));
+        buttonList.add(new SmallGuiButton(TYPE_BUTTON, guiLeft + 166, guiTop + 86, 62, 12, typeLabel()));
+        buttonList.add(new SmallGuiButton(ORE_DICT_BUTTON, guiLeft + 166, guiTop + 102, 30, 12, oreDictLabel()));
+        buttonList.add(new SmallGuiButton(IGNORE_NBT_BUTTON, guiLeft + 198, guiTop + 102, 30, 12, ignoreNbtLabel()));
         buttonList.add(new SmallGuiButton(CANCEL_BUTTON, guiLeft + 166, guiTop + 118, 62, 12, "Cancel"));
         for (int slot = 0; slot < 9; slot++) {
             buttonList.add(
@@ -140,8 +144,17 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             sendPatternAction(PatternSlotActionPacket.Action.MULTIPLY_TWO);
         } else if (button.id == TYPE_BUTTON) {
             ItemPattern.toggleProcessingPattern(editedPatternInventory.getPatternStack());
+            updatePatternSlotLayout();
             sendPatternAction(PatternSlotActionPacket.Action.TOGGLE_PROCESSING);
             initGui();
+        } else if (button.id == ORE_DICT_BUTTON) {
+            currentPattern().toggleOreDictSubstitution();
+            button.displayString = oreDictLabel();
+            sendPatternAction(PatternSlotActionPacket.Action.TOGGLE_ORE_DICT);
+        } else if (button.id == IGNORE_NBT_BUTTON) {
+            currentPattern().toggleIgnoreNbt();
+            button.displayString = ignoreNbtLabel();
+            sendPatternAction(PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT);
         } else if (button.id == CANCEL_BUTTON) {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(selectedPatternSlot)
@@ -153,6 +166,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        updatePatternSlotLayout();
         updateButtons();
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
         GuiGraphics.drawPlayerInventoryBackground(mc, guiLeft + PLAYER_INV_LEFT, guiTop + PLAYER_INV_TOP);
@@ -179,6 +193,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         if (!hasSubGui()) {
             drawHudAmounts();
             drawSatelliteTooltip(mouseX, mouseY);
+            drawFlagButtonTooltip(mouseX, mouseY);
         }
     }
 
@@ -216,6 +231,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         if (inventorySlots instanceof PatternContainer) {
             ((PatternContainer) inventorySlots).setSelectedPatternSlot(selectedPatternSlot);
         }
+        updatePatternSlotLayout();
         MainProxy.sendPacketToServer(
                 PacketHandler.getPacket(PatternPipeSelectPacket.class).setInteger(selectedPatternSlot)
                         .setTilePos(pipe.container));
@@ -373,6 +389,38 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
     }
 
+    private void drawFlagButtonTooltip(int mouseX, int mouseY) {
+        GuiButton hoveredButton = getHoveredFlagButton(mouseX, mouseY);
+        if (hoveredButton == null) {
+            return;
+        }
+        List<String> tooltip = new ArrayList<>();
+        if (hoveredButton.id == ORE_DICT_BUTTON) {
+            tooltip.add("OreDict substitution");
+            tooltip.add(currentPattern().isOreDictSubstitutionEnabled() ? "Enabled" : "Disabled");
+        } else if (hoveredButton.id == IGNORE_NBT_BUTTON) {
+            tooltip.add("Ignore ingredient NBT");
+            tooltip.add(currentPattern().isIgnoreNbtEnabled() ? "Enabled" : "Disabled");
+        }
+        GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
+    }
+
+    private GuiButton getHoveredFlagButton(int mouseX, int mouseY) {
+        for (Object buttonObject : buttonList) {
+            if (!(buttonObject instanceof GuiButton button)) {
+                continue;
+            }
+            if (button.id != ORE_DICT_BUTTON && button.id != IGNORE_NBT_BUTTON) {
+                continue;
+            }
+            if (mouseX >= button.xPosition && mouseX < button.xPosition + button.width
+                && mouseY >= button.yPosition && mouseY < button.yPosition + button.height) {
+                return button;
+            }
+        }
+        return null;
+    }
+
     private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid, boolean fluidTarget) {
         PatternSatelliteInfo.SatelliteType type = fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
             : PatternSatelliteInfo.SatelliteType.ITEM;
@@ -425,6 +473,18 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         return new PatternSlotLayout(pattern, INGREDIENT_LEFT, INGREDIENT_TOP, OUTPUT_LEFT, OUTPUT_TOP);
     }
 
+    private void updatePatternSlotLayout() {
+        if (inventorySlots instanceof PatternContainer) {
+            ((PatternContainer) inventorySlots)
+                .updatePatternSlotLayout(
+                    currentPattern(),
+                    INGREDIENT_LEFT + 1,
+                    INGREDIENT_TOP + 1,
+                    OUTPUT_LEFT + 1,
+                    OUTPUT_TOP + 1);
+        }
+    }
+
     private boolean isFluidSatelliteSlot(int inputSlot) {
         IPatternStack stack = currentPattern().getPatternStackInSlot(inputSlot);
         return PatternStackHelper.isFluid(stack);
@@ -456,6 +516,12 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             } else if (button.id == TYPE_BUTTON) {
                 button.displayString = typeLabel();
                 button.enabled = pattern != null;
+            } else if (button.id == ORE_DICT_BUTTON) {
+                button.displayString = oreDictLabel();
+                button.enabled = pattern != null;
+            } else if (button.id == IGNORE_NBT_BUTTON) {
+                button.displayString = ignoreNbtLabel();
+                button.enabled = pattern != null;
             } else if (button.id == CLEAR_BUTTON || button.id == MULTIPLY_BUTTON || button.id == CANCEL_BUTTON) {
                 button.enabled = pattern != null;
             } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {
@@ -463,5 +529,13 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
                 button.enabled = slot != selectedPatternSlot;
             }
         }
+    }
+
+    private String oreDictLabel() {
+        return currentPattern().isOreDictSubstitutionEnabled() ? "Ore+" : "Ore-";
+    }
+
+    private String ignoreNbtLabel() {
+        return currentPattern().isIgnoreNbtEnabled() ? "NBT+" : "NBT-";
     }
 }

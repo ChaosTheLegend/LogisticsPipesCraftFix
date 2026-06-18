@@ -1,6 +1,5 @@
 package logisticspipes.crafting;
 
-import logisticspipes.crafting.pattern.PatternHandler;
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.IRequestFluid;
@@ -24,11 +23,10 @@ class PatternCraftingOrder {
 
     final IOrderInfoProvider outputOrder;
     private final ModulePatternCrafting module;
-    private final PatternHandler patternHandler;
     private final PatternStackRequestHandler requestedIngredient;
 
     PatternCraftingOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
-                         IOrderInfoProvider outputOrder, ModulePatternCrafting module, PatternHandler patternHandler,
+                         IOrderInfoProvider outputOrder, ModulePatternCrafting module,
             PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
@@ -36,7 +34,6 @@ class PatternCraftingOrder {
         this.ingredientBranches = new ArrayList<>(branch.getSubRequests());
         this.outputOrder = outputOrder;
         this.module = module;
-        this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.remainingSets = initialRemainingSets(branch);
         module.debugEvent(
@@ -53,7 +50,7 @@ class PatternCraftingOrder {
 
     PatternCraftingOrder(int patternSlot, int resultAmountPerSet, int remainingSets,
             List<PatternCraftingBranch> ingredientBranches, IOrderInfoProvider outputOrder,
-                         ModulePatternCrafting module, PatternHandler patternHandler,
+                         ModulePatternCrafting module,
                          PatternStackRequestHandler requestedIngredient) {
         this.patternSlot = patternSlot;
         this.resultAmountPerSet = Math.max(1, resultAmountPerSet);
@@ -63,7 +60,6 @@ class PatternCraftingOrder {
         }
         this.outputOrder = outputOrder;
         this.module = module;
-        this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
         this.remainingSets = capRemainingSets(Math.max(0, remainingSets));
         module.debugEvent(
@@ -123,9 +119,9 @@ class PatternCraftingOrder {
      */
     int availableSetsFromBranches(ItemStack pattern) {
         int sets = Integer.MAX_VALUE;
-        for (IPatternStack ingredient : patternHandler.getAggregatedInputs(pattern)) {
+        for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             int available = availableFromBranches(ingredient);
-            sets = Math.min(sets, available / ingredient.getAmount());
+            sets = Math.min(sets, available / ingredient.stack().getAmount());
         }
         return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
     }
@@ -148,6 +144,7 @@ class PatternCraftingOrder {
             int requested = requestFromBranches(
                 ingredient.stack(),
                 ingredient.stack().getAmount() * requestedSets,
+                ingredient.inputSlot(),
                 ingredient.itemTarget(),
                 ingredient.fluidTarget());
             requestedIngredients.add(new RequestedIngredient(ingredient, requested));
@@ -238,7 +235,7 @@ class PatternCraftingOrder {
     /**
      * Returns the amount still available for one ingredient across matching branches.
      */
-    private int availableFromBranches(IPatternStack ingredient) {
+    private int availableFromBranches(PatternIngredientTarget ingredient) {
         int available = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
             if (branchMatches(branch, ingredient)) {
@@ -251,14 +248,14 @@ class PatternCraftingOrder {
     /**
      * Places provider or staged crafting orders for an ingredient, consuming the matching branch state as it goes.
      */
-    private int requestFromBranches(IPatternStack ingredient, int amount, IRequestItems itemTargetOverride,
-                                    IRequestFluid fluidTargetOverride) {
+    private int requestFromBranches(IPatternStack ingredient, int amount, int inputSlot,
+                                    IRequestItems itemTargetOverride, IRequestFluid fluidTargetOverride) {
         int requested = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
             if (requested >= amount) {
                 break;
             }
-            if (!branchMatches(branch, ingredient)) {
+            if (!branchMatches(branch, ingredient, inputSlot)) {
                 continue;
             }
             int before = branch.getRemainingAmount();
@@ -266,7 +263,8 @@ class PatternCraftingOrder {
                 int branchRequested = branch.request(
                     amount - requested,
                     fluidTargetOverride,
-                    fluidTargetOverride == null ? new PatternTargetInformation(patternSlot) : null);
+                    fluidTargetOverride == null ? new PatternTargetInformation(patternSlot, inputSlot)
+                        : null);
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
@@ -284,7 +282,8 @@ class PatternCraftingOrder {
                 int branchRequested = branch.request(
                         amount - requested,
                     itemTargetOverride,
-                    itemTargetOverride == null ? new PatternTargetInformation(patternSlot) : null);
+                    itemTargetOverride == null ? new PatternTargetInformation(patternSlot, inputSlot)
+                        : null);
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
@@ -306,13 +305,28 @@ class PatternCraftingOrder {
     /**
      * Checks whether a staged branch can provide the requested item or fluid ingredient.
      */
-    private boolean branchMatches(PatternCraftingBranch branch, IPatternStack ingredient) {
+    private boolean branchMatches(PatternCraftingBranch branch, PatternIngredientTarget ingredient) {
+        return branchMatches(branch, ingredient.stack(), ingredient.inputSlot());
+    }
+
+    private boolean branchMatches(PatternCraftingBranch branch, IPatternStack ingredient, int inputSlot) {
+        if (!branchTargetsInputSlot(branch, inputSlot)) {
+            return false;
+        }
         FluidIdentifier fluid = PatternStackHelper.asFluid(ingredient);
         if (fluid != null) {
             return branch.matches(fluid);
         }
         ItemIdentifier item = PatternStackHelper.getRoutingItem(ingredient);
         return item != null && branch.matches(item);
+    }
+
+    private boolean branchTargetsInputSlot(PatternCraftingBranch branch, int inputSlot) {
+        if (branch.getTargetInformation() instanceof PatternTargetInformation target) {
+            return target.inputSlot() == inputSlot
+                || target.inputSlot() == PatternTargetInformation.NO_INPUT_SLOT;
+        }
+        return true;
     }
 
     private static class RequestedIngredient {

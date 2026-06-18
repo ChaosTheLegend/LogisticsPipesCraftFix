@@ -59,12 +59,14 @@ final class PatternCraftingPersistence {
     private static final String INFO_TAG = "info";
     private static final String INFO_PATTERN_KIND = "pattern";
     private static final String PATTERN_SLOT_TAG = "patternSlot";
+    private static final String INPUT_SLOT_TAG = "inputSlot";
     private static final String RESULT_AMOUNT_PER_SET_TAG = "resultAmountPerSet";
     private static final String PROVIDED_TAG = "provided";
     private static final String USE_OD_TAG = "useOd";
     private static final String IGNORE_DMG_TAG = "ignoreDmg";
     private static final String IGNORE_NBT_TAG = "ignoreNbt";
     private static final String USE_CATEGORY_TAG = "useCategory";
+    private static final String MATCH_SAME_ITEM_TAG = "matchSameItem";
     private static final String IN_PROGRESS_TAG = "inProgress";
     private static final String MACHINE_PROGRESS_TAG = "machineProgress";
     private static final String WATCHED_TAG = "watched";
@@ -301,9 +303,10 @@ final class PatternCraftingPersistence {
 
     static void writeTargetInfo(NBTTagCompound parent, IAdditionalTargetInformation info) {
         NBTTagCompound tag = new NBTTagCompound();
-        if (info instanceof PatternTargetInformation) {
+        if (info instanceof PatternTargetInformation patternInfo) {
             tag.setString(KIND_TAG, INFO_PATTERN_KIND);
-            tag.setInteger(PATTERN_SLOT_TAG, ((PatternTargetInformation) info).patternSlot());
+            tag.setInteger(PATTERN_SLOT_TAG, patternInfo.patternSlot());
+            tag.setInteger(INPUT_SLOT_TAG, patternInfo.inputSlot());
         }
         if (!tag.hasNoTags()) {
             parent.setTag(INFO_TAG, tag);
@@ -314,7 +317,9 @@ final class PatternCraftingPersistence {
         if (!INFO_PATTERN_KIND.equals(tag.getString(KIND_TAG))) {
             return null;
         }
-        return new PatternTargetInformation(tag.getInteger(PATTERN_SLOT_TAG));
+        int inputSlot = tag.hasKey(INPUT_SLOT_TAG) ? tag.getInteger(INPUT_SLOT_TAG)
+            : PatternTargetInformation.NO_INPUT_SLOT;
+        return new PatternTargetInformation(tag.getInteger(PATTERN_SLOT_TAG), inputSlot);
     }
 
     static IAdditionalTargetInformation readTargetInfoFromParent(NBTTagCompound parent) {
@@ -346,6 +351,7 @@ final class PatternCraftingPersistence {
         tag.setBoolean(IGNORE_DMG_TAG, resource.ignore_dmg);
         tag.setBoolean(IGNORE_NBT_TAG, resource.ignore_nbt);
         tag.setBoolean(USE_CATEGORY_TAG, resource.use_category);
+        tag.setBoolean(MATCH_SAME_ITEM_TAG, resource.match_same_item);
     }
 
     private static DictResource readDictResource(NBTTagCompound tag, IRequestItems target) {
@@ -355,6 +361,7 @@ final class PatternCraftingPersistence {
         resource.ignore_dmg = tag.getBoolean(IGNORE_DMG_TAG);
         resource.ignore_nbt = tag.getBoolean(IGNORE_NBT_TAG);
         resource.use_category = tag.getBoolean(USE_CATEGORY_TAG);
+        resource.match_same_item = tag.getBoolean(MATCH_SAME_ITEM_TAG);
         return resource;
     }
 
