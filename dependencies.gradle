@@ -28,6 +28,7 @@ dependencies {
     compileOnly('curse.maven:better-storage-232919:2731636') { transitive = false }
     compileOnly('org.jetbrains:annotations:26.0.2') { transitive = false }
     compileOnly('org.projectlombok:lombok:1.18.24') { transitive = false }
+    compileOnly('com.github.GTNewHorizons:NotEnoughEnergistics:1.7.32') { transitive = false }
 
     annotationProcessor('org.projectlombok:lombok:1.18.24')
 

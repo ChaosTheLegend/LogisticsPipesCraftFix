@@ -1,6 +1,11 @@
 package logisticspipes.crafting;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.network.GuiIDs;
+import logisticspipes.network.PacketHandler;
+import logisticspipes.network.abstractpackets.ModernPacket;
+import logisticspipes.network.packets.satpipe.PatternSatelliteSetName;
+import logisticspipes.network.packets.satpipe.SatPipeSetID;
 import logisticspipes.pipes.PipeItemsSatelliteLogistics;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.routing.IRouter;
@@ -169,6 +174,13 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
                 : satelliteName.trim();
     }
 
+    /**
+     * Returns the player-defined label without falling back to the internal numeric satellite id.
+     */
+    public String getSatelliteName() {
+        return satelliteName == null ? "" : satelliteName.trim();
+    }
+
     @Override
     public void enabledUpdateEntity() {
         super.enabledUpdateEntity();
@@ -180,6 +192,10 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     public void setSatelliteName(String satelliteName) {
         this.satelliteName = satelliteName == null ? "" : satelliteName.trim();
         ensureAllSatelliteStatus();
+        if (container != null) {
+            container.markDirty();
+            container.sendUpdateToClient();
+        }
     }
 
     @Override
@@ -289,6 +305,17 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     public void setSatelliteId(int satelliteId) {
         this.satelliteId = satelliteId;
         ensureAllSatelliteStatus();
+    }
+
+    @Override
+    public void onWrenchClicked(EntityPlayer entityplayer) {
+        ModernPacket idPacket = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
+            .setPosY(getY()).setPosZ(getZ());
+        MainProxy.sendPacketToPlayer(idPacket, entityplayer);
+        ModernPacket namePacket = PacketHandler.getPacket(PatternSatelliteSetName.class).setString(getSatelliteName())
+            .setPosX(getX()).setPosY(getY()).setPosZ(getZ());
+        MainProxy.sendPacketToPlayer(namePacket, entityplayer);
+        entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
     }
 
     @Override

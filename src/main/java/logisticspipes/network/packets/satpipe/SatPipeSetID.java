@@ -1,9 +1,7 @@
 package logisticspipes.network.packets.satpipe;
 
-import java.io.IOException;
-
-import net.minecraft.entity.player.EntityPlayer;
-
+import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
+import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -11,9 +9,13 @@ import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.pipes.PipeFluidSatellite;
 import logisticspipes.pipes.PipeItemsSatelliteLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
+import logisticspipes.proxy.MainProxy;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.minecraft.entity.player.EntityPlayer;
+
+import java.io.IOException;
 
 @Accessors(chain = true)
 public class SatPipeSetID extends CoordinatesPacket {
@@ -47,6 +49,11 @@ public class SatPipeSetID extends CoordinatesPacket {
     public void processPacket(EntityPlayer player) {
         final LogisticsTileGenericPipe pipe = getPipe(player.worldObj);
         if (pipe == null) {
+            return;
+        }
+
+        if (!MainProxy.isClient(player.worldObj) && (pipe.pipe instanceof PipeItemsPatternSatelliteLogistics
+            || pipe.pipe instanceof PipeFluidPatternSatelliteLogistics)) {
             return;
         }
 
