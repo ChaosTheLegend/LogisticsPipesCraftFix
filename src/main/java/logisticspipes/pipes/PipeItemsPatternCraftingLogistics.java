@@ -277,7 +277,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     /**
      * Resolves a fluid pattern satellite stored on a fluid input slot and persists the link when it is first seen.
      */
-    public PipeFluidPatternSatelliteLogistics resolvePatternFluidSatelliteTarget(String satelliteUuid, int satelliteId) {
+    public PipeFluidPatternSatelliteLogistics resolvePatternFluidSatelliteTarget(String satelliteUuid,
+                                                                                 int satelliteId) {
         PipeFluidPatternSatelliteLogistics satellite = findPatternFluidSatellite(satelliteUuid, satelliteId);
         if (satellite != null && getWorld() != null && MainProxy.isServer(getWorld())) {
             linkPatternFluidSatellite(satellite.satelliteId, satellite.getSatelliteUuid());
@@ -291,11 +292,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
      * @return true when the pipe learned a new id or UUID
      */
     public boolean linkPatternSatellite(int satelliteId, String satelliteUuid) {
-        return linkPatternSatellite(
-            satelliteId,
-            satelliteUuid,
-            linkedPatternSatelliteIds,
-            linkedPatternSatelliteUuids);
+        return linkPatternSatellite(satelliteId, satelliteUuid, linkedPatternSatelliteIds, linkedPatternSatelliteUuids);
     }
 
     /**
@@ -599,6 +596,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     @Override
     public void listenedChanged() {
         doContentUpdate = true;
+        module.markHudStateDirty();
     }
 
     private void checkContentUpdate() {
@@ -616,6 +614,12 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     }
 
     private void checkHudUpdate() {
+        if (localModeWatchers.isEmptyWithoutCheck()) {
+            return;
+        }
+        if (!module.shouldRefreshHudState()) {
+            return;
+        }
         PatternCraftingHudState state = module.getHudState();
         if (!oldHudState.equals(state)) {
             oldHudState = state;
@@ -745,9 +749,11 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                     PacketHandler.getPacket(OrdererManagerContent.class).setIdentList(oldList).setPosX(getX())
                             .setPosY(getY()).setPosZ(getZ()),
                     player);
+            PatternCraftingHudState state = module.getHudState();
+            oldHudState = state;
             MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(PatternCraftingHudContent.class).setState(module.getHudState())
-                    .setPosX(getX()).setPosY(getY()).setPosZ(getZ()),
+                PacketHandler.getPacket(PatternCraftingHudContent.class).setState(state).setPosX(getX())
+                    .setPosY(getY()).setPosZ(getZ()),
                     player);
         } else {
             super.playerStartWatching(player, mode);

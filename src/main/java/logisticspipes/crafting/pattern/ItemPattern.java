@@ -36,8 +36,7 @@ public class ItemPattern extends LogisticsItem {
     }
 
     public static boolean isProcessingPattern(ItemStack pattern) {
-        return pattern != null
-            && pattern.hasTagCompound()
+        return pattern != null && pattern.hasTagCompound()
             && PROCESSING_TYPE.equals(pattern.getTagCompound().getString(PATTERN_TYPE_TAG));
     }
 

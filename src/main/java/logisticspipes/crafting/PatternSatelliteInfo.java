@@ -22,6 +22,7 @@ public final class PatternSatelliteInfo {
     private final boolean favorite;
     private final String uuid;
     private final String displayName;
+
     public PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite, String uuid,
                                 String displayName) {
         this(id, x, y, z, dimension, distance, favorite, uuid, displayName, SatelliteType.ITEM);

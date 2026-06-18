@@ -281,8 +281,7 @@ public class LogisticsTileGenericPipe extends TileEntity
      * Returns the visual connection state for one side without changing the server-side transport connection.
      */
     private boolean shouldRenderPipeConnection(ForgeDirection side) {
-        return pipeConnectionsBuffer[side.ordinal()]
-            || (pipe instanceof PipeItemsPatternCraftingLogistics patternPipe
+        return pipeConnectionsBuffer[side.ordinal()] || (pipe instanceof PipeItemsPatternCraftingLogistics patternPipe
             && patternPipe.shouldRenderCraftingTargetConnection(side));
     }
 

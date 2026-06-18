@@ -185,6 +185,7 @@ class PatternStagedCraftingCoordinator {
                         order.ingredientBranches.size(),
                         outputOrder.getAsDisplayItem());
             }
+            module.markHudStateDirty();
             return true;
         } catch (PatternCraftingPersistence.RestoreNotReadyException ignored) {
             module.debugEventThrottled("PERSIST", "restore staged crafting state postponed: routers not ready");
@@ -259,6 +260,7 @@ class PatternStagedCraftingCoordinator {
         }
         stagedCrafts.clear();
         outputOrders.clear();
+        module.markHudStateDirty();
     }
 
     boolean cancelPattern(int patternSlot) {
@@ -290,6 +292,9 @@ class PatternStagedCraftingCoordinator {
             outputOrders.remove(order);
             cancelled = true;
         }
+        if (cancelled) {
+            module.markHudStateDirty();
+        }
         return cancelled;
     }
 
@@ -307,6 +312,7 @@ class PatternStagedCraftingCoordinator {
         outputOrders.add(stagedOrder);
         PatternCraftingMonitorRegistry.register(order, stagedOrder);
         module.clearCancelledPattern(patternSlot);
+        module.markHudStateDirty();
         module.debugEvent(
                 "STAGED",
                 "staged craft registered slot=%d remainingSets=%d ingredientBranches=%d output=%s branch=%s branchRemaining=%d",

@@ -24,9 +24,7 @@ public class PatternPipeSelectPacket extends IntegerCoordinatesPacket {
             ((PatternContainer) player.openContainer).setSelectedPatternSlot(getInteger());
         }
         ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
-            .setSelectedPatternSlot(getInteger())
-            .setTilePos(pipe.container)
-            .open(player);
+            .setSelectedPatternSlot(getInteger()).setTilePos(pipe.container).open(player);
     }
 
     @Override

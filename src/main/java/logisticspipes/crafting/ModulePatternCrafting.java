@@ -88,6 +88,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     private static final int RESTORED_REQUESTED_RETRY_DELAY = 8000;
     private static final int RESTORE_DEBUG_INTERVAL = 40;
     private static final int DEFAULT_THROTTLE_TICKS = 40;
+    private static final int HUD_STATE_RECHECK_INTERVAL = 20;
     private static final int TAG_COMPOUND = 10;
 
     private final PipeItemsPatternCraftingLogistics pipe;
@@ -98,8 +99,8 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     private final DelayQueue<DelayedGeneric<Pair<IPatternStack, IAdditionalTargetInformation>>> lostIngredients = new DelayQueue<>();
     private final PatternHandler patternHandler = new PatternHandler(patternInventory);
     private final AdjacentInventoryHandler adjacentInventory;
-    private final PatternStackBufferHandler ingredientBuffer = new PatternStackBufferHandler();
-    private final PatternStackRequestHandler requestedIngredient = new PatternStackRequestHandler(requestedIngredients);
+    private final PatternStackBufferHandler ingredientBuffer;
+    private final PatternStackRequestHandler requestedIngredient;
     private final PatternStagedCraftingCoordinator stagedCrafting;
     private final PatternCraftingTemplateBuilder templateBuilder;
     private final PatternCraftingResultExtractor resultExtractor;
@@ -111,6 +112,9 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     private NBTTagCompound pendingStagedCrafting;
     private boolean pendingRequestedIngredientRestoreRetries;
     private int stagedCraftingRestoreAttempts;
+    private PatternCraftingHudState cachedHudState = PatternCraftingHudState.empty();
+    private boolean hudStateDirty = true;
+    private long lastHudStateBuildTick = Long.MIN_VALUE;
 
     public ModulePatternCrafting(PipeItemsPatternCraftingLogistics pipe) {
         this.pipe = pipe;
@@ -118,9 +122,12 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             if (pipe.container != null) {
                 pipe.container.markDirty();
             }
+            markHudStateDirty();
             pipe.listenedChanged();
         });
         adjacentInventory = new AdjacentInventoryHandler(this, pipe);
+        ingredientBuffer = new PatternStackBufferHandler(this::markHudStateDirty);
+        requestedIngredient = new PatternStackRequestHandler(requestedIngredients, this::markHudStateDirty);
         stagedCrafting = new PatternStagedCraftingCoordinator(
             this,
             pipe,
@@ -151,6 +158,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
 
     public void markPatternInventoryDirty() {
         patternInventory.markDirty();
+        markHudStateDirty();
     }
 
     public int assignSatelliteToAllPatternIngredients(int satelliteId, String satelliteUuid) {
@@ -181,9 +189,16 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     }
 
     public void setBlockingMode(PipeItemsPatternCraftingLogistics.BlockingMode blockingMode) {
-        this.blockingMode = adjacentInventory.isConnectedToPatternCraftingTable()
-            ? PipeItemsPatternCraftingLogistics.BlockingMode.SMART
+        PipeItemsPatternCraftingLogistics.BlockingMode requestedMode = blockingMode == null
+            ? PipeItemsPatternCraftingLogistics.BlockingMode.OFF
             : blockingMode;
+        PipeItemsPatternCraftingLogistics.BlockingMode nextMode = adjacentInventory.isConnectedToPatternCraftingTable()
+            ? PipeItemsPatternCraftingLogistics.BlockingMode.SMART
+            : requestedMode;
+        if (this.blockingMode != nextMode) {
+            this.blockingMode = nextMode;
+            markHudStateDirty();
+        }
     }
 
     public boolean isBlockingModeFixed() {
@@ -372,6 +387,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             : null;
         pendingRequestedIngredientRestoreRetries = !requestedIngredients.isEmpty();
         stagedCraftingRestoreAttempts = 0;
+        markHudStateDirty();
         debugEvent(
             "PERSIST",
             "loaded module nbt bufferedSlots=%d requestedSlots=%d lostQueued=%d pendingStaged=%s runningCraft=%d adjacentBatch=%s",
@@ -484,6 +500,10 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     }
 
     private long currentDebugTick() {
+        return currentWorldTick();
+    }
+
+    private long currentWorldTick() {
         World world = pipe.getWorld();
         return world == null ? 0 : world.getTotalWorldTime();
     }
@@ -501,6 +521,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             debugEvent("STAGED", "restored staged crafting state after %d attempts", stagedCraftingRestoreAttempts + 1);
             pendingStagedCrafting = null;
             stagedCraftingRestoreAttempts = 0;
+            markHudStateDirty();
             return;
         }
         stagedCraftingRestoreAttempts++;
@@ -629,6 +650,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
                 new logisticspipes.request.resources.DictResource(
                     new ItemIdentifierStack(promise.item, promise.numberOfItems),
                     null));
+            markHudStateDirty();
         }
         pipe.spawnParticle(Particles.WhiteParticle, 2);
         debugEvent(
@@ -670,6 +692,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         if (promise instanceof FluidExtraPromise) {
             pipe.getPatternFluidOrderManager().removeExtras(promise.getLiquid(), promise.getAmount());
             orderType = ResourceType.CRAFTING;
+            markHudStateDirty();
         }
         pipe.spawnParticle(Particles.WhiteParticle, 2);
         debugEvent(
@@ -725,6 +748,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
                 fluidPromise.getLiquid(),
                 fluidPromise.getAmount());
             pipe.getPatternFluidOrderManager().addExtra(fluidPromise.getLiquid(), fluidPromise.getAmount());
+            markHudStateDirty();
             return;
         }
         if (promise instanceof LogisticsDictPromise) {
@@ -732,11 +756,13 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             resource.getItemStack().setStackSize(promise.getAmount());
             debugEvent("EXTRA", "register dict extra %s amount=%d", resource.getItem(), promise.getAmount());
             pipe.getItemOrderManager().addExtra(resource);
+            markHudStateDirty();
             return;
         }
         debugEvent("EXTRA", "register extra %s amount=%d", promise.getItemType(), promise.getAmount());
         pipe.getItemOrderManager()
             .addExtra(new DictResource(new ItemIdentifierStack(promise.getItemType(), promise.getAmount()), null));
+        markHudStateDirty();
     }
 
     /**
@@ -783,7 +809,40 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         return results;
     }
 
+    /**
+     * Returns the cached HUD snapshot, rebuilding it only after crafting state changed or after a short external-state
+     * recheck interval.
+     */
     public PatternCraftingHudState getHudState() {
+        if (shouldRefreshHudState()) {
+            cachedHudState = buildHudState();
+            hudStateDirty = false;
+            lastHudStateBuildTick = currentWorldTick();
+        }
+        return cachedHudState;
+    }
+
+    /**
+     * Reports whether callers that broadcast HUD content should ask for a fresh snapshot.
+     */
+    public boolean shouldRefreshHudState() {
+        return hudStateDirty || isHudStateRecheckDue();
+    }
+
+    /**
+     * Invalidates the cached HUD snapshot after a crafting-visible state change.
+     */
+    public void markHudStateDirty() {
+        hudStateDirty = true;
+    }
+
+    private boolean isHudStateRecheckDue() {
+        long tick = currentWorldTick();
+        return lastHudStateBuildTick == Long.MIN_VALUE || tick - lastHudStateBuildTick >= HUD_STATE_RECHECK_INTERVAL;
+    }
+
+    private PatternCraftingHudState buildHudState() {
+        refreshRunningCraftState(getConnectedInventoryTile());
         PatternCraftingHudState state = new PatternCraftingHudState(getEffectiveBlockingMode());
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = getPatternStack(slot);
@@ -1488,8 +1547,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
                 : null;
             boolean merged = false;
             for (PatternIngredientTarget existing : result) {
-                if (existing.itemTarget() == itemTarget
-                    && existing.fluidTarget() == fluidTarget
+                if (existing.itemTarget() == itemTarget && existing.fluidTarget() == fluidTarget
                     && existing.stack().canMerge(stack)) {
                     existing.stack().addAmount(stack.getAmount());
                     merged = true;
@@ -1659,8 +1717,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             insertableSets);
         ingredientBuffer.removePatternSets(patternSlot, getLocalAggregatedIngredients(pattern), sets);
         if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
-            runningCraft = patternSlot;
-            runningCraftInAdjacent = true;
+            setRunningCraft(patternSlot, true);
         }
         debugEvent(
             "BUFFER",
@@ -1707,8 +1764,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         changed |= requestedIngredient.removeAll(patternSlot);
         changed |= flushBufferedIngredientsToStorage(patternSlot);
         if (runningCraft == patternSlot) {
-            runningCraft = -1;
-            runningCraftInAdjacent = false;
+            setRunningCraft(-1, false);
             changed = true;
         }
         if (changed) {
@@ -1761,8 +1817,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.OFF || runningCraft >= 0) {
             return;
         }
-        runningCraft = patternSlot;
-        runningCraftInAdjacent = false;
+        setRunningCraft(patternSlot, false);
         debugEvent("BUFFER", "running craft activated from buffer slot=%d", patternSlot);
     }
 
@@ -1786,32 +1841,38 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      */
     private void refreshRunningCraftState(AdjacentTile connected) {
         if (getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
-            runningCraft = -1;
-            runningCraftInAdjacent = false;
+            setRunningCraft(-1, false);
             return;
         }
         if (runningCraft >= 0 && getPatternStack(runningCraft) == null) {
             debugEvent("BUFFER", "running craft cleared slot=%d: pattern missing", runningCraft);
-            runningCraft = -1;
-            runningCraftInAdjacent = false;
+            setRunningCraft(-1, false);
         }
         if (runningCraft >= 0 && runningCraftInAdjacent && (connected == null || isInventoryEmpty(connected))) {
             debugEvent("BUFFER", "running craft adjacent batch finished slot=%d", runningCraft);
-            runningCraftInAdjacent = false;
+            setRunningCraft(runningCraft, false);
         }
         if (runningCraft >= 0 && !runningCraftInAdjacent && completeBufferedSets(runningCraft) <= 0) {
             debugEvent("BUFFER", "running craft released slot=%d: no arrived ingredients remain", runningCraft);
-            runningCraft = -1;
+            setRunningCraft(-1, false);
         }
         if (runningCraft < 0) {
-            runningCraftInAdjacent = false;
+            setRunningCraft(-1, false);
             int next = findCompleteBufferedPattern();
             if (next != -1) {
-                runningCraft = next;
-                runningCraftInAdjacent = false;
+                setRunningCraft(next, false);
                 debugEvent("BUFFER", "running craft selected buffered slot=%d", runningCraft);
             }
         }
+    }
+
+    private void setRunningCraft(int patternSlot, boolean inAdjacent) {
+        if (runningCraft == patternSlot && runningCraftInAdjacent == inAdjacent) {
+            return;
+        }
+        runningCraft = patternSlot;
+        runningCraftInAdjacent = patternSlot >= 0 && inAdjacent;
+        markHudStateDirty();
     }
 
     /**
@@ -2225,6 +2286,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         stagedCrafting.releaseAll();
         requestedIngredients.clear();
         cancelledPatternSlots.clear();
+        markHudStateDirty();
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
         ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());

@@ -13,6 +13,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +25,11 @@ class PatternStackBufferHandler implements ISaveState {
     private static final int TAG_COMPOUND = 10;
 
     private final Map<Integer, List<IPatternStack>> bufferedIngredients;
+    private final Runnable changeListener;
 
-    PatternStackBufferHandler() {
+    PatternStackBufferHandler(Runnable changeListener) {
         this.bufferedIngredients = new HashMap<>();
+        this.changeListener = changeListener;
     }
 
     int amount(int patternSlot, IPatternStack stack) {
@@ -34,7 +37,7 @@ class PatternStackBufferHandler implements ISaveState {
             return 0;
         }
         int amount = 0;
-        for (IPatternStack buffered : getBuffer(patternSlot)) {
+        for (IPatternStack buffered : getExistingBuffer(patternSlot)) {
             if (buffered.canMerge(stack)) {
                 amount += buffered.getAmount();
             }
@@ -44,7 +47,7 @@ class PatternStackBufferHandler implements ISaveState {
 
     int amount(int patternSlot, ItemIdentifier item) {
         int amount = 0;
-        for (IPatternStack buffered : getBuffer(patternSlot)) {
+        for (IPatternStack buffered : getExistingBuffer(patternSlot)) {
             if (PatternStackHelper.matches(buffered, item)) {
                 amount += buffered.getAmount();
             }
@@ -54,7 +57,7 @@ class PatternStackBufferHandler implements ISaveState {
 
     int amount(int patternSlot, FluidIdentifier fluid) {
         int amount = 0;
-        for (IPatternStack buffered : getBuffer(patternSlot)) {
+        for (IPatternStack buffered : getExistingBuffer(patternSlot)) {
             if (PatternStackHelper.matches(buffered, fluid)) {
                 amount += buffered.getAmount();
             }
@@ -66,8 +69,9 @@ class PatternStackBufferHandler implements ISaveState {
         if (stack == null || stack.getAmount() <= 0) {
             return;
         }
-        List<IPatternStack> buffer = getBuffer(patternSlot);
+        List<IPatternStack> buffer = getOrCreateBuffer(patternSlot);
         PatternStackHelper.addAggregated(buffer, stack);
+        markChanged();
     }
 
     int completeSets(int patternSlot, List<IPatternStack> ingredients) {
@@ -111,7 +115,11 @@ class PatternStackBufferHandler implements ISaveState {
         if (stack == null || amount <= 0) {
             return;
         }
-        List<IPatternStack> buffer = getBuffer(patternSlot);
+        List<IPatternStack> buffer = bufferedIngredients.get(patternSlot);
+        if (buffer == null) {
+            return;
+        }
+        boolean changed = false;
         for (int i = 0; i < buffer.size() && amount > 0; i++) {
             IPatternStack buffered = buffer.get(i);
             if (!buffered.canMerge(stack)) {
@@ -120,6 +128,7 @@ class PatternStackBufferHandler implements ISaveState {
             int removed = Math.min(amount, buffered.getAmount());
             buffered.addAmount(-removed);
             amount -= removed;
+            changed = true;
             if (buffered.getAmount() <= 0) {
                 buffer.remove(i);
                 i--;
@@ -128,9 +137,17 @@ class PatternStackBufferHandler implements ISaveState {
         if (buffer.isEmpty()) {
             bufferedIngredients.remove(patternSlot);
         }
+        if (changed) {
+            markChanged();
+        }
     }
 
-    private List<IPatternStack> getBuffer(int patternSlot) {
+    private List<IPatternStack> getExistingBuffer(int patternSlot) {
+        List<IPatternStack> buffer = bufferedIngredients.get(patternSlot);
+        return buffer == null ? Collections.emptyList() : buffer;
+    }
+
+    private List<IPatternStack> getOrCreateBuffer(int patternSlot) {
         return bufferedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
     }
 
@@ -143,12 +160,16 @@ class PatternStackBufferHandler implements ISaveState {
                     }
                 }
             }
-            bufferedIngredients.clear();
+            clear();
         }
     }
 
     public void clear() {
+        if (bufferedIngredients.isEmpty()) {
+            return;
+        }
         bufferedIngredients.clear();
+        markChanged();
     }
 
     public int size() {
@@ -165,9 +186,10 @@ class PatternStackBufferHandler implements ISaveState {
             int patternSlot = stackTag.getInteger("patternSlot");
             IPatternStack stack = IPatternStack.readFromNBT(stackTag);
             if (stack != null) {
-                getBuffer(patternSlot).add(stack);
+                getOrCreateBuffer(patternSlot).add(stack);
             }
         }
+        markChanged();
     }
 
     @Override
@@ -204,6 +226,7 @@ class PatternStackBufferHandler implements ISaveState {
                 copy.add(stack.copy());
             }
         }
+        markChanged();
         return copy;
     }
 
@@ -212,6 +235,12 @@ class PatternStackBufferHandler implements ISaveState {
      */
     public List<Integer> keySet() {
         return new ArrayList<>(bufferedIngredients.keySet());
+    }
+
+    private void markChanged() {
+        if (changeListener != null) {
+            changeListener.run();
+        }
     }
 
     static List<ItemStack> makeItemStacks(IPatternStack patternStack) {

@@ -138,10 +138,14 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                         inputSlot,
                         currentSatelliteId,
                     currentSatelliteUuid,
-                    fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID : PatternSatelliteInfo.SatelliteType.ITEM,
+                    fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
+                        : PatternSatelliteInfo.SatelliteType.ITEM,
                         satellites,
-                    (satelliteId,
-                     satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId, satelliteUuid, fluidTarget)));
+                    (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(
+                        inputSlot,
+                        satelliteId,
+                        satelliteUuid,
+                        fluidTarget)));
     }
 
     private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid, boolean fluidTarget) {
@@ -171,8 +175,9 @@ public class PatternGui extends LogisticsBaseGuiScreen {
             tooltip.add("Local inventory");
         } else {
             PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid, fluidTarget);
-            tooltip.add((fluidTarget ? "Fluid satellite " : "Pattern satellite ")
-                + (satellite == null ? "#" + satelliteId : satellite.displayName()));
+            tooltip.add(
+                (fluidTarget ? "Fluid satellite " : "Pattern satellite ")
+                    + (satellite == null ? "#" + satelliteId : satellite.displayName()));
             if (satellite != null) {
                 tooltip.add(
                     "Dim " + satellite
@@ -189,12 +194,10 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     }
 
     private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid, boolean fluidTarget) {
-        PatternSatelliteInfo.SatelliteType type = fluidTarget
-            ? PatternSatelliteInfo.SatelliteType.FLUID
+        PatternSatelliteInfo.SatelliteType type = fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
             : PatternSatelliteInfo.SatelliteType.ITEM;
         for (PatternSatelliteInfo satellite : satellites) {
-            if (satellite.type() == type
-                && ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
+            if (satellite.type() == type && ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
                 || (satelliteUuid.isEmpty() && satellite.id() == satelliteId))) {
                 return satellite;
             }

@@ -55,9 +55,7 @@ public class PatternPipeSlotActionPacket extends CoordinatesPacket {
         } else if (action == PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()) {
             ItemPattern.toggleProcessingPattern(pattern);
             ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
-                .setSelectedPatternSlot(patternSlot)
-                .setTilePos(pipe.container)
-                .open(player);
+                .setSelectedPatternSlot(patternSlot).setTilePos(pipe.container).open(player);
         }
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {

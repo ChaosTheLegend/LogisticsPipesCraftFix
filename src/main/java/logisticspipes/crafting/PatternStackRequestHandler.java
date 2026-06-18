@@ -9,6 +9,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +19,11 @@ class PatternStackRequestHandler implements ISaveState {
     private static final int TAG_COMPOUND = 10;
 
     private final Map<Integer, List<IPatternStack>> requestedIngredients;
+    private final Runnable changeListener;
 
-    PatternStackRequestHandler(Map<Integer, List<IPatternStack>> requestedIngredients) {
+    PatternStackRequestHandler(Map<Integer, List<IPatternStack>> requestedIngredients, Runnable changeListener) {
         this.requestedIngredients = requestedIngredients;
+        this.changeListener = changeListener;
     }
 
     int amount(int patternSlot, IPatternStack stack) {
@@ -28,7 +31,7 @@ class PatternStackRequestHandler implements ISaveState {
             return 0;
         }
         int amount = 0;
-        for (IPatternStack requested : getRequested(patternSlot)) {
+        for (IPatternStack requested : getExistingRequested(patternSlot)) {
             if (requested.canMerge(stack)) {
                 amount += requested.getAmount();
             }
@@ -38,7 +41,7 @@ class PatternStackRequestHandler implements ISaveState {
 
     int amount(int patternSlot, ItemIdentifier item) {
         int amount = 0;
-        for (IPatternStack requested : getRequested(patternSlot)) {
+        for (IPatternStack requested : getExistingRequested(patternSlot)) {
             if (PatternStackHelper.matches(requested, item)) {
                 amount += requested.getAmount();
             }
@@ -48,7 +51,7 @@ class PatternStackRequestHandler implements ISaveState {
 
     int amount(int patternSlot, FluidIdentifier fluid) {
         int amount = 0;
-        for (IPatternStack requested : getRequested(patternSlot)) {
+        for (IPatternStack requested : getExistingRequested(patternSlot)) {
             if (PatternStackHelper.matches(requested, fluid)) {
                 amount += requested.getAmount();
             }
@@ -60,8 +63,9 @@ class PatternStackRequestHandler implements ISaveState {
         if (stack == null || stack.getAmount() <= 0) {
             return;
         }
-        List<IPatternStack> requested = getRequested(patternSlot);
+        List<IPatternStack> requested = getOrCreateRequested(patternSlot);
         PatternStackHelper.addAggregated(requested, stack);
+        markChanged();
     }
 
     /**
@@ -84,6 +88,7 @@ class PatternStackRequestHandler implements ISaveState {
         requested.addAmount(-removed);
 
         removeEntryIfEmpty(patternSlot);
+        markChanged();
     }
 
     /**
@@ -92,12 +97,14 @@ class PatternStackRequestHandler implements ISaveState {
      * @param patternSlot the slot to check
      */
     private void removeEntryIfEmpty(int patternSlot) {
-        getRequested(patternSlot).removeIf(requested -> requested.getAmount() <= 0);
-        if (getRequested(patternSlot).isEmpty()) requestedIngredients.remove(patternSlot);
+        List<IPatternStack> requested = requestedIngredients.get(patternSlot);
+        if (requested == null) return;
+        requested.removeIf(stack -> stack.getAmount() <= 0);
+        if (requested.isEmpty()) requestedIngredients.remove(patternSlot);
     }
 
     private IPatternStack requestedItemForPattern(int patternSlot, IPatternStack stack) {
-        for (var requested : getRequested(patternSlot)) {
+        for (var requested : getExistingRequested(patternSlot)) {
             if (requested.canMerge(stack)) return requested;
         }
         return null;
@@ -110,13 +117,20 @@ class PatternStackRequestHandler implements ISaveState {
         }
         for (IPatternStack stack : removed) {
             if (stack != null && stack.getAmount() > 0) {
+                markChanged();
                 return true;
             }
         }
+        markChanged();
         return false;
     }
 
-    private List<IPatternStack> getRequested(int patternSlot) {
+    private List<IPatternStack> getExistingRequested(int patternSlot) {
+        List<IPatternStack> requested = requestedIngredients.get(patternSlot);
+        return requested == null ? Collections.emptyList() : requested;
+    }
+
+    private List<IPatternStack> getOrCreateRequested(int patternSlot) {
         return requestedIngredients.computeIfAbsent(patternSlot, k -> new ArrayList<>());
     }
 
@@ -131,6 +145,7 @@ class PatternStackRequestHandler implements ISaveState {
                 add(stackTag.getInteger("patternSlot"), stack);
             }
         }
+        markChanged();
     }
 
     @Override
@@ -148,5 +163,11 @@ class PatternStackRequestHandler implements ISaveState {
             }
         }
         tag.setTag(REQUESTED_TAG, requested);
+    }
+
+    private void markChanged() {
+        if (changeListener != null) {
+            changeListener.run();
+        }
     }
 }

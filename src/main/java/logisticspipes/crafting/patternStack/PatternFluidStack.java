@@ -1,5 +1,6 @@
 package logisticspipes.crafting.patternStack;
 
+import codechicken.nei.recipe.StackInfo;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
@@ -45,10 +46,12 @@ public class PatternFluidStack implements IPatternStack {
         } else if (FluidContainerRegistry.isContainer(stack)) {
             fluid = FluidContainerRegistry.getFluidForFilledItem(stack);
         }
-
         if (fluid == null) {
             fluid = SimpleServiceLocator.logisticsFluidManager
                     .getFluidFromContainer(ItemIdentifierStack.getFromStack(stack));
+        }
+        if (fluid == null) {
+            fluid = StackInfo.getFluid(stack);
         }
         return fluid;
     }

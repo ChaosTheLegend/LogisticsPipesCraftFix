@@ -152,7 +152,11 @@ public abstract class AbstractPattern {
     }
 
     public void setSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid) {
-        setSatelliteTargetForInputSlot(slot, satelliteId, satelliteUuid, SATELLITE_TARGETS_TAG,
+        setSatelliteTargetForInputSlot(
+            slot,
+            satelliteId,
+            satelliteUuid,
+            SATELLITE_TARGETS_TAG,
             SATELLITE_TARGET_UUIDS_TAG);
     }
 
@@ -169,7 +173,11 @@ public abstract class AbstractPattern {
     }
 
     public void setFluidSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid) {
-        setSatelliteTargetForInputSlot(slot, satelliteId, satelliteUuid, FLUID_SATELLITE_TARGETS_TAG,
+        setSatelliteTargetForInputSlot(
+            slot,
+            satelliteId,
+            satelliteUuid,
+            FLUID_SATELLITE_TARGETS_TAG,
             FLUID_SATELLITE_TARGET_UUIDS_TAG);
     }
 

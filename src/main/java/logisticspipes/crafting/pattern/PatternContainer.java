@@ -51,8 +51,7 @@ public class PatternContainer extends DummyContainer {
     }
 
     private boolean isPatternSlot(Slot slot) {
-        return slot != null
-                && slot.inventory == _dummyInventory
+        return slot != null && slot.inventory == _dummyInventory
                 && slot.getSlotIndex() >= 0
                 && slot.getSlotIndex() < ItemPattern.MAX_ITEM_SLOT_COUNT;
     }
