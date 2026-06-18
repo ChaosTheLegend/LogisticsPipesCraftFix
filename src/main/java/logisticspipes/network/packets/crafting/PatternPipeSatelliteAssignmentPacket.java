@@ -25,6 +25,7 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
     private int inputSlot;
     private int satelliteId;
     private String satelliteUuid = "";
+    private boolean fluidTarget;
 
     public PatternPipeSatelliteAssignmentPacket(int id) {
         super(id);
@@ -37,6 +38,7 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
         inputSlot = data.readInt();
         satelliteId = data.readInt();
         satelliteUuid = data.readUTF();
+        fluidTarget = data.readBoolean();
     }
 
     /**
@@ -55,8 +57,13 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
         if (pattern == null || pattern.getItem() != LogisticsPipes.LogisticsPattern) {
             return;
         }
-        ItemPattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
-        pipe.linkPatternSatellite(satelliteId, satelliteUuid);
+        if (fluidTarget) {
+            ItemPattern.fromStack(pattern).setFluidSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+            pipe.linkPatternFluidSatellite(satelliteId, satelliteUuid);
+        } else {
+            ItemPattern.fromStack(pattern).setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+            pipe.linkPatternSatellite(satelliteId, satelliteUuid);
+        }
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {
             player.openContainer.detectAndSendChanges();
@@ -70,6 +77,7 @@ public class PatternPipeSatelliteAssignmentPacket extends CoordinatesPacket {
         data.writeInt(inputSlot);
         data.writeInt(satelliteId);
         data.writeUTF(satelliteUuid == null ? "" : satelliteUuid);
+        data.writeBoolean(fluidTarget);
     }
 
     @Override

@@ -7,6 +7,7 @@ import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModulePatternCrafting;
 import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingTargetSelector;
+import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.gui.hud.HUDPatternCrafting;
 import logisticspipes.interfaces.IChangeListener;
@@ -93,6 +94,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
 
     private static final String LINKED_PATTERN_SATELLITES_TAG = "linkedPatternSatelliteIds";
     private static final String LINKED_PATTERN_SATELLITE_UUIDS_TAG = "linkedPatternSatelliteUuids";
+    private static final String LINKED_PATTERN_FLUID_SATELLITES_TAG = "linkedPatternFluidSatelliteIds";
+    private static final String LINKED_PATTERN_FLUID_SATELLITE_UUIDS_TAG = "linkedPatternFluidSatelliteUuids";
 
     private final ModulePatternCrafting module;
     private final LogisticsFluidOrderManager fluidOrderManager;
@@ -107,6 +110,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     private boolean doContentUpdate = true;
     private final Set<Integer> linkedPatternSatelliteIds = new TreeSet<>();
     private final Set<String> linkedPatternSatelliteUuids = new TreeSet<>();
+    private final Set<Integer> linkedPatternFluidSatelliteIds = new TreeSet<>();
+    private final Set<String> linkedPatternFluidSatelliteUuids = new TreeSet<>();
 
     public PipeItemsPatternCraftingLogistics(Item item) {
         super(new PipeFluidTransportLogistics() {
@@ -270,17 +275,50 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
     }
 
     /**
+     * Resolves a fluid pattern satellite stored on a fluid input slot and persists the link when it is first seen.
+     */
+    public PipeFluidPatternSatelliteLogistics resolvePatternFluidSatelliteTarget(String satelliteUuid, int satelliteId) {
+        PipeFluidPatternSatelliteLogistics satellite = findPatternFluidSatellite(satelliteUuid, satelliteId);
+        if (satellite != null && getWorld() != null && MainProxy.isServer(getWorld())) {
+            linkPatternFluidSatellite(satellite.satelliteId, satellite.getSatelliteUuid());
+        }
+        return satellite;
+    }
+
+    /**
      * Adds one pattern satellite reference to the pipe's persisted link list.
      *
      * @return true when the pipe learned a new id or UUID
      */
     public boolean linkPatternSatellite(int satelliteId, String satelliteUuid) {
+        return linkPatternSatellite(
+            satelliteId,
+            satelliteUuid,
+            linkedPatternSatelliteIds,
+            linkedPatternSatelliteUuids);
+    }
+
+    /**
+     * Adds one fluid pattern satellite reference to the pipe's persisted link list.
+     *
+     * @return true when the pipe learned a new id or UUID
+     */
+    public boolean linkPatternFluidSatellite(int satelliteId, String satelliteUuid) {
+        return linkPatternSatellite(
+            satelliteId,
+            satelliteUuid,
+            linkedPatternFluidSatelliteIds,
+            linkedPatternFluidSatelliteUuids);
+    }
+
+    private boolean linkPatternSatellite(int satelliteId, String satelliteUuid, Set<Integer> linkedIds,
+                                         Set<String> linkedUuids) {
         boolean added = false;
         if (satelliteId > 0) {
-            added |= linkedPatternSatelliteIds.add(satelliteId);
+            added |= linkedIds.add(satelliteId);
         }
         if (satelliteUuid != null && !satelliteUuid.isEmpty()) {
-            added |= linkedPatternSatelliteUuids.add(satelliteUuid);
+            added |= linkedUuids.add(satelliteUuid);
         }
         if (added) {
             refreshRender(false);
@@ -299,6 +337,16 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             }
         }
         return satelliteId > 0 ? PipeItemsPatternSatelliteLogistics.findById(satelliteId) : null;
+    }
+
+    private PipeFluidPatternSatelliteLogistics findPatternFluidSatellite(String satelliteUuid, int satelliteId) {
+        if (satelliteUuid != null && !satelliteUuid.isEmpty()) {
+            PipeFluidPatternSatelliteLogistics satellite = PipeFluidPatternSatelliteLogistics.findByUuid(satelliteUuid);
+            if (satellite != null) {
+                return satellite;
+            }
+        }
+        return satelliteId > 0 ? PipeFluidPatternSatelliteLogistics.findById(satelliteId) : null;
     }
 
     private int addLinkedPatternSatellites(List<ItemMemoryChip.StoredPatternSatellite> satellites) {
@@ -595,6 +643,19 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             satelliteUuids.appendTag(uuidTag);
         }
         nbttagcompound.setTag(LINKED_PATTERN_SATELLITE_UUIDS_TAG, satelliteUuids);
+        int[] fluidSatelliteIds = new int[linkedPatternFluidSatelliteIds.size()];
+        index = 0;
+        for (Integer satelliteId : linkedPatternFluidSatelliteIds) {
+            fluidSatelliteIds[index++] = satelliteId;
+        }
+        nbttagcompound.setIntArray(LINKED_PATTERN_FLUID_SATELLITES_TAG, fluidSatelliteIds);
+        NBTTagList fluidSatelliteUuids = new NBTTagList();
+        for (String satelliteUuid : linkedPatternFluidSatelliteUuids) {
+            NBTTagCompound uuidTag = new NBTTagCompound();
+            uuidTag.setString("uuid", satelliteUuid);
+            fluidSatelliteUuids.appendTag(uuidTag);
+        }
+        nbttagcompound.setTag(LINKED_PATTERN_FLUID_SATELLITE_UUIDS_TAG, fluidSatelliteUuids);
     }
 
     @Override
@@ -613,6 +674,20 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             String satelliteUuid = satelliteUuids.getCompoundTagAt(i).getString("uuid");
             if (!satelliteUuid.isEmpty()) {
                 linkedPatternSatelliteUuids.add(satelliteUuid);
+            }
+        }
+        linkedPatternFluidSatelliteIds.clear();
+        for (int satelliteId : nbttagcompound.getIntArray(LINKED_PATTERN_FLUID_SATELLITES_TAG)) {
+            if (satelliteId > 0) {
+                linkedPatternFluidSatelliteIds.add(satelliteId);
+            }
+        }
+        linkedPatternFluidSatelliteUuids.clear();
+        NBTTagList fluidSatelliteUuids = nbttagcompound.getTagList(LINKED_PATTERN_FLUID_SATELLITE_UUIDS_TAG, 10);
+        for (int i = 0; i < fluidSatelliteUuids.tagCount(); i++) {
+            String satelliteUuid = fluidSatelliteUuids.getCompoundTagAt(i).getString("uuid");
+            if (!satelliteUuid.isEmpty()) {
+                linkedPatternFluidSatelliteUuids.add(satelliteUuid);
             }
         }
     }

@@ -4,7 +4,10 @@ import logisticspipes.crafting.pattern.AbstractPattern;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.pattern.PatternContainer;
 import logisticspipes.crafting.pattern.PatternGuiProvider;
+import logisticspipes.crafting.pattern.PatternSlotLayout;
 import logisticspipes.crafting.pattern.PipePatternInventory;
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.PatternPipeSatelliteAssignmentPacket;
 import logisticspipes.network.packets.gui.PatternCraftingPipeCancel;
@@ -36,6 +39,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private static final int CLEAR_BUTTON = 1;
     private static final int MULTIPLY_BUTTON = 2;
     private static final int CANCEL_BUTTON = 3;
+    private static final int TYPE_BUTTON = 4;
     private static final int TAB_BUTTON_BASE = 100;
 
     private static final int TAB_LEFT = 32;
@@ -46,7 +50,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private static final int OUTPUT_LEFT = 116;
     private static final int OUTPUT_TOP = 74;
     private static final int PLAYER_INV_LEFT = 32;
-    private static final int PLAYER_INV_TOP = 138;
+    private static final int PLAYER_INV_TOP = 156;
     private static final int SLOT_SIZE = 18;
     private static final int SATELLITE_ICON_SIZE = 7;
     private static final int BUFFER_BLUE = 0xff55aaff;
@@ -59,14 +63,19 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
 
     public PatternCraftingPipeGui(EntityPlayer player, PipeItemsPatternCraftingLogistics pipe, int selectedPatternSlot,
             List<PatternSatelliteInfo> satellites) {
-        super(238, 220, 0, 0);
+        super(238, 238, 0, 0);
         this.pipe = pipe;
         this.selectedPatternSlot = Math.max(0, Math.min(8, selectedPatternSlot));
         this.satellites = satellites == null ? Collections.emptyList() : new ArrayList<>(satellites);
         editedPatternInventory = new PipePatternInventory(pipe, this.selectedPatternSlot);
         PatternContainer dummy = new PatternContainer(player.inventory, editedPatternInventory);
-        PatternGuiProvider
-            .addPatternSlots(dummy, INGREDIENT_LEFT + 1, INGREDIENT_TOP + 1, OUTPUT_LEFT + 1, OUTPUT_TOP + 1);
+        PatternGuiProvider.addPatternSlots(
+            dummy,
+            currentPattern(),
+            INGREDIENT_LEFT + 1,
+            INGREDIENT_TOP + 1,
+            OUTPUT_LEFT + 1,
+            OUTPUT_TOP + 1);
         PatternCraftingPipeGuiProvider.addPatternSlots(dummy, pipe);
         dummy.addNormalSlotsForPlayerInventory(PLAYER_INV_LEFT, PLAYER_INV_TOP);
         inventorySlots = dummy;
@@ -81,7 +90,8 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         buttonList.add(modeButton);
         buttonList.add(new SmallGuiButton(CLEAR_BUTTON, guiLeft + 166, guiTop + 70, 62, 12, "Clear"));
         buttonList.add(new SmallGuiButton(MULTIPLY_BUTTON, guiLeft + 166, guiTop + 86, 62, 12, "2x"));
-        buttonList.add(new SmallGuiButton(CANCEL_BUTTON, guiLeft + 166, guiTop + 102, 62, 12, "Cancel"));
+        buttonList.add(new SmallGuiButton(TYPE_BUTTON, guiLeft + 166, guiTop + 102, 62, 12, typeLabel()));
+        buttonList.add(new SmallGuiButton(CANCEL_BUTTON, guiLeft + 166, guiTop + 118, 62, 12, "Cancel"));
         for (int slot = 0; slot < 9; slot++) {
             buttonList.add(
                 new SmallGuiButton(
@@ -128,6 +138,10 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             AbstractPattern pattern = ItemPattern.fromStack(editedPatternInventory.getPatternStack());
             pattern.multiply(2);
             sendPatternAction(PatternSlotActionPacket.Action.MULTIPLY_TWO);
+        } else if (button.id == TYPE_BUTTON) {
+            ItemPattern.toggleProcessingPattern(editedPatternInventory.getPatternStack());
+            sendPatternAction(PatternSlotActionPacket.Action.TOGGLE_PROCESSING);
+            initGui();
         } else if (button.id == CANCEL_BUTTON) {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(selectedPatternSlot)
@@ -146,16 +160,13 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             GuiGraphics.drawSlotBackground(mc, guiLeft + TAB_LEFT + i * SLOT_SIZE - 1, guiTop + TAB_TOP - 1);
         }
         drawSelectedTabFrame();
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
-                GuiGraphics.drawSlotBackground(
-                    mc,
-                    guiLeft + INGREDIENT_LEFT + x * SLOT_SIZE,
-                        guiTop + INGREDIENT_TOP + y * SLOT_SIZE);
-            }
+        AbstractPattern pattern = currentPattern();
+        PatternSlotLayout layout = layout(pattern);
+        for (int slot = 0; slot < pattern.getIngredientSlotCount(); slot++) {
+            GuiGraphics.drawSlotBackground(mc, guiLeft + layout.inputX(slot), guiTop + layout.inputY(slot));
         }
-        for (int i = 0; i < ItemPattern.RESULT_SLOTS; i++) {
-            GuiGraphics.drawSlotBackground(mc, guiLeft + OUTPUT_LEFT + i * SLOT_SIZE, guiTop + OUTPUT_TOP);
+        for (int slot = 0; slot < pattern.getResultSlotCount(); slot++) {
+            GuiGraphics.drawSlotBackground(mc, guiLeft + layout.outputX(slot), guiTop + layout.outputY(slot));
         }
         drawSatelliteIcons();
         mc.fontRenderer.drawString("Pattern Crafting Pipe", guiLeft + 8, guiTop + 6, 0x404040);
@@ -211,19 +222,25 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     }
 
     private void openSatelliteSelector(int inputSlot) {
-        AbstractPattern pattern = ItemPattern.fromStack(editedPatternInventory.getPatternStack());
+        AbstractPattern pattern = currentPattern();
+        boolean fluidTarget = isFluidSatelliteSlot(inputSlot);
         setSubGui(
                 new PatternSatelliteSelectorGui(
                         inputSlot,
-                        pattern.getSatelliteIdForInputSlot(inputSlot),
+                    getSatelliteId(pattern, inputSlot, fluidTarget),
+                    getSatelliteUuid(pattern, inputSlot, fluidTarget),
+                    fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID : PatternSatelliteInfo.SatelliteType.ITEM,
                         satellites,
                     (satelliteId,
-                     satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId, satelliteUuid)));
+                     satelliteUuid) -> setSatelliteForInputSlot(inputSlot, satelliteId, satelliteUuid, fluidTarget)));
     }
 
-    private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid) {
-        ItemPattern.fromStack(editedPatternInventory.getPatternStack())
-                .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+    private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid, boolean fluidTarget) {
+        if (fluidTarget) {
+            currentPattern().setFluidSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        } else {
+            currentPattern().setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+        }
         PatternPipeSatelliteAssignmentPacket packet = PacketHandler
             .getPacket(PatternPipeSatelliteAssignmentPacket.class);
         packet.setTilePos(pipe.container);
@@ -231,6 +248,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         packet.setInputSlot(inputSlot);
         packet.setSatelliteId(satelliteId);
         packet.setSatelliteUuid(satelliteUuid);
+        packet.setFluidTarget(fluidTarget);
         MainProxy.sendPacketToServer(packet);
     }
 
@@ -254,10 +272,10 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private void drawStatusPanel() {
         PatternCraftingHudState.PatternInfo info = getSelectedPatternInfo();
         String status = info == null ? "Empty" : info.getStatus();
-        mc.fontRenderer.drawString("Mode: " + modeLabel(), guiLeft + 166, guiTop + 122, 0x404040);
+        mc.fontRenderer.drawString("Mode: " + modeLabel(), guiLeft + 166, guiTop + 134, 0x404040);
         List<String> lines = mc.fontRenderer.listFormattedStringToWidth(status == null ? "" : status, 62);
         for (int i = 0; i < Math.min(3, lines.size()); i++) {
-            mc.fontRenderer.drawString(lines.get(i), guiLeft + 166, guiTop + 134 + i * 9, 0x404040);
+            mc.fontRenderer.drawString(lines.get(i), guiLeft + 166, guiTop + 146 + i * 9, 0x404040);
         }
     }
 
@@ -266,17 +284,18 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         if (info == null) {
             return;
         }
+        PatternSlotLayout layout = layout(currentPattern());
         for (PatternCraftingHudState.IngredientInfo ingredient : info.getIngredients()) {
             if (ingredient.bufferedAmount() > 0 && ingredient.slot() >= 0) {
-                int x = guiLeft + INGREDIENT_LEFT + (ingredient.slot() % 3) * SLOT_SIZE;
-                int y = guiTop + INGREDIENT_TOP + (ingredient.slot() / 3) * SLOT_SIZE;
+                int x = guiLeft + layout.inputX(ingredient.slot());
+                int y = guiTop + layout.inputY(ingredient.slot());
                 drawAmount(ingredient.bufferedAmount(), x, y);
             }
         }
         for (PatternCraftingHudState.OutputInfo output : info.getOutputs()) {
             if (output.requestedAmount() > 0 && output.slot() >= 0) {
-                int x = guiLeft + OUTPUT_LEFT + output.slot() * SLOT_SIZE;
-                int y = guiTop + OUTPUT_TOP;
+                int x = guiLeft + layout.outputX(output.slot());
+                int y = guiTop + layout.outputY(output.slot());
                 drawAmount(output.requestedAmount(), x, y);
             }
         }
@@ -301,15 +320,22 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     }
 
     private void drawSatelliteIcons() {
-        AbstractPattern pattern = ItemPattern.fromStack(editedPatternInventory.getPatternStack());
-        for (int inputSlot = 0; inputSlot < ItemPattern.INGREDIENT_SLOTS; inputSlot++) {
-            int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
-            String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
-            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
-            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+        AbstractPattern pattern = currentPattern();
+        PatternSlotLayout layout = layout(pattern);
+        for (int inputSlot = 0; inputSlot < pattern.getIngredientSlotCount(); inputSlot++) {
+            boolean fluidTarget = isFluidSatelliteSlot(inputSlot);
+            int satelliteId = getSatelliteId(pattern, inputSlot, fluidTarget);
+            String satelliteUuid = getSatelliteUuid(pattern, inputSlot, fluidTarget);
+            int x = guiLeft + layout.inputX(inputSlot);
+            int y = guiTop + layout.inputY(inputSlot);
             boolean assigned = satelliteId > 0 || !satelliteUuid.isEmpty();
-            Gui.drawRect(x, y, x + SATELLITE_ICON_SIZE, y + SATELLITE_ICON_SIZE, assigned ? 0xff2b6ee8 : 0xff777777);
-            mc.fontRenderer.drawString(assigned ? "S" : "+", x + 1, y, 0xffffff);
+            Gui.drawRect(
+                x,
+                y,
+                x + SATELLITE_ICON_SIZE,
+                y + SATELLITE_ICON_SIZE,
+                assigned ? (fluidTarget ? 0xff00a8cc : 0xff2b6ee8) : 0xff777777);
+            mc.fontRenderer.drawString(assigned ? (fluidTarget ? "F" : "S") : "+", x + 1, y, 0xffffff);
         }
     }
 
@@ -318,15 +344,17 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         if (inputSlot < 0) {
             return;
         }
-        AbstractPattern pattern = ItemPattern.fromStack(editedPatternInventory.getPatternStack());
-        int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
-        String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
+        AbstractPattern pattern = currentPattern();
+        boolean fluidTarget = isFluidSatelliteSlot(inputSlot);
+        int satelliteId = getSatelliteId(pattern, inputSlot, fluidTarget);
+        String satelliteUuid = getSatelliteUuid(pattern, inputSlot, fluidTarget);
         List<String> tooltip = new ArrayList<>();
         if (satelliteId <= 0 && satelliteUuid.isEmpty()) {
             tooltip.add("Local inventory");
         } else {
-            PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid);
-            tooltip.add("Pattern satellite " + (satellite == null ? "#" + satelliteId : satellite.displayName()));
+            PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid, fluidTarget);
+            tooltip.add((fluidTarget ? "Fluid satellite " : "Pattern satellite ")
+                + (satellite == null ? "#" + satelliteId : satellite.displayName()));
             if (satellite != null) {
                 tooltip.add(
                     "Dim " + satellite
@@ -340,10 +368,14 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         GuiGraphics.drawToolTip(mouseX, mouseY, tooltip, EnumChatFormatting.WHITE);
     }
 
-    private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid) {
+    private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid, boolean fluidTarget) {
+        PatternSatelliteInfo.SatelliteType type = fluidTarget
+            ? PatternSatelliteInfo.SatelliteType.FLUID
+            : PatternSatelliteInfo.SatelliteType.ITEM;
         for (PatternSatelliteInfo satellite : satellites) {
-            if ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
-                    || (satelliteUuid.isEmpty() && satellite.id() == satelliteId)) {
+            if (satellite.type() == type
+                && ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
+                || (satelliteUuid.isEmpty() && satellite.id() == satelliteId))) {
                 return satellite;
             }
         }
@@ -351,9 +383,11 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     }
 
     private int getSatelliteHotspotSlot(int mouseX, int mouseY) {
-        for (int inputSlot = 0; inputSlot < ItemPattern.INGREDIENT_SLOTS; inputSlot++) {
-            int x = guiLeft + INGREDIENT_LEFT + (inputSlot % 3) * SLOT_SIZE;
-            int y = guiTop + INGREDIENT_TOP + (inputSlot / 3) * SLOT_SIZE;
+        AbstractPattern pattern = currentPattern();
+        PatternSlotLayout layout = layout(pattern);
+        for (int inputSlot = 0; inputSlot < pattern.getIngredientSlotCount(); inputSlot++) {
+            int x = guiLeft + layout.inputX(inputSlot);
+            int y = guiTop + layout.inputY(inputSlot);
             if (mouseX >= x && mouseX < x + SATELLITE_ICON_SIZE && mouseY >= y && mouseY < y + SATELLITE_ICON_SIZE) {
                 return inputSlot;
             }
@@ -380,6 +414,33 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         };
     }
 
+    private AbstractPattern currentPattern() {
+        return ItemPattern.fromStack(editedPatternInventory.getPatternStack());
+    }
+
+    private PatternSlotLayout layout(AbstractPattern pattern) {
+        return new PatternSlotLayout(pattern, INGREDIENT_LEFT, INGREDIENT_TOP, OUTPUT_LEFT, OUTPUT_TOP);
+    }
+
+    private boolean isFluidSatelliteSlot(int inputSlot) {
+        IPatternStack stack = currentPattern().getPatternStackInSlot(inputSlot);
+        return PatternStackHelper.isFluid(stack);
+    }
+
+    private int getSatelliteId(AbstractPattern pattern, int inputSlot, boolean fluidTarget) {
+        return fluidTarget ? pattern.getFluidSatelliteIdForInputSlot(inputSlot)
+            : pattern.getSatelliteIdForInputSlot(inputSlot);
+    }
+
+    private String getSatelliteUuid(AbstractPattern pattern, int inputSlot, boolean fluidTarget) {
+        return fluidTarget ? pattern.getFluidSatelliteUuidForInputSlot(inputSlot)
+            : pattern.getSatelliteUuidForInputSlot(inputSlot);
+    }
+
+    private String typeLabel() {
+        return ItemPattern.isProcessingPattern(editedPatternInventory.getPatternStack()) ? "Crafting" : "Processing";
+    }
+
     private void updateButtons() {
         ItemStack pattern = editedPatternInventory.getPatternStack();
         for (Object buttonObject : buttonList) {
@@ -389,6 +450,9 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             if (button.id == MODE_BUTTON) {
                 button.displayString = modeLabel();
                 button.enabled = !pipe.isBlockingModeFixed();
+            } else if (button.id == TYPE_BUTTON) {
+                button.displayString = typeLabel();
+                button.enabled = pattern != null;
             } else if (button.id == CLEAR_BUTTON || button.id == MULTIPLY_BUTTON || button.id == CANCEL_BUTTON) {
                 button.enabled = pattern != null;
             } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {

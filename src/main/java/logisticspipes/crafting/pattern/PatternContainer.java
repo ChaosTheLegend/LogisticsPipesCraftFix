@@ -27,7 +27,7 @@ public class PatternContainer extends DummyContainer {
     @Override
     public void handleDummyClick(Slot slot, int slotId, ItemStack currentlyEquippedStack, int mouseButton, int isShift,
             EntityPlayer entityplayer) {
-        if (isPatternSlot(slotId)) {
+        if (isPatternSlot(slot)) {
             FluidStack fluid = getFluidFromItem(currentlyEquippedStack);
             if (fluid != null && fluid.amount > 0) {
                 // Handle fluid insertion
@@ -50,8 +50,11 @@ public class PatternContainer extends DummyContainer {
         syncSlot(slot, slotId, entityplayer);
     }
 
-    private boolean isPatternSlot(int slotId) {
-        return slotId >= 0 && slotId < ItemPattern.ITEM_SLOT_COUNT;
+    private boolean isPatternSlot(Slot slot) {
+        return slot != null
+                && slot.inventory == _dummyInventory
+                && slot.getSlotIndex() >= 0
+                && slot.getSlotIndex() < ItemPattern.MAX_ITEM_SLOT_COUNT;
     }
 
     private FluidStack getFluidFromItem(ItemStack stack) {

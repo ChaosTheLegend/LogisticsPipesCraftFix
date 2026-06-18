@@ -26,6 +26,7 @@ import logisticspipes.commands.chathelper.LPChatListener;
 import logisticspipes.config.Configs;
 import logisticspipes.config.PlayerConfig;
 import logisticspipes.crafting.ItemMemoryChip;
+import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.requesttable.RequestTablePipe;
@@ -232,6 +233,7 @@ public class LogisticsPipes {
     public static Item LogisticsCraftingPipeMk1;
     public static Item LogisticsPatternCraftingPipe;
     public static Item LogisticsPatternSatellitePipe;
+    public static Item LogisticsPatternFluidSatellitePipe;
     public static Item LogisticsCraftingPipeMk2;
     public static Item LogisticsCraftingPipeMk3;
     public static Item LogisticsSatellitePipe;
@@ -603,6 +605,7 @@ public class LogisticsPipes {
         HudUpdateTick.clearUpdateFlags();
         PipeItemsSatelliteLogistics.cleanup();
         PipeItemsPatternSatelliteLogistics.cleanup();
+        PipeFluidPatternSatelliteLogistics.cleanup();
         PipeFluidSatellite.cleanup();
         ServerRouter.cleanup();
         if (event.getSide().equals(Side.CLIENT)) {
@@ -646,6 +649,10 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsPatternSatellitePipe = createPipe(
                 PipeItemsPatternSatelliteLogistics.class,
                 "Pattern Satellite Logistics Pipe",
+            side);
+        LogisticsPipes.LogisticsPatternFluidSatellitePipe = createPipe(
+            PipeFluidPatternSatelliteLogistics.class,
+            "Pattern Fluid Satellite Logistics Pipe",
                 side);
         LogisticsPipes.LogisticsSatellitePipe = createPipe(
                 PipeItemsSatelliteLogistics.class,

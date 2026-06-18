@@ -1,6 +1,7 @@
 package logisticspipes.network.packets.gui;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.PatternCraftingPipeGuiProvider;
 import logisticspipes.crafting.pattern.AbstractPattern;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.network.LPDataInputStream;
@@ -51,6 +52,12 @@ public class PatternPipeSlotActionPacket extends CoordinatesPacket {
             configuredPattern.clear();
         } else if (action == PatternSlotActionPacket.Action.MULTIPLY_TWO.ordinal()) {
             configuredPattern.multiply(2);
+        } else if (action == PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()) {
+            ItemPattern.toggleProcessingPattern(pattern);
+            ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
+                .setSelectedPatternSlot(patternSlot)
+                .setTilePos(pipe.container)
+                .open(player);
         }
         pipe.getPatternModule().markPatternInventoryDirty();
         if (player.openContainer != null) {

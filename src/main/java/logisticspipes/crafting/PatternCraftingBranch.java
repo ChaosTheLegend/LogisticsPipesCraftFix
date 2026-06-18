@@ -1,10 +1,12 @@
 package logisticspipes.crafting;
 
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.interfaces.routing.IRequestFluid;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.request.IExtraPromise;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.resources.DictResource;
+import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.routing.FluidLogisticsPromise;
@@ -254,7 +256,7 @@ public class PatternCraftingBranch {
      * fulfilled directly, releasing any reservation that was made for this staged craft.
      */
     public int request(int amount) {
-        return request(amount, null, info);
+        return request(amount, null, null, info);
     }
 
     /**
@@ -264,11 +266,26 @@ public class PatternCraftingBranch {
      * through the crafting pipe's local buffer.
      */
     public int request(int amount, IRequestItems targetOverride, IAdditionalTargetInformation infoOverride) {
+        return request(amount, targetOverride, null, infoOverride);
+    }
+
+    /**
+     * Fulfils up to {@code amount} fluids from this branch while optionally routing the order to another requester.
+     * <p>
+     * Pattern fluid satellites use this to receive assigned fluid ingredients directly instead of passing those fluids
+     * through the crafting pipe's local buffer.
+     */
+    public int request(int amount, IRequestFluid targetOverride, IAdditionalTargetInformation infoOverride) {
+        return request(amount, null, targetOverride, infoOverride);
+    }
+
+    private int request(int amount, IRequestItems targetOverride, IRequestFluid fluidTargetOverride,
+                        IAdditionalTargetInformation infoOverride) {
         int wanted = Math.min(amount, remainingAmount);
         int requested = 0;
         debugBranchEvent(
                 "BRANCH",
-                "branch request start resource=%s amount=%d wanted=%d remaining=%d craftingRemaining=%d promises=%d target=%s info=%s",
+            "branch request start resource=%s amount=%d wanted=%d remaining=%d craftingRemaining=%d promises=%d itemTarget=%s fluidTarget=%s info=%s",
                 requestType,
                 amount,
                 wanted,
@@ -276,6 +293,7 @@ public class PatternCraftingBranch {
                 remainingCraftingAmount,
                 promises.size(),
                 targetOverride,
+            fluidTargetOverride,
                 infoOverride);
         for (int promiseIndex = 0; promiseIndex < promises.size() && requested < wanted; promiseIndex++) {
             PromiseState promiseState = promises.get(promiseIndex);
@@ -296,7 +314,7 @@ public class PatternCraftingBranch {
                     requested,
                     wanted);
             IPromise promise = copyPromiseForAmount(promiseState.promise, toRequest);
-            IResource request = copyRequestForTarget(toRequest, targetOverride);
+            IResource request = copyRequestForTarget(toRequest, targetOverride, fluidTargetOverride);
             IOrderInfoProvider result;
             boolean requestSubRequestsAfterOrder = false;
             if (promise.getType() == ResourceType.CRAFTING
@@ -383,22 +401,26 @@ public class PatternCraftingBranch {
         return requested;
     }
 
-    private IResource copyRequestForTarget(int amount, IRequestItems targetOverride) {
-        if (targetOverride == null) {
+    private IResource copyRequestForTarget(int amount, IRequestItems targetOverride,
+                                           IRequestFluid fluidTargetOverride) {
+        if (targetOverride == null && fluidTargetOverride == null) {
             return requestType.copyForDisplayWith(amount);
         }
-        if (requestType instanceof ItemResource) {
+        if (targetOverride != null && requestType instanceof ItemResource) {
             return new ItemResource(
                     new ItemIdentifierStack(((ItemResource) requestType).getItem(), amount),
                     targetOverride);
         }
-        if (requestType instanceof DictResource source) {
+        if (targetOverride != null && requestType instanceof DictResource source) {
             DictResource copy = new DictResource(new ItemIdentifierStack(source.getItem(), amount), targetOverride);
             copy.use_od = source.use_od;
             copy.ignore_dmg = source.ignore_dmg;
             copy.ignore_nbt = source.ignore_nbt;
             copy.use_category = source.use_category;
             return copy;
+        }
+        if (fluidTargetOverride != null && requestType instanceof FluidResource source) {
+            return new FluidResource(source.getFluid(), amount, fluidTargetOverride);
         }
         return requestType.copyForDisplayWith(amount);
     }

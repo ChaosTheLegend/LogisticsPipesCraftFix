@@ -1431,6 +1431,10 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             if (PatternStackHelper.isSolid(stack) && getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
                 continue;
             }
+            if (PatternStackHelper.isFluid(stack)
+                && getFluidSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
+                continue;
+            }
             PatternStackHelper.addAggregated(result, stack);
         }
         return result;
@@ -1476,19 +1480,24 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             if (stack == null || stack.getAmount() <= 0) {
                 continue;
             }
-            IRequestItems target = PatternStackHelper.isSolid(stack)
+            IRequestItems itemTarget = PatternStackHelper.isSolid(stack)
                 ? getSatelliteTargetForInputSlot(configuredPattern, slot)
+                : null;
+            IRequestFluid fluidTarget = PatternStackHelper.isFluid(stack)
+                ? getFluidSatelliteTargetForInputSlot(configuredPattern, slot)
                 : null;
             boolean merged = false;
             for (PatternIngredientTarget existing : result) {
-                if (existing.target() == target && existing.stack().canMerge(stack)) {
+                if (existing.itemTarget() == itemTarget
+                    && existing.fluidTarget() == fluidTarget
+                    && existing.stack().canMerge(stack)) {
                     existing.stack().addAmount(stack.getAmount());
                     merged = true;
                     break;
                 }
             }
             if (!merged) {
-                result.add(new PatternIngredientTarget(stack.copy(), target));
+                result.add(new PatternIngredientTarget(stack.copy(), itemTarget, fluidTarget));
             }
         }
         return result;
@@ -1511,7 +1520,15 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      * Checks whether one input slot is assigned to a linked and currently known pattern satellite pipe.
      */
     boolean hasLinkedSatelliteAssignment(ItemStack pattern, int inputSlot) {
-        return pattern != null && getSatelliteTargetForInputSlot(ItemPattern.fromStack(pattern), inputSlot) != null;
+        if (pattern == null) {
+            return false;
+        }
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
+        IPatternStack stack = configuredPattern.getPatternStackInSlot(inputSlot);
+        if (PatternStackHelper.isFluid(stack)) {
+            return getFluidSatelliteTargetForInputSlot(configuredPattern, inputSlot) != null;
+        }
+        return getSatelliteTargetForInputSlot(configuredPattern, inputSlot) != null;
     }
 
     /**
@@ -1523,7 +1540,12 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         }
         AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
         for (int slot = 0; slot < configuredPattern.getIngredientSlotCount(); slot++) {
-            if (getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
+            IPatternStack stack = configuredPattern.getPatternStackInSlot(slot);
+            if (PatternStackHelper.isSolid(stack) && getSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
+                return true;
+            }
+            if (PatternStackHelper.isFluid(stack)
+                && getFluidSatelliteTargetForInputSlot(configuredPattern, slot) != null) {
                 return true;
             }
         }
@@ -1532,9 +1554,6 @@ public class ModulePatternCrafting extends LogisticsGuiModule
 
     /**
      * Resolves the linked pattern satellite assigned to one solid input slot.
-     * <p>
-     * Fluid ingredients are always local to the pattern crafting pipe; only item ingredients can be routed to pattern
-     * satellites.
      */
     private IRequestItems getSatelliteTargetForInputSlot(AbstractPattern pattern, int inputSlot) {
         if (adjacentInventory.isConnectedToPatternCraftingTable()) {
@@ -1543,6 +1562,18 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         int satelliteId = pattern.getSatelliteIdForInputSlot(inputSlot);
         String satelliteUuid = pattern.getSatelliteUuidForInputSlot(inputSlot);
         return pipe.resolvePatternSatelliteTarget(satelliteUuid, satelliteId);
+    }
+
+    /**
+     * Resolves the linked pattern fluid satellite assigned to one fluid input slot.
+     */
+    private IRequestFluid getFluidSatelliteTargetForInputSlot(AbstractPattern pattern, int inputSlot) {
+        if (adjacentInventory.isConnectedToPatternCraftingTable()) {
+            return null;
+        }
+        int satelliteId = pattern.getFluidSatelliteIdForInputSlot(inputSlot);
+        String satelliteUuid = pattern.getFluidSatelliteUuidForInputSlot(inputSlot);
+        return pipe.resolvePatternFluidSatelliteTarget(satelliteUuid, satelliteId);
     }
 
     /**

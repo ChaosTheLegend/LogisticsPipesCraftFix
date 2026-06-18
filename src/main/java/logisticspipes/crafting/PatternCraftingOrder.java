@@ -3,6 +3,7 @@ package logisticspipes.crafting;
 import logisticspipes.crafting.pattern.PatternHandler;
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.crafting.patternStack.PatternStackHelper;
+import logisticspipes.interfaces.routing.IRequestFluid;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.utils.FluidIdentifier;
@@ -147,20 +148,22 @@ class PatternCraftingOrder {
             int requested = requestFromBranches(
                 ingredient.stack(),
                 ingredient.stack().getAmount() * requestedSets,
-                ingredient.target());
+                ingredient.itemTarget(),
+                ingredient.fluidTarget());
             requestedIngredients.add(new RequestedIngredient(ingredient, requested));
             module.debugEvent(
                     "REQUEST",
-                    "order requested ingredient slot=%d ingredient=%s target=%s requested=%d amountPerSet=%d",
+                "order requested ingredient slot=%d ingredient=%s itemTarget=%s fluidTarget=%s requested=%d amountPerSet=%d",
                     patternSlot,
                 ingredient.stack(),
-                ingredient.target(),
+                ingredient.itemTarget(),
+                ingredient.fluidTarget(),
                     requested,
                 ingredient.stack().getAmount());
             requestedSets = Math.min(requestedSets, requested / ingredient.stack().getAmount());
         }
         for (RequestedIngredient requested : requestedIngredients) {
-            if (requested.ingredient.target() == null) {
+            if (requested.ingredient.isLocal()) {
                 int reserved = Math.min(requested.amount, requested.ingredient.stack().getAmount() * requestedSets);
                 if (reserved <= 0) {
                     continue;
@@ -248,7 +251,8 @@ class PatternCraftingOrder {
     /**
      * Places provider or staged crafting orders for an ingredient, consuming the matching branch state as it goes.
      */
-    private int requestFromBranches(IPatternStack ingredient, int amount, IRequestItems targetOverride) {
+    private int requestFromBranches(IPatternStack ingredient, int amount, IRequestItems itemTargetOverride,
+                                    IRequestFluid fluidTargetOverride) {
         int requested = 0;
         for (PatternCraftingBranch branch : ingredientBranches) {
             if (requested >= amount) {
@@ -259,13 +263,17 @@ class PatternCraftingOrder {
             }
             int before = branch.getRemainingAmount();
             if (PatternStackHelper.isFluid(ingredient)) {
-                int branchRequested = branch.request(amount - requested);
+                int branchRequested = branch.request(
+                    amount - requested,
+                    fluidTargetOverride,
+                    fluidTargetOverride == null ? new PatternTargetInformation(patternSlot) : null);
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
-                        "branch fluid request slot=%d ingredient=%s branch=%s branchRemaining=%d->%d requested=%d total=%d/%d",
+                    "branch fluid request slot=%d ingredient=%s target=%s branch=%s branchRemaining=%d->%d requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
+                    fluidTargetOverride,
                         branch.getRequestType(),
                         before,
                         branch.getRemainingAmount(),
@@ -275,15 +283,15 @@ class PatternCraftingOrder {
             } else {
                 int branchRequested = branch.request(
                         amount - requested,
-                        targetOverride,
-                        targetOverride == null ? new PatternTargetInformation(patternSlot) : null);
+                    itemTargetOverride,
+                    itemTargetOverride == null ? new PatternTargetInformation(patternSlot) : null);
                 requested += branchRequested;
                 module.debugEvent(
                         "REQUEST",
                         "branch item request slot=%d ingredient=%s target=%s branch=%s branchRemaining=%d->%d requested=%d total=%d/%d",
                         patternSlot,
                         ingredient,
-                        targetOverride,
+                    itemTargetOverride,
                         branch.getRequestType(),
                         before,
                         branch.getRemainingAmount(),

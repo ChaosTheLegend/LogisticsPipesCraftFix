@@ -26,7 +26,7 @@ public class PipePatternInventory implements IInventory {
 
     @Override
     public int getSizeInventory() {
-        return ItemPattern.ITEM_SLOT_COUNT;
+        return ItemPattern.MAX_ITEM_SLOT_COUNT;
     }
 
     @Override

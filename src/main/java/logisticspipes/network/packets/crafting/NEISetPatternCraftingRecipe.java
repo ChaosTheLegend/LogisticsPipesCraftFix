@@ -2,6 +2,7 @@ package logisticspipes.network.packets.crafting;
 
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.pattern.AbstractPattern;
+import logisticspipes.crafting.pattern.DefaultPattern;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.pattern.PatternContainer;
 import logisticspipes.crafting.patternStack.IPatternStack;
@@ -61,13 +62,26 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
         ItemStack patternStack = player.inventory.mainInventory[patternInventorySlot];
         if (patternStack == null || patternStack.getItem() != LogisticsPipes.LogisticsPattern) return;
 
-        // clear pattern
+        boolean processingPattern = outputs.size() > DefaultPattern.RESULT_SLOTS
+            || inputs.size() > DefaultPattern.INGREDIENT_SLOTS
+            || usesProcessingInputSlot(indices);
+        ItemPattern.setProcessingPattern(patternStack, processingPattern);
+
         AbstractPattern pattern = ItemPattern.fromStack(patternStack);
         pattern.setInputsAndOutputs(inputs, indices, outputs);
 
         // reload the gui from the new pattern
         if (!(player.openContainer instanceof PatternContainer container)) return;
         container.reloadFromPattern(pattern);
+    }
+
+    private boolean usesProcessingInputSlot(List<Integer> indices) {
+        for (Integer index : indices) {
+            if (index != null && index >= DefaultPattern.INGREDIENT_SLOTS) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

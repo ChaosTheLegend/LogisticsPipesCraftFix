@@ -11,7 +11,6 @@ public class PatternInventory implements IInventory {
     private final EntityPlayer player;
     @Getter
     private final ItemStack patternStack;
-    private final AbstractPattern pattern;
     @Getter
     private final int inventorySlot;
 
@@ -19,17 +18,16 @@ public class PatternInventory implements IInventory {
         this.player = player;
         this.inventorySlot = inventorySlot;
         this.patternStack = readPatternStack();
-        this.pattern = ItemPattern.fromStack(patternStack);
     }
 
     @Override
     public int getSizeInventory() {
-        return pattern.getItemSlotCount();
+        return ItemPattern.MAX_ITEM_SLOT_COUNT;
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        return pattern.getStackInSlot(slot);
+        return currentPattern().getStackInSlot(slot);
     }
 
     @Override
@@ -38,7 +36,7 @@ public class PatternInventory implements IInventory {
         if (stack == null) {
             return null;
         }
-        pattern.setStackInSlot(slot, null);
+        currentPattern().setStackInSlot(slot, null);
         return stack;
     }
 
@@ -49,7 +47,7 @@ public class PatternInventory implements IInventory {
 
     @Override
     public void setInventorySlotContents(int slot, ItemStack stack) {
-        pattern.setStackInSlot(slot, stack);
+        currentPattern().setStackInSlot(slot, stack);
         markDirty();
     }
 
@@ -102,5 +100,9 @@ public class PatternInventory implements IInventory {
 
     public void clear() {
         ItemPattern.fromStack(readPatternStack()).clear();
+    }
+
+    private AbstractPattern currentPattern() {
+        return ItemPattern.fromStack(readPatternStack());
     }
 }

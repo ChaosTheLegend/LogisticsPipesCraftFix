@@ -25,7 +25,12 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
     private final int patternSlot;
 
     public PatternCraftingTemplate(ItemIdentifierStack result, ICraftItems crafter, int priority, int patternSlot) {
-        super(ItemPattern.INGREDIENT_SLOTS, priority);
+        this(result, crafter, priority, patternSlot, ItemPattern.INGREDIENT_SLOTS);
+    }
+
+    public PatternCraftingTemplate(ItemIdentifierStack result, ICraftItems crafter, int priority, int patternSlot,
+                                   int ingredientSlots) {
+        super(ingredientSlots, priority);
         this.result = result;
         this.crafter = crafter;
         this.patternSlot = patternSlot;

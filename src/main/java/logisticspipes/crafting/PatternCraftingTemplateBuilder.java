@@ -77,7 +77,12 @@ class PatternCraftingTemplateBuilder {
                 continue;
             }
             module.debug("crafting template matched item output slot=%d result=%s request=%s", slot, result, toCraft);
-            PatternCraftingTemplate template = new PatternCraftingTemplate(result.clone(), module, 0, slot);
+            PatternCraftingTemplate template = new PatternCraftingTemplate(
+                result.clone(),
+                module,
+                0,
+                slot,
+                configuredPattern.getIngredientSlotCount());
             addPatternIngredients(template, configuredPattern.getAggregatedInputs(), slot);
             addItemResultByproducts(template, result, outputs);
             return template;

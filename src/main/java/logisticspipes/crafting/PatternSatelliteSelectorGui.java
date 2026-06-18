@@ -28,6 +28,8 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
     private final int inputSlot;
     private final int currentSatelliteId;
+    private final String currentSatelliteUuid;
+    private final PatternSatelliteInfo.SatelliteType satelliteType;
     private final List<PatternSatelliteInfo> satellites;
     private final SelectionHandler handler;
     private GuiTextField searchField;
@@ -35,9 +37,17 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
     public PatternSatelliteSelectorGui(int inputSlot, int currentSatelliteId, List<PatternSatelliteInfo> satellites,
             SelectionHandler handler) {
+        this(inputSlot, currentSatelliteId, "", PatternSatelliteInfo.SatelliteType.ITEM, satellites, handler);
+    }
+
+    public PatternSatelliteSelectorGui(int inputSlot, int currentSatelliteId, String currentSatelliteUuid,
+                                       PatternSatelliteInfo.SatelliteType satelliteType, List<PatternSatelliteInfo> satellites,
+                                       SelectionHandler handler) {
         super(228, 178, 0, 0);
         this.inputSlot = inputSlot;
         this.currentSatelliteId = currentSatelliteId;
+        this.currentSatelliteUuid = currentSatelliteUuid == null ? "" : currentSatelliteUuid;
+        this.satelliteType = satelliteType == null ? PatternSatelliteInfo.SatelliteType.ITEM : satelliteType;
         this.satellites = satellites == null ? Collections.emptyList() : new ArrayList<>(satellites);
         this.handler = handler;
     }
@@ -65,7 +75,11 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     @Override
     protected void renderGuiBackground(int mouseX, int mouseY) {
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
-        fontRendererObj.drawString("Input " + (inputSlot + 1) + " Satellite", guiLeft + 10, guiTop + 8, 0x404040);
+        fontRendererObj.drawString(
+            "Input " + (inputSlot + 1) + " " + satelliteType.name().toLowerCase(Locale.ROOT) + " satellite",
+            guiLeft + 10,
+            guiTop + 8,
+            0x404040);
         searchField.drawTextBox();
     }
 
@@ -85,7 +99,7 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     private void drawRow(Row row, int index, int mouseX, int mouseY) {
         int x = guiLeft + 10;
         int y = getRowY(index);
-        int color = row.satelliteId == currentSatelliteId ? 0xffd7e8ff : 0xffb8b8b8;
+        int color = row.matches(currentSatelliteId, currentSatelliteUuid) ? 0xffd7e8ff : 0xffb8b8b8;
         if (isMouseOverRow(index, mouseX, mouseY)) {
             color = 0xfffff0a8;
         }
@@ -207,6 +221,9 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
         List<Row> rows = new ArrayList<>();
         addRowIfMatching(rows, new Row(0, "", "Local inventory", "local none no satellite 0"), query);
         for (PatternSatelliteInfo satellite : satellites) {
+            if (satellite.type() != satelliteType) {
+                continue;
+            }
             addRowIfMatching(
                     rows,
                     new Row(satellite.id(), satellite.uuid(), formatSatellite(satellite), satellite.getSearchText()),
@@ -251,5 +268,9 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     @Desugar
     private record Row(int satelliteId, String satelliteUuid, String display, String search) {
 
+        private boolean matches(int currentId, String currentUuid) {
+            return (!currentUuid.isEmpty() && currentUuid.equals(satelliteUuid))
+                || (currentUuid.isEmpty() && satelliteId == currentId);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package logisticspipes.crafting.pattern;
 
 import logisticspipes.crafting.PatternSatelliteInfo;
+import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
@@ -43,6 +44,24 @@ public class PatternGuiProvider extends GuiProvider {
         return new PatternGui(player, new PatternInventory(player, inventorySlot), satellites);
     }
 
+    static void addPatternSlots(DummyContainer dummy, AbstractPattern pattern) {
+        addPatternSlots(dummy, pattern, 26, 17, 116, 35);
+    }
+
+    public static void addPatternSlots(DummyContainer dummy, AbstractPattern pattern, int inputLeft, int inputTop,
+                                       int outputLeft, int outputTop) {
+        if (pattern == null) {
+            pattern = ItemPattern.fromStack(null);
+        }
+        PatternSlotLayout layout = new PatternSlotLayout(pattern, inputLeft, inputTop, outputLeft, outputTop);
+        for (int slot = 0; slot < pattern.getIngredientSlotCount(); slot++) {
+            dummy.addDummySlot(slot, layout.inputX(slot), layout.inputY(slot));
+        }
+        for (int slot = 0; slot < pattern.getResultSlotCount(); slot++) {
+            dummy.addDummySlot(pattern.getResultSlotStart() + slot, layout.outputX(slot), layout.outputY(slot));
+        }
+    }
+
     @Override
     public DummyContainer getContainer(EntityPlayer player) {
         PatternInventory inventory = new PatternInventory(player, inventorySlot);
@@ -51,26 +70,11 @@ public class PatternGuiProvider extends GuiProvider {
             return null;
         }
         satellites = PipeItemsPatternSatelliteLogistics.getKnownSatellitesFor(player);
+        satellites.addAll(PipeFluidPatternSatelliteLogistics.getKnownSatellitesFor(player));
         PatternContainer dummy = new PatternContainer(player.inventory, inventory);
-        addPatternSlots(dummy);
-        dummy.addNormalSlotsForPlayerInventory(8, 92);
+        addPatternSlots(dummy, ItemPattern.fromStack(inventory.getPatternStack()));
+        dummy.addNormalSlotsForPlayerInventory(8, 116);
         return dummy;
-    }
-
-    static void addPatternSlots(DummyContainer dummy) {
-        addPatternSlots(dummy, 26, 17, 116, 35);
-    }
-
-    public static void addPatternSlots(DummyContainer dummy, int inputLeft, int inputTop, int outputLeft,
-                                       int outputTop) {
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
-                dummy.addDummySlot(x + y * 3, inputLeft + x * 18, inputTop + y * 18);
-            }
-        }
-        for (int i = 0; i < ItemPattern.RESULT_SLOTS; i++) {
-            dummy.addDummySlot(ItemPattern.INGREDIENT_SLOTS + i, outputLeft + i * 18, outputTop);
-        }
     }
 
     @Override
