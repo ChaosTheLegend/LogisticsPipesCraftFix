@@ -405,6 +405,13 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         }
     }
 
+    public void returnStoredInputsToStorage() {
+        boolean changed = module.returnStoredInputsToStorage();
+        if (changed) {
+            doContentUpdate = true;
+        }
+    }
+
     /**
      * Prevents routed fluid ingredients from being stored in the inherited internal fluid tanks.
      * <p>

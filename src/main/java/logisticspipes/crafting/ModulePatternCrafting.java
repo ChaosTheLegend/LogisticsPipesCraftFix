@@ -2007,20 +2007,69 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         stagedCrafting.requestIngredients();
     }
 
+    /**
+     * Cancels the running request tree that contains {@code patternSlot}.
+     * <p>
+     * A selected pattern can be a middle node in a larger staged recipe. The staged coordinator resolves that tree and
+     * returns every affected pattern slot so local buffers and requested ingredients are cleaned up consistently.
+     */
     public boolean cancelPatternCraft(int patternSlot) {
         if (patternSlot < 0 || patternSlot >= patternHandler.size()) {
             return false;
         }
-        boolean changed = stagedCrafting.cancelPattern(patternSlot);
-        changed |= requestedIngredient.removeAll(patternSlot);
-        changed |= flushBufferedIngredientsToStorage(patternSlot);
-        if (runningCraft == patternSlot) {
+        Set<Integer> slotsToCancel = new HashSet<>(stagedCrafting.cancelPattern(patternSlot));
+        boolean changed = !slotsToCancel.isEmpty();
+        slotsToCancel.add(patternSlot);
+        for (int cancelledSlot : slotsToCancel) {
+            changed |= requestedIngredient.removeAll(cancelledSlot);
+            changed |= flushBufferedIngredientsToStorage(cancelledSlot);
+            if (runningCraft == cancelledSlot) {
+                setRunningCraft(-1, false);
+                changed = true;
+            }
+        }
+        if (changed) {
+            cancelledPatternSlots.addAll(slotsToCancel);
+            debugEvent("CANCEL", "cancelled pattern slots=%s and flushed buffers", slotsToCancel);
+            pipe.getCacheHolder().trigger(CacheTypes.Inventory);
+        }
+        return changed;
+    }
+
+    /**
+     * Returns every input currently owned by this pattern pipe to storage.
+     * <p>
+     * Buffered inputs cannot be cleared independently from active staged orders: those orders have already consumed
+     * request-tree capacity for the items. The method therefore cancels all active staged crafts first, then flushes all
+     * local input buffers and requested-input reservations.
+     */
+    public boolean returnStoredInputsToStorage() {
+        Set<Integer> slotsToClear = new HashSet<>();
+        for (int slot = 0; slot < patternHandler.size(); slot++) {
+            slotsToClear.addAll(stagedCrafting.cancelPattern(slot));
+        }
+        slotsToClear.addAll(ingredientBuffer.keySet());
+        slotsToClear.addAll(requestedIngredients.keySet());
+        if (runningCraft >= 0) {
+            slotsToClear.add(runningCraft);
+        }
+
+        boolean changed = !slotsToClear.isEmpty();
+        for (int slot : slotsToClear) {
+            changed |= requestedIngredient.removeAll(slot);
+            changed |= flushBufferedIngredientsToStorage(slot);
+        }
+        if (runningCraft >= 0) {
             setRunningCraft(-1, false);
             changed = true;
         }
+        if (!lostIngredients.isEmpty()) {
+            lostIngredients.clear();
+            changed = true;
+        }
         if (changed) {
-            cancelledPatternSlots.add(patternSlot);
-            debugEvent("CANCEL", "cancelled pattern slot=%d and flushed buffer", patternSlot);
+            cancelledPatternSlots.addAll(slotsToClear);
+            debugEvent("CANCEL", "returned stored pattern inputs slots=%s", slotsToClear);
             pipe.getCacheHolder().trigger(CacheTypes.Inventory);
         }
         return changed;

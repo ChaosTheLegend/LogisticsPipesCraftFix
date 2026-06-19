@@ -12,6 +12,7 @@ import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.crafting.PatternPipeSatelliteAssignmentPacket;
 import logisticspipes.network.packets.gui.PatternCraftingPipeCancel;
 import logisticspipes.network.packets.gui.PatternCraftingPipeMode;
+import logisticspipes.network.packets.gui.PatternCraftingPipeReturnInputs;
 import logisticspipes.network.packets.gui.PatternPipeSelectPacket;
 import logisticspipes.network.packets.gui.PatternPipeSlotActionPacket;
 import logisticspipes.network.packets.gui.PatternSlotActionPacket;
@@ -42,6 +43,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private static final int TYPE_BUTTON = 4;
     private static final int ORE_DICT_BUTTON = 5;
     private static final int IGNORE_NBT_BUTTON = 6;
+    private static final int RETURN_INPUTS_BUTTON = 7;
     private static final int TAB_BUTTON_BASE = 100;
 
     private static final int TAB_LEFT = 32;
@@ -96,6 +98,7 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
         buttonList.add(new SmallGuiButton(ORE_DICT_BUTTON, guiLeft + 166, guiTop + 102, 30, 12, oreDictLabel()));
         buttonList.add(new SmallGuiButton(IGNORE_NBT_BUTTON, guiLeft + 198, guiTop + 102, 30, 12, ignoreNbtLabel()));
         buttonList.add(new SmallGuiButton(CANCEL_BUTTON, guiLeft + 166, guiTop + 118, 62, 12, "Cancel"));
+        buttonList.add(new SmallGuiButton(RETURN_INPUTS_BUTTON, guiLeft + 166, guiTop + 134, 62, 12, "Return"));
         for (int slot = 0; slot < 9; slot++) {
             buttonList.add(
                 new SmallGuiButton(
@@ -159,6 +162,9 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
             MainProxy.sendPacketToServer(
                     PacketHandler.getPacket(PatternCraftingPipeCancel.class).setInteger(selectedPatternSlot)
                             .setTilePos(pipe.container));
+        } else if (button.id == RETURN_INPUTS_BUTTON) {
+            MainProxy.sendPacketToServer(
+                PacketHandler.getPacket(PatternCraftingPipeReturnInputs.class).setTilePos(pipe.container));
         } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {
             selectPatternSlot(button.id - TAB_BUTTON_BASE);
         }
@@ -292,10 +298,10 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
     private void drawStatusPanel() {
         PatternCraftingHudState.PatternInfo info = getSelectedPatternInfo();
         String status = info == null ? "Empty" : info.getStatus();
-        mc.fontRenderer.drawString("Mode: " + modeLabel(), guiLeft + 166, guiTop + 134, 0x404040);
+        mc.fontRenderer.drawString("Mode: " + modeLabel(), guiLeft + 166, guiTop + 150, 0x404040);
         List<String> lines = mc.fontRenderer.listFormattedStringToWidth(status == null ? "" : status, 62);
         for (int i = 0; i < Math.min(3, lines.size()); i++) {
-            mc.fontRenderer.drawString(lines.get(i), guiLeft + 166, guiTop + 146 + i * 9, 0x404040);
+            mc.fontRenderer.drawString(lines.get(i), guiLeft + 166, guiTop + 162 + i * 9, 0x404040);
         }
     }
 
@@ -524,6 +530,8 @@ public class PatternCraftingPipeGui extends LogisticsBaseGuiScreen {
                 button.enabled = pattern != null;
             } else if (button.id == CLEAR_BUTTON || button.id == MULTIPLY_BUTTON || button.id == CANCEL_BUTTON) {
                 button.enabled = pattern != null;
+            } else if (button.id == RETURN_INPUTS_BUTTON) {
+                button.enabled = true;
             } else if (button.id >= TAB_BUTTON_BASE && button.id < TAB_BUTTON_BASE + 9) {
                 int slot = button.id - TAB_BUTTON_BASE;
                 button.enabled = slot != selectedPatternSlot;

@@ -51,6 +51,7 @@ class PatternStagedCraftingCoordinator {
     private final List<PatternCraftingOrder> stagedCrafts = new ArrayList<>();
     private final List<PatternCraftingOrder> outputOrders = new ArrayList<>();
     private final PatternStagedCraftingScheduler scheduler;
+    private final PatternCraftingCancellationResolver cancellationResolver = new PatternCraftingCancellationResolver();
 
     PatternStagedCraftingCoordinator(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
             PatternHandler patternHandler, PatternStackRequestHandler requestedIngredient,
@@ -266,45 +267,42 @@ class PatternStagedCraftingCoordinator {
         module.markHudStateDirty();
     }
 
-    boolean cancelPattern(int patternSlot) {
-        boolean cancelled = false;
-        List<PatternCraftingOrder> ordersToCancel = new ArrayList<>();
-        for (PatternCraftingOrder order : stagedCrafts) {
-            if (order.patternSlot == patternSlot) {
-                ordersToCancel.add(order);
-            }
+    Set<Integer> cancelPattern(int patternSlot) {
+        Set<Integer> cancelledSlots = new HashSet<>();
+        int directOrders = countActiveOutputOrders(patternSlot);
+        List<PatternCraftingOrder> ordersToCancel = cancellationResolver.resolve(patternSlot, outputOrders);
+        if (ordersToCancel.size() > directOrders) {
+            module.debugEvent(
+                "CANCEL",
+                "cancel slot=%d expanded to request tree directOrders=%d resolvedOrders=%d",
+                patternSlot,
+                directOrders,
+                ordersToCancel.size());
         }
-        for (PatternCraftingOrder order : outputOrders) {
-            if (order.patternSlot != patternSlot) {
-                continue;
-            }
-            if (!ordersToCancel.contains(order)) {
-                ordersToCancel.add(order);
-            }
-        }
-        collectOrdersTargetingCancelledSlots(ordersToCancel);
         Set<PatternCraftingOrder> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         for (PatternCraftingOrder order : ordersToCancel) {
-            cancelled |= cancelOrderAndChildren(order, visited);
+            cancelOrderAndChildren(order, visited, cancelledSlots);
         }
-        if (cancelled) {
+        if (!cancelledSlots.isEmpty()) {
             module.markHudStateDirty();
         }
-        return cancelled;
+        return cancelledSlots;
     }
 
-    private boolean cancelOrderAndChildren(PatternCraftingOrder order, Set<PatternCraftingOrder> visited) {
+    private void cancelOrderAndChildren(PatternCraftingOrder order, Set<PatternCraftingOrder> visited,
+                                        Set<Integer> cancelledSlots) {
         if (order == null || !visited.add(order)) {
-            return false;
+            return;
         }
         for (PatternCraftingOrder child : order.getChildStagedOrders()) {
-            cancelOrderAndChildren(child, visited);
+            cancelOrderAndChildren(child, visited, cancelledSlots);
         }
         module.debugEvent(
             "CANCEL",
             "cancel staged order slot=%d remainingSets=%d",
             order.patternSlot,
             order.remainingSets);
+        cancelledSlots.add(order.patternSlot);
         order.retrieveSatelliteDeliveries();
         order.releaseReservations();
         removeOutputOrder(order.outputOrder);
@@ -313,42 +311,16 @@ class PatternStagedCraftingCoordinator {
         }
         stagedCrafts.remove(order);
         outputOrders.remove(order);
-        return true;
     }
 
-    private void collectOrdersTargetingCancelledSlots(List<PatternCraftingOrder> ordersToCancel) {
-        Set<Integer> cancelledSlots = new HashSet<>();
-        for (PatternCraftingOrder order : ordersToCancel) {
-            cancelledSlots.add(order.patternSlot);
-        }
-        boolean added;
-        do {
-            added = false;
-            for (PatternCraftingOrder order : outputOrders) {
-                if (ordersToCancel.contains(order)) {
-                    continue;
-                }
-                PatternTargetInformation target = getPatternTarget(order);
-                if (target == null || !cancelledSlots.contains(target.patternSlot())) {
-                    continue;
-                }
-                ordersToCancel.add(order);
-                cancelledSlots.add(order.patternSlot);
-                added = true;
+    private int countActiveOutputOrders(int patternSlot) {
+        int count = 0;
+        for (PatternCraftingOrder order : outputOrders) {
+            if (order.patternSlot == patternSlot && order.outputOrder != null && !order.outputOrder.isFinished()) {
+                count++;
             }
-        } while (added);
-    }
-
-    private PatternTargetInformation getPatternTarget(PatternCraftingOrder order) {
-        if (order.outputOrder instanceof LogisticsItemOrder) {
-            IAdditionalTargetInformation info = ((LogisticsItemOrder) order.outputOrder).getInformation();
-            return info instanceof PatternTargetInformation ? (PatternTargetInformation) info : null;
         }
-        if (order.outputOrder instanceof LogisticsFluidOrder) {
-            IAdditionalTargetInformation info = ((LogisticsFluidOrder) order.outputOrder).getInformation();
-            return info instanceof PatternTargetInformation ? (PatternTargetInformation) info : null;
-        }
-        return null;
+        return count;
     }
 
     private void registerOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
