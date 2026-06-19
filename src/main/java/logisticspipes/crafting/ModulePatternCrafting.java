@@ -109,6 +109,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     private PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = PipeItemsPatternCraftingLogistics.BlockingMode.OFF;
     private int runningCraft = -1;
     private boolean runningCraftInAdjacent = false;
+    private PatternSatelliteDispatchBatch activeSatelliteBatch;
     private boolean checkingBufferedOrders = false;
     private NBTTagCompound pendingStagedCrafting;
     private boolean pendingRequestedIngredientRestoreRetries;
@@ -281,6 +282,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         cancelUnsupportedFluidPatternCrafts();
         scheduleRequestedIngredientRestoreRetriesIfReady();
         retryLostItems();
+        refreshSatelliteDispatchBatch();
         pushBufferedIngredients();
         stagedCrafting.requestIngredients();
         clearRunningCraftIfFinished();
@@ -885,6 +887,11 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         AdjacentTile connected = adjacentInventory.getConnected();
         int bufferedSets = completeBufferedSets(patternSlot);
+        if (activeSatelliteBatch != null) {
+            return activeSatelliteBatch.patternSlot == patternSlot
+                ? "Doing: waiting on satellites"
+                : "Waiting: satellites reserved";
+        }
         if (runningCraft == patternSlot && runningCraftInAdjacent) {
             return "Doing: crafting in target inventory";
         }
@@ -903,7 +910,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
                     && !adjacentInventory.isEmpty(connected)) {
                 return "Waiting: target inventory occupied";
             }
-            if (adjacentInventory.availablePatternSets(pattern) <= 0) {
+            if (findInsertableBufferedPlan(patternSlot, pattern, bufferedSets) == null) {
                 return "Waiting: no target space";
             }
             return "Doing: ready to insert " + formatSets(bufferedSets);
@@ -926,7 +933,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     }
 
     private String getHudPendingIngredient(int patternSlot, ItemStack pattern) {
-        for (PatternIngredientTarget target : getLocalIngredientTargets(pattern)) {
+        for (PatternIngredientTarget target : getIngredientTargets(pattern)) {
             IPatternStack ingredient = target.stack();
             int buffered = bufferedIngredientAmount(patternSlot, pattern, ingredient);
             int requested = requestedIngredientAmount(patternSlot, pattern, ingredient);
@@ -1265,7 +1272,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             pattern,
             1,
             new PatternItemStack(new ItemIdentifierStack(item, space))) != null) {
-            space += localIngredientAmount(pattern, item);
+            space += ingredientAmount(pattern, item);
         }
         debug("arrival item space slot=%d item=%s space=%d", patternSlot, item, space);
         return space;
@@ -1301,7 +1308,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      * without its matching solid ingredients.
      */
     private boolean itemIngredientsBufferedForOneSet(int patternSlot, ItemStack pattern) {
-        for (PatternIngredientTarget ingredient : getLocalIngredientTargets(pattern)) {
+        for (PatternIngredientTarget ingredient : getIngredientTargets(pattern)) {
             if (!PatternStackHelper.isSolid(ingredient.stack())) {
                 continue;
             }
@@ -1343,7 +1350,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         int count = 0;
         for (int slot = 0; slot < patternHandler.size(); slot++) {
             ItemStack pattern = patternHandler.getConfiguredPatternStack(slot);
-            if (pattern == null || !isPatternCraftingSupported(pattern) || localIngredientAmount(pattern, item) <= 0) {
+            if (pattern == null || !isPatternCraftingSupported(pattern) || ingredientAmount(pattern, item) <= 0) {
                 continue;
             }
             int requested = requestedItemAmount(slot, pattern, item);
@@ -1396,6 +1403,10 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         if (!isPatternCraftingSupported(patternHandler.getConfiguredPatternStack(patternSlot))) {
             return false;
         }
+        refreshSatelliteDispatchBatch();
+        if (activeSatelliteBatch != null) {
+            return false;
+        }
         PipeItemsPatternCraftingLogistics.BlockingMode mode = getEffectiveBlockingMode();
         if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             return true;
@@ -1416,7 +1427,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         if (getEffectiveBlockingMode() != PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING) {
             sets += adjacentInventory.availablePatternSets(pattern);
         }
-        int capacity = sets * localIngredientAmount(pattern, item);
+        int capacity = sets * ingredientAmount(pattern, item);
         int room = Math.max(0, capacity - matchingBufferedItemAmount(patternSlot, pattern, item));
         int result = maxAcceptedItemAmount(patternSlot, pattern, item, room);
         debug(
@@ -1498,14 +1509,23 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     }
 
     private boolean patternContains(ItemStack pattern, ItemIdentifier item) {
-        return localIngredientAmount(pattern, item) > 0;
+        return ingredientAmount(pattern, item) > 0;
     }
 
     /**
-     * Returns the non-satellite item ingredients that have to be buffered and inserted by this crafting pipe.
-     * <p>
-     * Ingredients assigned to a linked pattern satellite are requested directly for that satellite and therefore must
-     * not be counted as local buffer requirements.
+     * Returns all ingredients that have to be buffered by this crafting pipe before one or more pattern sets can be
+     * dispatched to the local adjacent target and any configured satellites.
+     */
+    List<IPatternStack> getAggregatedIngredients(ItemStack pattern) {
+        List<IPatternStack> result = new ArrayList<>();
+        for (PatternIngredientTarget target : getIngredientTargets(pattern)) {
+            PatternStackHelper.addAggregated(result, target.stack());
+        }
+        return result;
+    }
+
+    /**
+     * Returns the non-satellite ingredients that are inserted into this crafting pipe's adjacent target.
      */
     List<IPatternStack> getLocalAggregatedIngredients(ItemStack pattern) {
         List<IPatternStack> result = new ArrayList<>();
@@ -1544,9 +1564,8 @@ public class ModulePatternCrafting extends LogisticsGuiModule
     /**
      * Resolves the satellite destination for an item ingredient in a pattern.
      * <p>
-     * If duplicate input slots contain the same item and only some are assigned to satellites, the assigned satellite
-     * is used for staged routing of that item. Keep pattern assignments uniform for duplicate ingredients when
-     * splitting the same item between local and satellite machines matters.
+     * If duplicate input slots contain the same item and only some are assigned to satellites, this method reports the
+     * first assigned target. Dispatch still happens per input slot after the main pipe has buffered a complete set.
      */
     IRequestItems getSatelliteTargetForIngredient(ItemStack pattern, ItemIdentifier item) {
         if (pattern == null || item == null) {
@@ -1593,6 +1612,19 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             result.add(new PatternIngredientTarget(slot, stack.copy(), itemTarget, fluidTarget));
         }
         return result;
+    }
+
+    /**
+     * Counts how much of an item ingredient the full pattern needs, including satellite-assigned input slots.
+     */
+    private int ingredientAmount(ItemStack pattern, ItemIdentifier item) {
+        int amount = 0;
+        for (PatternIngredientTarget ingredient : getIngredientTargets(pattern)) {
+            if (ingredientMatchesItem(pattern, ingredient.stack(), item)) {
+                amount += ingredient.stack().getAmount();
+            }
+        }
+        return amount;
     }
 
     /**
@@ -1712,12 +1744,12 @@ public class ModulePatternCrafting extends LogisticsGuiModule
 
     private List<PatternIngredientAssignment> buildBufferedIngredientPlan(int patternSlot, ItemStack pattern,
                                                                           int sets) {
-        return buildBufferedIngredientPlan(patternSlot, pattern, getLocalIngredientTargets(pattern), sets, null);
+        return buildBufferedIngredientPlan(patternSlot, pattern, getIngredientTargets(pattern), sets, null);
     }
 
     private List<PatternIngredientAssignment> buildBufferedIngredientPlanAfterAdding(
         int patternSlot, ItemStack pattern, int sets, IPatternStack arrivingStack) {
-        return buildBufferedIngredientPlan(patternSlot, pattern, getLocalIngredientTargets(pattern), sets, arrivingStack);
+        return buildBufferedIngredientPlan(patternSlot, pattern, getIngredientTargets(pattern), sets, arrivingStack);
     }
 
     private List<PatternIngredientAssignment> buildBufferedIngredientPlan(int patternSlot, ItemStack pattern,
@@ -1839,6 +1871,15 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      * adjacent target is processing a batch inserted by that slot.
      */
     private void pushBufferedIngredients() {
+        refreshSatelliteDispatchBatch();
+        if (activeSatelliteBatch != null) {
+            debugEventThrottled(
+                "BUFFER",
+                40,
+                "push skipped: satellite batch active slot=%d",
+                activeSatelliteBatch.patternSlot);
+            return;
+        }
         AdjacentTile connected = getConnectedInventoryTile();
         if (connected == null) {
             debugEventThrottled(
@@ -1896,8 +1937,8 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             insertableSets = Math.min(insertableSets, 1);
         }
         int sets = Math.min(bufferedSets, insertableSets);
-        List<PatternIngredientAssignment> plan = findInsertableBufferedPlan(patternSlot, pattern, sets);
-        if (plan == null || !adjacentInventory.insertPatternIngredients(pattern, plan)) {
+        PatternDispatchPlan plan = findInsertableBufferedPlan(patternSlot, pattern, sets);
+        if (plan == null || !plan.dispatch()) {
             debugEventThrottled(
                 "BUFFER",
                 "push slot=%d failed: bufferedSets=%d insertableSets=%d selectedSets=%d",
@@ -1907,7 +1948,7 @@ public class ModulePatternCrafting extends LogisticsGuiModule
                 sets);
             return;
         }
-        sets = insertedSetsFromPlan(pattern, plan);
+        sets = insertedSetsFromPlan(pattern, plan.assignments());
         debugEvent(
             "BUFFER",
             "push slot=%d inserted sets=%d bufferedSets=%d insertableSets=%d",
@@ -1915,8 +1956,11 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             sets,
             bufferedSets,
             insertableSets);
-        removeBufferedPlan(patternSlot, plan);
-        if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
+        removeBufferedPlan(patternSlot, plan.assignments());
+        if (plan.hasSatellites()) {
+            activeSatelliteBatch = plan.createSatelliteBatch(patternSlot);
+            setRunningCraft(patternSlot, true);
+        } else if (mode != PipeItemsPatternCraftingLogistics.BlockingMode.OFF) {
             setRunningCraft(patternSlot, true);
         }
         debugEvent(
@@ -1929,15 +1973,53 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         requestIngredientsForStagedCrafts();
     }
 
-    private List<PatternIngredientAssignment> findInsertableBufferedPlan(int patternSlot, ItemStack pattern,
-                                                                         int maxSets) {
+    private PatternDispatchPlan findInsertableBufferedPlan(int patternSlot, ItemStack pattern, int maxSets) {
         for (int sets = maxSets; sets > 0; sets--) {
-            List<PatternIngredientAssignment> plan = buildBufferedIngredientPlan(patternSlot, pattern, sets);
-            if (plan != null && adjacentInventory.canInsertPatternIngredients(pattern, plan)) {
-                return plan;
+            List<PatternIngredientAssignment> assignments = buildBufferedIngredientPlan(patternSlot, pattern, sets);
+            if (assignments == null) {
+                continue;
+            }
+            PatternDispatchPlan dispatchPlan = buildDispatchPlan(pattern, assignments);
+            if (dispatchPlan != null && dispatchPlan.canDispatch()) {
+                return dispatchPlan;
             }
         }
         return null;
+    }
+
+    private PatternDispatchPlan buildDispatchPlan(ItemStack pattern, List<PatternIngredientAssignment> assignments) {
+        if (pattern == null || assignments == null || assignments.isEmpty()) {
+            return null;
+        }
+        PatternDispatchPlan plan = new PatternDispatchPlan(pattern, assignments);
+        AbstractPattern configuredPattern = ItemPattern.fromStack(pattern);
+        for (PatternIngredientAssignment assignment : assignments) {
+            IPatternStack configuredStack = configuredPattern.getPatternStackInSlot(assignment.inputSlot());
+            ItemIdentifierStack item = PatternStackHelper.asSolidStack(assignment.stack());
+            if (item != null) {
+                IRequestItems target = PatternStackHelper.isSolid(configuredStack)
+                    ? getSatelliteTargetForInputSlot(configuredPattern, assignment.inputSlot())
+                    : null;
+                if (target instanceof PipeItemsPatternSatelliteLogistics satellite) {
+                    plan.addItemSatellite(satellite, item.clone());
+                } else {
+                    plan.addLocal(assignment);
+                }
+                continue;
+            }
+            FluidIdentifier fluid = PatternStackHelper.asFluid(assignment.stack());
+            if (fluid != null) {
+                IRequestFluid target = PatternStackHelper.isFluid(configuredStack)
+                    ? getFluidSatelliteTargetForInputSlot(configuredPattern, assignment.inputSlot())
+                    : null;
+                if (target instanceof PipeFluidPatternSatelliteLogistics satellite) {
+                    plan.addFluidSatellite(satellite, fluid, assignment.stack().getAmount());
+                } else {
+                    plan.addLocal(assignment);
+                }
+            }
+        }
+        return plan;
     }
 
     private int insertedSetsFromPlan(ItemStack pattern, List<PatternIngredientAssignment> plan) {
@@ -1967,9 +2049,9 @@ public class ModulePatternCrafting extends LogisticsGuiModule
      */
     private int completeBufferedSets(int patternSlot) {
         ItemStack pattern = getPatternStack(patternSlot);
-        List<PatternIngredientTarget> localIngredients = getLocalIngredientTargets(pattern);
-        int sets = localIngredients.isEmpty() ? 0 : completeBufferedSets(patternSlot, pattern, localIngredients);
-        debug("complete buffered sets slot=%d ingredients=%d sets=%d", patternSlot, localIngredients.size(), sets);
+        List<PatternIngredientTarget> ingredients = getIngredientTargets(pattern);
+        int sets = ingredients.isEmpty() ? 0 : completeBufferedSets(patternSlot, pattern, ingredients);
+        debug("complete buffered sets slot=%d ingredients=%d sets=%d", patternSlot, ingredients.size(), sets);
         return sets;
     }
 
@@ -2020,6 +2102,11 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         Set<Integer> slotsToCancel = new HashSet<>(stagedCrafting.cancelPattern(patternSlot));
         boolean changed = !slotsToCancel.isEmpty();
         slotsToCancel.add(patternSlot);
+        if (activeSatelliteBatch != null && slotsToCancel.contains(activeSatelliteBatch.patternSlot)) {
+            activeSatelliteBatch.retrieveAndRelease();
+            activeSatelliteBatch = null;
+            changed = true;
+        }
         for (int cancelledSlot : slotsToCancel) {
             changed |= requestedIngredient.removeAll(cancelledSlot);
             changed |= flushBufferedIngredientsToStorage(cancelledSlot);
@@ -2052,6 +2139,11 @@ public class ModulePatternCrafting extends LogisticsGuiModule
         slotsToClear.addAll(requestedIngredients.keySet());
         if (runningCraft >= 0) {
             slotsToClear.add(runningCraft);
+        }
+        if (activeSatelliteBatch != null) {
+            slotsToClear.add(activeSatelliteBatch.patternSlot);
+            activeSatelliteBatch.retrieveAndRelease();
+            activeSatelliteBatch = null;
         }
 
         boolean changed = !slotsToClear.isEmpty();
@@ -2089,6 +2181,20 @@ public class ModulePatternCrafting extends LogisticsGuiModule
             }
         }
         return sent;
+    }
+
+    private void refreshSatelliteDispatchBatch() {
+        if (activeSatelliteBatch == null || !activeSatelliteBatch.isConsumed()) {
+            return;
+        }
+        debugEvent(
+            "BUFFER",
+            "satellite batch completed slot=%d satellites=%d",
+            activeSatelliteBatch.patternSlot,
+            activeSatelliteBatch.size());
+        activeSatelliteBatch.release();
+        activeSatelliteBatch = null;
+        markHudStateDirty();
     }
 
     /**
@@ -2586,6 +2692,10 @@ public class ModulePatternCrafting extends LogisticsGuiModule
 
         World world = pipe.getWorld();
 
+        if (activeSatelliteBatch != null) {
+            activeSatelliteBatch.retrieveAndRelease();
+            activeSatelliteBatch = null;
+        }
         stagedCrafting.releaseAll();
         requestedIngredients.clear();
         cancelledPatternSlots.clear();
@@ -2593,6 +2703,243 @@ public class ModulePatternCrafting extends LogisticsGuiModule
 
         patternInventory.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
         ingredientBuffer.dropContents(world, pipe.getX(), pipe.getY(), pipe.getZ());
+    }
+
+    private static class ItemSatelliteAssignment {
+
+        private final PipeItemsPatternSatelliteLogistics satellite;
+        private final ItemIdentifierStack stack;
+
+        private ItemSatelliteAssignment(PipeItemsPatternSatelliteLogistics satellite, ItemIdentifierStack stack) {
+            this.satellite = satellite;
+            this.stack = stack;
+        }
+    }
+
+    private static class FluidSatelliteAssignment {
+
+        private final PipeFluidPatternSatelliteLogistics satellite;
+        private final FluidIdentifier fluid;
+        private final int amount;
+
+        private FluidSatelliteAssignment(PipeFluidPatternSatelliteLogistics satellite, FluidIdentifier fluid,
+                                         int amount) {
+            this.satellite = satellite;
+            this.fluid = fluid;
+            this.amount = amount;
+        }
+    }
+
+    private class PatternDispatchPlan {
+
+        private final ItemStack pattern;
+        private final List<PatternIngredientAssignment> assignments;
+        private final List<PatternIngredientAssignment> localAssignments = new ArrayList<>();
+        private final List<ItemSatelliteAssignment> itemSatelliteAssignments = new ArrayList<>();
+        private final List<FluidSatelliteAssignment> fluidSatelliteAssignments = new ArrayList<>();
+
+        private PatternDispatchPlan(ItemStack pattern, List<PatternIngredientAssignment> assignments) {
+            this.pattern = pattern;
+            this.assignments = new ArrayList<>(assignments);
+        }
+
+        private List<PatternIngredientAssignment> assignments() {
+            return assignments;
+        }
+
+        private void addLocal(PatternIngredientAssignment assignment) {
+            localAssignments.add(assignment);
+        }
+
+        private void addItemSatellite(PipeItemsPatternSatelliteLogistics satellite, ItemIdentifierStack stack) {
+            itemSatelliteAssignments.add(new ItemSatelliteAssignment(satellite, stack));
+        }
+
+        private void addFluidSatellite(PipeFluidPatternSatelliteLogistics satellite, FluidIdentifier fluid, int amount) {
+            fluidSatelliteAssignments.add(new FluidSatelliteAssignment(satellite, fluid, amount));
+        }
+
+        private boolean hasSatellites() {
+            return !itemSatelliteAssignments.isEmpty() || !fluidSatelliteAssignments.isEmpty();
+        }
+
+        private boolean canDispatch() {
+            if (!localAssignments.isEmpty()
+                && !adjacentInventory.canInsertPatternIngredients(pattern, localAssignments)) {
+                return false;
+            }
+            for (ItemSatelliteAssignment assignment : itemSatelliteAssignments) {
+                if (!assignment.satellite.canReserveFor(pipe)
+                    || !assignment.satellite.canAcceptPatternInput(assignment.stack)) {
+                    return false;
+                }
+            }
+            for (FluidSatelliteAssignment assignment : fluidSatelliteAssignments) {
+                if (!assignment.satellite.canReserveFor(pipe)
+                    || !assignment.satellite.canAcceptPatternInput(assignment.fluid, assignment.amount)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private boolean dispatch() {
+            if (!canDispatch()) {
+                return false;
+            }
+            List<PipeItemsPatternSatelliteLogistics> reservedItemSatellites = new ArrayList<>();
+            List<PipeFluidPatternSatelliteLogistics> reservedFluidSatellites = new ArrayList<>();
+            if (!reserveSatellites(reservedItemSatellites, reservedFluidSatellites)) {
+                releaseSatellites(reservedItemSatellites, reservedFluidSatellites);
+                return false;
+            }
+            if (!localAssignments.isEmpty()
+                && !adjacentInventory.insertPatternIngredients(pattern, localAssignments)) {
+                releaseSatellites(reservedItemSatellites, reservedFluidSatellites);
+                return false;
+            }
+            for (ItemSatelliteAssignment assignment : itemSatelliteAssignments) {
+                int inserted = assignment.satellite.insertPatternInput(assignment.stack);
+                if (inserted != assignment.stack.getStackSize()) {
+                    releaseSatellites(reservedItemSatellites, reservedFluidSatellites);
+                    return false;
+                }
+            }
+            for (FluidSatelliteAssignment assignment : fluidSatelliteAssignments) {
+                int inserted = assignment.satellite.insertPatternInput(assignment.fluid, assignment.amount);
+                if (inserted != assignment.amount) {
+                    releaseSatellites(reservedItemSatellites, reservedFluidSatellites);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private PatternSatelliteDispatchBatch createSatelliteBatch(int patternSlot) {
+            return new PatternSatelliteDispatchBatch(
+                patternSlot,
+                new ArrayList<>(itemSatelliteAssignments),
+                new ArrayList<>(fluidSatelliteAssignments));
+        }
+
+        private boolean reserveSatellites(List<PipeItemsPatternSatelliteLogistics> itemSatellites,
+                                          List<PipeFluidPatternSatelliteLogistics> fluidSatellites) {
+            for (PipeItemsPatternSatelliteLogistics satellite : uniqueItemSatellites()) {
+                if (!satellite.reserveFor(pipe)) {
+                    return false;
+                }
+                itemSatellites.add(satellite);
+            }
+            for (PipeFluidPatternSatelliteLogistics satellite : uniqueFluidSatellites()) {
+                if (!satellite.reserveFor(pipe)) {
+                    return false;
+                }
+                fluidSatellites.add(satellite);
+            }
+            return true;
+        }
+
+        private List<PipeItemsPatternSatelliteLogistics> uniqueItemSatellites() {
+            List<PipeItemsPatternSatelliteLogistics> result = new ArrayList<>();
+            for (ItemSatelliteAssignment assignment : itemSatelliteAssignments) {
+                if (!result.contains(assignment.satellite)) {
+                    result.add(assignment.satellite);
+                }
+            }
+            return result;
+        }
+
+        private List<PipeFluidPatternSatelliteLogistics> uniqueFluidSatellites() {
+            List<PipeFluidPatternSatelliteLogistics> result = new ArrayList<>();
+            for (FluidSatelliteAssignment assignment : fluidSatelliteAssignments) {
+                if (!result.contains(assignment.satellite)) {
+                    result.add(assignment.satellite);
+                }
+            }
+            return result;
+        }
+
+        private void releaseSatellites(List<PipeItemsPatternSatelliteLogistics> itemSatellites,
+                                       List<PipeFluidPatternSatelliteLogistics> fluidSatellites) {
+            for (PipeItemsPatternSatelliteLogistics satellite : itemSatellites) {
+                satellite.releaseReservation(pipe);
+            }
+            for (PipeFluidPatternSatelliteLogistics satellite : fluidSatellites) {
+                satellite.releaseReservation(pipe);
+            }
+        }
+    }
+
+    private class PatternSatelliteDispatchBatch {
+
+        private final int patternSlot;
+        private final List<ItemSatelliteAssignment> itemAssignments;
+        private final List<FluidSatelliteAssignment> fluidAssignments;
+
+        private PatternSatelliteDispatchBatch(int patternSlot,
+                                              List<ItemSatelliteAssignment> itemAssignments,
+                                              List<FluidSatelliteAssignment> fluidAssignments) {
+            this.patternSlot = patternSlot;
+            this.itemAssignments = itemAssignments;
+            this.fluidAssignments = fluidAssignments;
+        }
+
+        private boolean isConsumed() {
+            for (PipeItemsPatternSatelliteLogistics satellite : uniqueItemSatellites()) {
+                if (!satellite.isReservationConsumed(pipe)) {
+                    return false;
+                }
+            }
+            for (PipeFluidPatternSatelliteLogistics satellite : uniqueFluidSatellites()) {
+                if (!satellite.isReservationConsumed(pipe)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private int size() {
+            return uniqueItemSatellites().size() + uniqueFluidSatellites().size();
+        }
+
+        private void retrieveAndRelease() {
+            for (ItemSatelliteAssignment assignment : itemAssignments) {
+                assignment.satellite.retrieveOrCancelToStorage(assignment.stack.clone(), false);
+            }
+            for (FluidSatelliteAssignment assignment : fluidAssignments) {
+                assignment.satellite.retrieveFluidToStorage(assignment.fluid, assignment.amount);
+            }
+            release();
+        }
+
+        private void release() {
+            for (PipeItemsPatternSatelliteLogistics satellite : uniqueItemSatellites()) {
+                satellite.releaseReservation(pipe);
+            }
+            for (PipeFluidPatternSatelliteLogistics satellite : uniqueFluidSatellites()) {
+                satellite.releaseReservation(pipe);
+            }
+        }
+
+        private List<PipeItemsPatternSatelliteLogistics> uniqueItemSatellites() {
+            List<PipeItemsPatternSatelliteLogistics> result = new ArrayList<>();
+            for (ItemSatelliteAssignment assignment : itemAssignments) {
+                if (!result.contains(assignment.satellite)) {
+                    result.add(assignment.satellite);
+                }
+            }
+            return result;
+        }
+
+        private List<PipeFluidPatternSatelliteLogistics> uniqueFluidSatellites() {
+            List<PipeFluidPatternSatelliteLogistics> result = new ArrayList<>();
+            for (FluidSatelliteAssignment assignment : fluidAssignments) {
+                if (!result.contains(assignment.satellite)) {
+                    result.add(assignment.satellite);
+                }
+            }
+            return result;
+        }
     }
 
     private static class ThrottledDebugEvent {

@@ -10,16 +10,19 @@ import logisticspipes.network.PacketHandler;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.network.packets.satpipe.PatternSatelliteSetName;
 import logisticspipes.network.packets.satpipe.SatPipeSetID;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.PipeItemsSatelliteLogistics;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.routing.IRouter;
 import logisticspipes.security.SecuritySettings;
 import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.InventoryHelper;
 import logisticspipes.utils.SidedInventoryMinecraftAdapter;
 import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.transactor.ITransactor;
 import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -32,9 +35,11 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -52,6 +57,8 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     private String satelliteUuid = UUID.randomUUID().toString();
     private String satelliteName = "";
     private final List<PendingCancelledArrival> pendingCancelledArrivals = new ArrayList<>();
+    private final Map<ItemIdentifier, Integer> reservationBaseline = new HashMap<>();
+    private int reservedOwnerRouter = -1;
 
     public PipeItemsPatternSatelliteLogistics(Item item) {
         super(item);
@@ -215,6 +222,81 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     }
 
     /**
+     * Returns true when this satellite is unlocked or already belongs to the same crafting pipe.
+     */
+    public boolean canReserveFor(PipeItemsPatternCraftingLogistics owner) {
+        int ownerRouter = ownerRouterId(owner);
+        return ownerRouter >= 0 && (reservedOwnerRouter < 0 || reservedOwnerRouter == ownerRouter);
+    }
+
+    /**
+     * Locks this satellite for a pattern crafting pipe before a complete buffered set is dispatched.
+     */
+    public boolean reserveFor(PipeItemsPatternCraftingLogistics owner) {
+        if (!canReserveFor(owner)) {
+            return false;
+        }
+        reservedOwnerRouter = ownerRouterId(owner);
+        return true;
+    }
+
+    /**
+     * Releases the reservation held by the owner pipe.
+     */
+    public void releaseReservation(PipeItemsPatternCraftingLogistics owner) {
+        int ownerRouter = ownerRouterId(owner);
+        if (ownerRouter >= 0 && reservedOwnerRouter != ownerRouter) {
+            return;
+        }
+        reservedOwnerRouter = -1;
+        reservationBaseline.clear();
+    }
+
+    /**
+     * Returns true once all items inserted during the current reservation have been consumed.
+     */
+    public boolean isReservationConsumed(PipeItemsPatternCraftingLogistics owner) {
+        int ownerRouter = ownerRouterId(owner);
+        if (ownerRouter < 0 || reservedOwnerRouter != ownerRouter) {
+            return true;
+        }
+        for (Map.Entry<ItemIdentifier, Integer> entry : reservationBaseline.entrySet()) {
+            if (countAdjacentItem(entry.getKey()) > entry.getValue()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks whether the adjacent satellite inventory can accept the complete stack.
+     */
+    public boolean canAcceptPatternInput(ItemIdentifierStack stack) {
+        return stack != null && stack.getStackSize() > 0 && roomForPatternInput(stack) >= stack.getStackSize();
+    }
+
+    /**
+     * Inserts a complete pattern input stack into the satellite's adjacent inventory.
+     */
+    public int insertPatternInput(ItemIdentifierStack stack) {
+        AdjacentTile target = getPatternTargetInventory();
+        if (stack == null || stack.getStackSize() <= 0 || target == null) {
+            return 0;
+        }
+        int before = countAdjacentItem(stack.getItem());
+        ITransactor transactor = InventoryHelper.getTransactorFor(target.tile, target.orientation.getOpposite());
+        if (transactor == null) {
+            return 0;
+        }
+        ItemStack inserted = transactor.add(stack.makeNormalStack(), target.orientation.getOpposite(), true);
+        int amount = inserted == null ? 0 : inserted.stackSize;
+        if (amount > 0) {
+            reservationBaseline.putIfAbsent(stack.getItem(), before);
+        }
+        return amount;
+    }
+
+    /**
      * Retrieves cancelled craft ingredients from the adjacent inventory and optionally catches still-traveling items.
      *
      * @param stack            item and amount that belonged to the cancelled craft
@@ -288,6 +370,73 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             queueToStorage(removed, tile.orientation);
         }
         return extracted;
+    }
+
+    private int roomForPatternInput(ItemIdentifierStack stack) {
+        AdjacentTile target = getPatternTargetInventory();
+        if (target == null) {
+            return 0;
+        }
+        IInventory inventory = getInsertableInventory(target);
+        if (inventory == null) {
+            return 0;
+        }
+        IInventoryUtil inventoryUtil = SimpleServiceLocator.inventoryUtilFactory
+            .getInventoryUtil(inventory, target.orientation.getOpposite());
+        return inventoryUtil.roomForItem(stack.getItem(), stack.getStackSize());
+    }
+
+    private int countAdjacentItem(ItemIdentifier item) {
+        if (item == null) {
+            return 0;
+        }
+        AdjacentTile target = getPatternTargetInventory();
+        if (target == null) {
+            return 0;
+        }
+        IInventory inventory = getInsertableInventory(target);
+        if (inventory == null) {
+            return 0;
+        }
+        IInventoryUtil inventoryUtil = SimpleServiceLocator.inventoryUtilFactory
+            .getInventoryUtil(inventory, target.orientation.getOpposite());
+        return inventoryUtil.itemCount(item);
+    }
+
+    private AdjacentTile getPatternTargetInventory() {
+        WorldUtil worldUtil = new WorldUtil(getWorld(), getX(), getY(), getZ());
+        ForgeDirection pointed = getPointedOrientation();
+        AdjacentTile fallback = null;
+        for (AdjacentTile tile : worldUtil.getAdjacentTileEntities(true)) {
+            if (!(tile.tile instanceof IInventory)
+                || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
+                continue;
+            }
+            if (tile.orientation == pointed) {
+                return tile;
+            }
+            if (fallback == null) {
+                fallback = tile;
+            }
+        }
+        return fallback;
+    }
+
+    private IInventory getInsertableInventory(AdjacentTile target) {
+        if (!(target.tile instanceof IInventory inventory)) {
+            return null;
+        }
+        if (inventory instanceof ISidedInventory) {
+            return new SidedInventoryMinecraftAdapter(
+                (ISidedInventory) inventory,
+                target.orientation.getOpposite(),
+                false);
+        }
+        return inventory;
+    }
+
+    private int ownerRouterId(PipeItemsPatternCraftingLogistics owner) {
+        return owner == null || owner.getRouter() == null ? -1 : owner.getRouter().getSimpleID();
     }
 
     private void queueToStorage(ItemStack stack, ForgeDirection from) {

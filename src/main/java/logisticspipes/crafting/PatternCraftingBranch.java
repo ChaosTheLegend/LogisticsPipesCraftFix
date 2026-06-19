@@ -146,39 +146,6 @@ public class PatternCraftingBranch {
     }
 
     /**
-     * Checks whether this branch has already launched a crafting order that has not produced its output yet.
-     */
-    boolean hasUnfinishedCraftingOrder() {
-        for (IOrderInfoProvider order : liveOrders) {
-            PatternCraftingOrder stagedOrder = PatternCraftingMonitorRegistry.find(order);
-            if (stagedOrder != null && stagedOrder.outputOrder != null && !stagedOrder.outputOrder.isFinished()) {
-                return true;
-            }
-            if (order.getType() == ResourceType.CRAFTING && !order.isFinished()) {
-                return true;
-            }
-        }
-        for (PatternCraftingBranch child : subRequests) {
-            if (child.hasUnfinishedCraftingOrder()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns true while this branch still owns crafting promise capacity.
-     */
-    boolean hasCraftingPromiseRemaining() {
-        for (PromiseState promise : promises) {
-            if (promise.promise.getType() == ResourceType.CRAFTING && promise.remainingAmount > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * The module that receives debug events from this branch
      *
      * @param module the module
@@ -323,8 +290,8 @@ public class PatternCraftingBranch {
     /**
      * Fulfils up to {@code amount} items from this branch while optionally routing the order to another requester.
      * <p>
-     * Pattern satellites use this to receive their assigned ingredients directly, without making those ingredients pass
-     * through the crafting pipe's local buffer.
+     * Most staged pattern ingredients use the original requester stored on the branch. The override remains for legacy
+     * callers that need to send a branch slice to a different item requester.
      */
     public int request(int amount, IRequestItems targetOverride, IAdditionalTargetInformation infoOverride) {
         return request(amount, targetOverride, null, infoOverride);
@@ -333,8 +300,8 @@ public class PatternCraftingBranch {
     /**
      * Fulfils up to {@code amount} fluids from this branch while optionally routing the order to another requester.
      * <p>
-     * Pattern fluid satellites use this to receive assigned fluid ingredients directly instead of passing those fluids
-     * through the crafting pipe's local buffer.
+     * Most staged pattern ingredients use the original requester stored on the branch. The override remains for legacy
+     * callers that need to send a branch slice to a different fluid requester.
      */
     public int request(int amount, IRequestFluid targetOverride, IAdditionalTargetInformation infoOverride) {
         return request(amount, null, targetOverride, infoOverride);

@@ -168,33 +168,6 @@ class PatternStagedCraftingScheduler {
 
     private void requestOrderIngredients(PatternCraftingOrder order, ItemStack pattern) {
         int orderableSets = orderableSetsForPattern(order, pattern);
-        if (usesSatelliteBlocking(pattern)) {
-            if (order.hasSatelliteBlockingBatchInProgress()) {
-                module.debugEventThrottled(
-                    "SCHED",
-                    60,
-                    "request ingredients slot=%d paused: satellite blocking batch still running remainingSets=%d orderableSets=%d",
-                    order.patternSlot,
-                    order.remainingSets,
-                    orderableSets);
-                return;
-            }
-            if (order.hasBlockingDependencyInFlight()) {
-                module.debugEventThrottled(
-                    "SCHED",
-                    60,
-                    "request ingredients slot=%d paused: blocking satellite dependency in flight remainingSets=%d orderableSets=%d",
-                    order.patternSlot,
-                    order.remainingSets,
-                    orderableSets);
-                return;
-            }
-            if (orderableSets > 0 && order.requestBlockingPrerequisite(pattern)) {
-                pipe.getCacheHolder().trigger(CacheTypes.Inventory);
-                module.markHudStateDirty();
-                return;
-            }
-        }
         int branchSets = order.availableSetsFromBranches(pattern);
         int sets = Math.min(order.remainingSets, orderableSets);
         sets = Math.min(sets, branchSets);
@@ -234,9 +207,6 @@ class PatternStagedCraftingScheduler {
                 order.patternSlot,
                 requestedSets,
                 order.remainingSets);
-        if (usesSatelliteBlocking(pattern)) {
-            order.markSatelliteBlockingBatchStarted();
-        }
         pipe.getCacheHolder().trigger(CacheTypes.Inventory);
         module.markHudStateDirty();
         if (order.isFullyRequested()) {
@@ -260,14 +230,14 @@ class PatternStagedCraftingScheduler {
             module.debugEventThrottled("SCHED", "orderable sets slot=%d result=0 cannot receive", order.patternSlot);
             return 0;
         }
-        List<IPatternStack> localIngredients = module.getLocalAggregatedIngredients(pattern);
-        if (localIngredients.isEmpty()) {
-            return capOrderableSetsForBlocking(pattern, orderableSetsWithoutLocalBuffer(order, pattern));
+        List<IPatternStack> ingredients = module.getAggregatedIngredients(pattern);
+        if (ingredients.isEmpty()) {
+            return 0;
         }
         AdjacentTile connected = module.getConnectedInventoryTile();
         int sets = Integer.MAX_VALUE;
         PipeItemsPatternCraftingLogistics.BlockingMode mode = module.getEffectiveBlockingMode();
-        for (IPatternStack ingredient : localIngredients) {
+        for (IPatternStack ingredient : ingredients) {
             int room = module.spaceForPatternIngredient(order.patternSlot, pattern, ingredient);
             if (mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING && connected != null
                     && adjacentInventory.isEmpty(connected)) {
@@ -276,58 +246,7 @@ class PatternStagedCraftingScheduler {
             room -= module.requestedIngredientAmount(order.patternSlot, pattern, ingredient);
             sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
         }
-        return capOrderableSetsForBlocking(pattern, sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets));
-    }
-
-    /**
-     * Allows staged orders whose ingredients are routed away from this pipe to progress.
-     * <p>
-     * Satellite-only patterns do not reserve local buffer space, so the normal local-capacity calculation has no
-     * ingredient to measure and would otherwise return zero forever.
-     */
-    private int orderableSetsWithoutLocalBuffer(PatternCraftingOrder order, ItemStack pattern) {
-        if (!hasAnyIngredientTarget(pattern)) {
-            return 0;
-        }
-        module.debugEventThrottled(
-            "SCHED",
-            100,
-            "orderable sets slot=%d localBuffer=none allowing remainingSets=%d",
-            order.patternSlot,
-            order.remainingSets);
-        return Math.max(0, order.remainingSets);
-    }
-
-    private int capOrderableSetsForBlocking(ItemStack pattern, int sets) {
-        if (!usesSatelliteBlocking(pattern)) {
-            return sets;
-        }
-        return Math.min(sets, 1);
-    }
-
-    private boolean usesSatelliteBlocking(ItemStack pattern) {
-        return module.getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
-            && hasSatelliteTarget(pattern);
-    }
-
-    /**
-     * Checks whether a pattern still has ingredient work even though none of it is local to this pipe.
-     */
-    private boolean hasAnyIngredientTarget(ItemStack pattern) {
-        for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
-            if (ingredient.stack() != null && ingredient.stack().getAmount() > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasSatelliteTarget(ItemStack pattern) {
-        for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
-            if (ingredient.stack() != null && ingredient.stack().getAmount() > 0 && !ingredient.isLocal()) {
-                return true;
-            }
-        }
-        return false;
+        sets = sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
+        return mode == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING ? Math.min(sets, 1) : sets;
     }
 }

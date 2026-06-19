@@ -8,9 +8,9 @@ import logisticspipes.interfaces.routing.IRequestItems;
 /**
  * One pattern input ingredient together with the destination that should receive it.
  * <p>
- * Null item and fluid targets mean the ingredient is local to the pattern crafting pipe and must be buffered before the
- * craft is inserted into the adjacent target. A non-null target routes the ingredient directly to a linked pattern
- * satellite of the matching transport type.
+ * Null item and fluid targets mean the ingredient is inserted into the crafting pipe's adjacent target. A non-null
+ * target means the ingredient is buffered by the main pattern crafting pipe first and dispatched to the linked pattern
+ * satellite only when a complete pattern set is ready.
  */
 @Desugar
 record PatternIngredientTarget(int inputSlot, IPatternStack stack, IRequestItems itemTarget,
@@ -18,5 +18,9 @@ record PatternIngredientTarget(int inputSlot, IPatternStack stack, IRequestItems
 
     boolean isLocal() {
         return itemTarget == null && fluidTarget == null;
+    }
+
+    boolean hasSatelliteTarget() {
+        return !isLocal();
     }
 }
