@@ -1,16 +1,27 @@
 package logisticspipes.crafting;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.logisticspipes.IRoutedItem;
+import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.network.GuiIDs;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.network.packets.satpipe.PatternSatelliteSetName;
 import logisticspipes.network.packets.satpipe.SatPipeSetID;
 import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.routing.IRouter;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.tuples.Pair;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTankInfo;
+import net.minecraftforge.fluids.IFluidHandler;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -139,6 +150,61 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
             container.markDirty();
             container.sendUpdateToClient();
         }
+    }
+
+    /**
+     * Retrieves cancelled craft fluid from adjacent tanks and routes it back into normal storage.
+     *
+     * @return amount that was drained and queued for storage routing
+     */
+    public int retrieveFluidToStorage(FluidIdentifier fluid, int amount) {
+        if (fluid == null || amount <= 0 || MainProxy.isClient(getWorld())) {
+            return 0;
+        }
+        int remaining = amount;
+        int retrieved = 0;
+        for (Pair<TileEntity, ForgeDirection> pair : getAdjacentTanks(false)) {
+            if (remaining <= 0) {
+                break;
+            }
+            if (!(pair.getValue1() instanceof IFluidHandler tank)) {
+                continue;
+            }
+            ForgeDirection side = pair.getValue2().getOpposite();
+            FluidTankInfo[] tanks = tank.getTankInfo(side);
+            if (tanks == null) {
+                continue;
+            }
+            for (FluidTankInfo tankInfo : tanks) {
+                if (remaining <= 0) {
+                    break;
+                }
+                if (tankInfo == null || tankInfo.fluid == null || !fluid.equals(FluidIdentifier.get(tankInfo.fluid))) {
+                    continue;
+                }
+                int toDrain = Math.min(remaining, tankInfo.fluid.amount);
+                FluidStack simulated = tank.drain(side, toDrain, false);
+                if (simulated == null || simulated.amount <= 0 || !fluid.equals(FluidIdentifier.get(simulated))) {
+                    continue;
+                }
+                FluidStack drained = tank.drain(side, simulated.amount, true);
+                if (drained == null || drained.amount <= 0 || !fluid.equals(FluidIdentifier.get(drained))) {
+                    continue;
+                }
+                queueFluidToStorage(drained, pair.getValue2());
+                remaining -= drained.amount;
+                retrieved += drained.amount;
+            }
+        }
+        return retrieved;
+    }
+
+    private void queueFluidToStorage(FluidStack fluid, ForgeDirection from) {
+        ItemIdentifierStack container = SimpleServiceLocator.logisticsFluidManager.getFluidContainer(fluid);
+        IRoutedItem routedItem = SimpleServiceLocator.routedItemHelper.createNewTravelItem(container);
+        routedItem.setDestination(-1);
+        routedItem.setTransportMode(TransportMode.Active);
+        queueRoutedItem(routedItem, from == null ? ForgeDirection.UNKNOWN : from);
     }
 
     @Override

@@ -168,6 +168,33 @@ class PatternStagedCraftingScheduler {
 
     private void requestOrderIngredients(PatternCraftingOrder order, ItemStack pattern) {
         int orderableSets = orderableSetsForPattern(order, pattern);
+        if (usesSatelliteBlocking(pattern)) {
+            if (order.hasSatelliteBlockingBatchInProgress()) {
+                module.debugEventThrottled(
+                    "SCHED",
+                    60,
+                    "request ingredients slot=%d paused: satellite blocking batch still running remainingSets=%d orderableSets=%d",
+                    order.patternSlot,
+                    order.remainingSets,
+                    orderableSets);
+                return;
+            }
+            if (order.hasBlockingDependencyInFlight()) {
+                module.debugEventThrottled(
+                    "SCHED",
+                    60,
+                    "request ingredients slot=%d paused: blocking satellite dependency in flight remainingSets=%d orderableSets=%d",
+                    order.patternSlot,
+                    order.remainingSets,
+                    orderableSets);
+                return;
+            }
+            if (orderableSets > 0 && order.requestBlockingPrerequisite(pattern)) {
+                pipe.getCacheHolder().trigger(CacheTypes.Inventory);
+                module.markHudStateDirty();
+                return;
+            }
+        }
         int branchSets = order.availableSetsFromBranches(pattern);
         int sets = Math.min(order.remainingSets, orderableSets);
         sets = Math.min(sets, branchSets);
@@ -207,6 +234,9 @@ class PatternStagedCraftingScheduler {
                 order.patternSlot,
                 requestedSets,
                 order.remainingSets);
+        if (usesSatelliteBlocking(pattern)) {
+            order.markSatelliteBlockingBatchStarted();
+        }
         pipe.getCacheHolder().trigger(CacheTypes.Inventory);
         module.markHudStateDirty();
         if (order.isFullyRequested()) {
@@ -232,7 +262,7 @@ class PatternStagedCraftingScheduler {
         }
         List<IPatternStack> localIngredients = module.getLocalAggregatedIngredients(pattern);
         if (localIngredients.isEmpty()) {
-            return orderableSetsWithoutLocalBuffer(order, pattern);
+            return capOrderableSetsForBlocking(pattern, orderableSetsWithoutLocalBuffer(order, pattern));
         }
         AdjacentTile connected = module.getConnectedInventoryTile();
         int sets = Integer.MAX_VALUE;
@@ -246,7 +276,7 @@ class PatternStagedCraftingScheduler {
             room -= module.requestedIngredientAmount(order.patternSlot, pattern, ingredient);
             sets = Math.min(sets, Math.max(0, room) / ingredient.getAmount());
         }
-        return sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets);
+        return capOrderableSetsForBlocking(pattern, sets == Integer.MAX_VALUE ? 0 : Math.max(0, sets));
     }
 
     /**
@@ -268,12 +298,33 @@ class PatternStagedCraftingScheduler {
         return Math.max(0, order.remainingSets);
     }
 
+    private int capOrderableSetsForBlocking(ItemStack pattern, int sets) {
+        if (!usesSatelliteBlocking(pattern)) {
+            return sets;
+        }
+        return Math.min(sets, 1);
+    }
+
+    private boolean usesSatelliteBlocking(ItemStack pattern) {
+        return module.getEffectiveBlockingMode() == PipeItemsPatternCraftingLogistics.BlockingMode.BLOCKING
+            && hasSatelliteTarget(pattern);
+    }
+
     /**
      * Checks whether a pattern still has ingredient work even though none of it is local to this pipe.
      */
     private boolean hasAnyIngredientTarget(ItemStack pattern) {
         for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
             if (ingredient.stack() != null && ingredient.stack().getAmount() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasSatelliteTarget(ItemStack pattern) {
+        for (PatternIngredientTarget ingredient : module.getIngredientTargets(pattern)) {
+            if (ingredient.stack() != null && ingredient.stack().getAmount() > 0 && !ingredient.isLocal()) {
                 return true;
             }
         }

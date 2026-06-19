@@ -125,6 +125,60 @@ public class PatternCraftingBranch {
     }
 
     /**
+     * Returns the number of live logistics orders that have been spawned from this branch.
+     * <p>
+     * Callers use this as a cursor before requesting a branch so they can inspect only the orders created by that
+     * specific request step.
+     */
+    int liveOrderCount() {
+        return liveOrders.size();
+    }
+
+    /**
+     * Returns a snapshot of live orders that were added after {@code index}.
+     */
+    List<IOrderInfoProvider> liveOrdersFrom(int index) {
+        int start = Math.max(0, index);
+        if (start >= liveOrders.size()) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(liveOrders.subList(start, liveOrders.size()));
+    }
+
+    /**
+     * Checks whether this branch has already launched a crafting order that has not produced its output yet.
+     */
+    boolean hasUnfinishedCraftingOrder() {
+        for (IOrderInfoProvider order : liveOrders) {
+            PatternCraftingOrder stagedOrder = PatternCraftingMonitorRegistry.find(order);
+            if (stagedOrder != null && stagedOrder.outputOrder != null && !stagedOrder.outputOrder.isFinished()) {
+                return true;
+            }
+            if (order.getType() == ResourceType.CRAFTING && !order.isFinished()) {
+                return true;
+            }
+        }
+        for (PatternCraftingBranch child : subRequests) {
+            if (child.hasUnfinishedCraftingOrder()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true while this branch still owns crafting promise capacity.
+     */
+    boolean hasCraftingPromiseRemaining() {
+        for (PromiseState promise : promises) {
+            if (promise.promise.getType() == ResourceType.CRAFTING && promise.remainingAmount > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * The module that receives debug events from this branch
      *
      * @param module the module

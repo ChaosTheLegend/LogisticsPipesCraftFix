@@ -1,6 +1,10 @@
 package logisticspipes.crafting;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.interfaces.IInventoryUtil;
+import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.logisticspipes.IRoutedItem;
+import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
 import logisticspipes.network.GuiIDs;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.abstractpackets.ModernPacket;
@@ -8,18 +12,28 @@ import logisticspipes.network.packets.satpipe.PatternSatelliteSetName;
 import logisticspipes.network.packets.satpipe.SatPipeSetID;
 import logisticspipes.pipes.PipeItemsSatelliteLogistics;
 import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.routing.IRouter;
 import logisticspipes.security.SecuritySettings;
+import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.SidedInventoryMinecraftAdapter;
+import logisticspipes.utils.WorldUtil;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ChatComponentText;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -32,10 +46,12 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             .newSetFromMap(new WeakHashMap<>());
     private static final String UUID_TAG = "patternSatelliteUuid";
     private static final String NAME_TAG = "patternSatelliteName";
+    private static final int CANCELLED_ARRIVAL_TIMEOUT = 640;
 
     @Getter
     private String satelliteUuid = UUID.randomUUID().toString();
     private String satelliteName = "";
+    private final List<PendingCancelledArrival> pendingCancelledArrivals = new ArrayList<>();
 
     public PipeItemsPatternSatelliteLogistics(Item item) {
         super(item);
@@ -198,6 +214,140 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         }
     }
 
+    /**
+     * Retrieves cancelled craft ingredients from the adjacent inventory and optionally catches still-traveling items.
+     *
+     * @param stack            item and amount that belonged to the cancelled craft
+     * @param interceptMissing whether missing amounts should be intercepted if they arrive shortly after cancellation
+     * @return amount that was already extracted from adjacent inventories
+     */
+    public int retrieveOrCancelToStorage(ItemIdentifierStack stack, boolean interceptMissing) {
+        return retrieveOrCancelToStorage(stack, interceptMissing, -1, PatternTargetInformation.NO_INPUT_SLOT);
+    }
+
+    /**
+     * Retrieves cancelled craft ingredients and only intercepts late arrivals for the matching pattern input.
+     */
+    public int retrieveOrCancelToStorage(ItemIdentifierStack stack, boolean interceptMissing, int patternSlot,
+                                         int inputSlot) {
+        if (stack == null || stack.getStackSize() <= 0 || MainProxy.isClient(getWorld())) {
+            return 0;
+        }
+        int extracted = retrieveLandedItemsToStorage(stack);
+        int missing = stack.getStackSize() - extracted;
+        if (interceptMissing && missing > 0) {
+            addPendingCancelledArrival(stack.getItem(), missing, patternSlot, inputSlot);
+        }
+        return extracted;
+    }
+
+    /**
+     * Intercepts cancelled deliveries before the transport layer inserts them into the satellite inventory.
+     */
+    @Override
+    public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {
+        super.itemArrived(item, info);
+        if (item == null || item.getStackSize() <= 0 || MainProxy.isClient(getWorld())) {
+            return;
+        }
+        purgeExpiredCancelledArrivals();
+        int cancelled = removePendingCancelledArrival(item, info);
+        if (cancelled <= 0) {
+            return;
+        }
+        ItemIdentifierStack rerouted = new ItemIdentifierStack(item.getItem(), cancelled);
+        queueToStorage(rerouted.makeNormalStack(), getPointedOrientation());
+        item.lowerStackSize(cancelled);
+    }
+
+    private int retrieveLandedItemsToStorage(ItemIdentifierStack stack) {
+        int remaining = stack.getStackSize();
+        int extracted = 0;
+        WorldUtil worldUtil = new WorldUtil(getWorld(), getX(), getY(), getZ());
+        for (AdjacentTile tile : worldUtil.getAdjacentTileEntities(true)) {
+            if (remaining <= 0) {
+                break;
+            }
+            if (!(tile.tile instanceof IInventory base) || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
+                continue;
+            }
+            if (base instanceof ISidedInventory) {
+                base = new SidedInventoryMinecraftAdapter(
+                    (ISidedInventory) base,
+                    tile.orientation.getOpposite(),
+                    true);
+            }
+            IInventoryUtil inventory = SimpleServiceLocator.inventoryUtilFactory
+                .getInventoryUtil(base, tile.orientation.getOpposite());
+            ItemStack removed = inventory.getMultipleItems(stack.getItem(), remaining);
+            if (removed == null || removed.stackSize <= 0) {
+                continue;
+            }
+            remaining -= removed.stackSize;
+            extracted += removed.stackSize;
+            queueToStorage(removed, tile.orientation);
+        }
+        return extracted;
+    }
+
+    private void queueToStorage(ItemStack stack, ForgeDirection from) {
+        if (stack == null || stack.stackSize <= 0) {
+            return;
+        }
+        ForgeDirection safeFrom = from == null ? ForgeDirection.UNKNOWN : from;
+        IRoutedItem routedItem = SimpleServiceLocator.routedItemHelper.createNewTravelItem(stack);
+        routedItem.setDestination(-1);
+        routedItem.setTransportMode(TransportMode.Active);
+        queueRoutedItem(routedItem, safeFrom);
+    }
+
+    private void addPendingCancelledArrival(ItemIdentifier item, int amount, int patternSlot, int inputSlot) {
+        if (item == null || amount <= 0) {
+            return;
+        }
+        long expires = getWorld() == null ? 0 : getWorld().getTotalWorldTime() + CANCELLED_ARRIVAL_TIMEOUT;
+        for (PendingCancelledArrival pending : pendingCancelledArrivals) {
+            if (pending.matches(item, patternSlot, inputSlot)) {
+                pending.amount += amount;
+                pending.expires = Math.max(pending.expires, expires);
+                return;
+            }
+        }
+        pendingCancelledArrivals.add(new PendingCancelledArrival(item, amount, expires, patternSlot, inputSlot));
+    }
+
+    private int removePendingCancelledArrival(ItemIdentifierStack arriving, IAdditionalTargetInformation info) {
+        int matched = 0;
+        int available = arriving.getStackSize();
+        Iterator<PendingCancelledArrival> iterator = pendingCancelledArrivals.iterator();
+        while (iterator.hasNext() && matched < available) {
+            PendingCancelledArrival pending = iterator.next();
+            if (!pending.matches(arriving, info)) {
+                continue;
+            }
+            int used = Math.min(pending.amount, available - matched);
+            pending.amount -= used;
+            matched += used;
+            if (pending.amount <= 0) {
+                iterator.remove();
+            }
+        }
+        return matched;
+    }
+
+    private void purgeExpiredCancelledArrivals() {
+        if (getWorld() == null) {
+            return;
+        }
+        long now = getWorld().getTotalWorldTime();
+        Iterator<PendingCancelledArrival> iterator = pendingCancelledArrivals.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().expires <= now) {
+                iterator.remove();
+            }
+        }
+    }
+
     @Override
     protected int findId(int increment) {
         if (MainProxy.isClient(getWorld())) {
@@ -340,5 +490,39 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             return;
         }
         ALL_PATTERN_SATELLITES.remove(this);
+    }
+
+    private static class PendingCancelledArrival {
+
+        private final ItemIdentifier item;
+        private final int patternSlot;
+        private final int inputSlot;
+        private int amount;
+        private long expires;
+
+        private PendingCancelledArrival(ItemIdentifier item, int amount, long expires, int patternSlot, int inputSlot) {
+            this.item = item;
+            this.amount = amount;
+            this.expires = expires;
+            this.patternSlot = patternSlot;
+            this.inputSlot = inputSlot;
+        }
+
+        private boolean matches(ItemIdentifier item, int patternSlot, int inputSlot) {
+            return this.item.equals(item) && this.patternSlot == patternSlot && this.inputSlot == inputSlot;
+        }
+
+        private boolean matches(ItemIdentifierStack arriving, IAdditionalTargetInformation info) {
+            if (!item.equals(arriving.getItem())) {
+                return false;
+            }
+            if (patternSlot < 0) {
+                return true;
+            }
+            if (!(info instanceof PatternTargetInformation target)) {
+                return false;
+            }
+            return target.patternSlot() == patternSlot && target.inputSlot() == inputSlot;
+        }
     }
 }

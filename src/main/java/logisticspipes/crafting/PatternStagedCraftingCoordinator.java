@@ -20,6 +20,7 @@ import net.minecraft.nbt.NBTTagList;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -167,6 +168,9 @@ class PatternStagedCraftingCoordinator {
                         outputOrder,
                         module,
                         requestedIngredient);
+                if (restored.runtimeState != null) {
+                    order.readRuntimeState(restored.runtimeState);
+                }
                 outputOrders.add(order);
                 if (!order.isFullyRequested() && !outputOrder.isFinished()) {
                     stagedCrafts.add(order);
@@ -248,12 +252,13 @@ class PatternStagedCraftingCoordinator {
     }
 
     void releaseAll() {
-        for (PatternCraftingOrder order : stagedCrafts) {
+        for (PatternCraftingOrder order : new ArrayList<>(outputOrders)) {
             module.debugEvent(
                     "CANCEL",
                     "removal releases staged order slot=%d remainingSets=%d",
                     order.patternSlot,
                     order.remainingSets);
+            order.retrieveSatelliteDeliveries();
             order.releaseReservations();
         }
         stagedCrafts.clear();
@@ -277,23 +282,73 @@ class PatternStagedCraftingCoordinator {
                 ordersToCancel.add(order);
             }
         }
+        collectOrdersTargetingCancelledSlots(ordersToCancel);
+        Set<PatternCraftingOrder> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         for (PatternCraftingOrder order : ordersToCancel) {
-            module.debugEvent(
-                    "CANCEL",
-                    "cancel staged order slot=%d remainingSets=%d",
-                    order.patternSlot,
-                    order.remainingSets);
-            order.releaseReservations();
-            removeOutputOrder(order.outputOrder);
-            PatternCraftingMonitorRegistry.unregister(order.outputOrder);
-            stagedCrafts.remove(order);
-            outputOrders.remove(order);
-            cancelled = true;
+            cancelled |= cancelOrderAndChildren(order, visited);
         }
         if (cancelled) {
             module.markHudStateDirty();
         }
         return cancelled;
+    }
+
+    private boolean cancelOrderAndChildren(PatternCraftingOrder order, Set<PatternCraftingOrder> visited) {
+        if (order == null || !visited.add(order)) {
+            return false;
+        }
+        for (PatternCraftingOrder child : order.getChildStagedOrders()) {
+            cancelOrderAndChildren(child, visited);
+        }
+        module.debugEvent(
+            "CANCEL",
+            "cancel staged order slot=%d remainingSets=%d",
+            order.patternSlot,
+            order.remainingSets);
+        order.retrieveSatelliteDeliveries();
+        order.releaseReservations();
+        removeOutputOrder(order.outputOrder);
+        if (order.outputOrder != null) {
+            PatternCraftingMonitorRegistry.unregister(order.outputOrder);
+        }
+        stagedCrafts.remove(order);
+        outputOrders.remove(order);
+        return true;
+    }
+
+    private void collectOrdersTargetingCancelledSlots(List<PatternCraftingOrder> ordersToCancel) {
+        Set<Integer> cancelledSlots = new HashSet<>();
+        for (PatternCraftingOrder order : ordersToCancel) {
+            cancelledSlots.add(order.patternSlot);
+        }
+        boolean added;
+        do {
+            added = false;
+            for (PatternCraftingOrder order : outputOrders) {
+                if (ordersToCancel.contains(order)) {
+                    continue;
+                }
+                PatternTargetInformation target = getPatternTarget(order);
+                if (target == null || !cancelledSlots.contains(target.patternSlot())) {
+                    continue;
+                }
+                ordersToCancel.add(order);
+                cancelledSlots.add(order.patternSlot);
+                added = true;
+            }
+        } while (added);
+    }
+
+    private PatternTargetInformation getPatternTarget(PatternCraftingOrder order) {
+        if (order.outputOrder instanceof LogisticsItemOrder) {
+            IAdditionalTargetInformation info = ((LogisticsItemOrder) order.outputOrder).getInformation();
+            return info instanceof PatternTargetInformation ? (PatternTargetInformation) info : null;
+        }
+        if (order.outputOrder instanceof LogisticsFluidOrder) {
+            IAdditionalTargetInformation info = ((LogisticsFluidOrder) order.outputOrder).getInformation();
+            return info instanceof PatternTargetInformation ? (PatternTargetInformation) info : null;
+        }
+        return null;
     }
 
     private void registerOrder(int patternSlot, int resultAmountPerSet, PatternCraftingBranch branch,
@@ -389,6 +444,7 @@ class PatternStagedCraftingCoordinator {
                 branches.appendTag(branchTag);
             }
             orderTag.setTag(INGREDIENT_BRANCHES_TAG, branches);
+            order.writeRuntimeState(orderTag);
             list.appendTag(orderTag);
             savedOutputOrders.add(order.outputOrder);
         }
@@ -432,6 +488,7 @@ class PatternStagedCraftingCoordinator {
             order.resultAmountPerSet = orderTag.getInteger(RESULT_AMOUNT_PER_SET_TAG);
             order.remainingSets = orderTag.getInteger(REMAINING_SETS_TAG);
             order.outputOrder = PatternCraftingPersistence.readOrder(orderTag.getCompoundTag(OUTPUT_ORDER_TAG));
+            order.runtimeState = orderTag;
             NBTTagList branches = orderTag.getTagList(INGREDIENT_BRANCHES_TAG, TAG_COMPOUND);
             for (int branch = 0; branch < branches.tagCount(); branch++) {
                 order.ingredientBranches.add(PatternCraftingBranch.readFromNBT(branches.getCompoundTagAt(branch)));
@@ -455,6 +512,7 @@ class PatternStagedCraftingCoordinator {
         private int resultAmountPerSet;
         private int remainingSets;
         private PatternCraftingPersistence.RestoredOrder outputOrder;
+        private NBTTagCompound runtimeState;
         private final List<PatternCraftingBranch> ingredientBranches = new ArrayList<>();
     }
 }
