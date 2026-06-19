@@ -1,7 +1,5 @@
 package logisticspipes.pipes;
 
-import buildcraft.transport.TravelingItem;
-import cpw.mods.fml.common.Optional;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModulePatternCrafting;
@@ -32,7 +30,6 @@ import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.pipes.basic.fluid.FluidRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.proxy.buildcraft.LPRoutedBCTravelingItem;
 import logisticspipes.request.ICraftingTemplate;
 import logisticspipes.request.IPromise;
 import logisticspipes.request.RequestTree;
@@ -118,28 +115,17 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
 
             @Override
             public boolean canPipeConnect(TileEntity tile, ForgeDirection dir) {
-                if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
-                    return super.canPipeConnect(tile, dir);
+                if (super.canPipeConnect(tile, dir)) {
+                    return true;
                 }
-                if (tile instanceof IInventory || tile instanceof IFluidHandler) {
+                if (SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)) {
                     return false;
                 }
-                return super.canPipeConnect(tile, dir);
-            }
-
-            /**
-             * Accepts routed BuildCraft transport items while ignoring passive items pushed by foreign pipes.
-             * <p>
-             * Pattern crafting ingredients must arrive with routing information so the module can match them to the
-             * staged order that reserved the buffer space.
-             */
-            @Override
-            @Optional.Method(modid = "BuildCraft|Transport")
-            public void injectItem(TravelingItem item, ForgeDirection inputOrientation) {
-                if (item instanceof LPRoutedBCTravelingItem
-                    || LPRoutedBCTravelingItem.restoreFromExtraNBTData(item) != null) {
-                    super.injectItem(item, inputOrientation);
+                if (tile instanceof IFluidHandler handler) {
+                    return handler.getTankInfo(dir.getOpposite()) != null
+                        && handler.getTankInfo(dir.getOpposite()).length > 0;
                 }
+                return false;
             }
         }, item);
         module = new ModulePatternCrafting(this);
@@ -166,7 +152,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             return false;
         }
         if (tile instanceof IInventory || tile instanceof IFluidHandler) {
-            return true;
+            return !targetSelector.isSelectedInventory(tile, dir);
         }
         return true;
     }

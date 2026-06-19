@@ -59,6 +59,15 @@ public class PatternCraftingTargetSelector {
     }
 
     /**
+     * Checks whether a neighboring tile is the selected crafting target side.
+     */
+    public boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
+        AdjacentTile selected = getConnectedInventoryTile();
+        return selected != null && selected.tile == tile
+            && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
+    }
+
+    /**
      * Advances the selected target to the next adjacent inventory or fluid handler and reports the choice to the
      * player.
      */
@@ -189,6 +198,18 @@ public class PatternCraftingTargetSelector {
     }
 
     /**
+     * Finds the side currently occupied by a neighboring tile.
+     */
+    private ForgeDirection getDirectionTo(TileEntity tile) {
+        for (ForgeDirection direction : ForgeDirection.VALID_DIRECTIONS) {
+            if (getAdjacentTile(direction) == tile) {
+                return direction;
+            }
+        }
+        return ForgeDirection.UNKNOWN;
+    }
+
+    /**
      * Checks whether a neighboring tile is a non-pipe inventory or tank that the pattern pipe may use as crafting
      * target.
      * <p>
@@ -202,7 +223,8 @@ public class PatternCraftingTargetSelector {
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
         return (hasInventory || hasTank) && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
-            && !pipe.isSideBlocked(direction, false);
+            && !pipe.isSideBlocked(direction, false)
+            && pipe.transport.canPipeConnect(tile, direction);
     }
 
     /**
