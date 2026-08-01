@@ -1,0 +1,148 @@
+package logisticspipes.network.packets.crafting.requesttable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
+
+import logisticspipes.crafting.requesttable.RequestTableNetworkEntry;
+import logisticspipes.crafting.requesttable.RequestTablePipe;
+import logisticspipes.network.PacketHandler;
+import logisticspipes.network.abstractpackets.IntegerCoordinatesPacket;
+import logisticspipes.network.abstractpackets.ModernPacket;
+import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import logisticspipes.utils.tuples.Pair;
+
+/**
+ * Requests a fresh combined network list for the new request table GUI.
+ */
+public class RequestTableRefreshPacket extends IntegerCoordinatesPacket {
+
+    public RequestTableRefreshPacket(int id) {
+        super(id);
+    }
+
+    @Override
+    public ModernPacket template() {
+        return new RequestTableRefreshPacket(getId());
+    }
+
+    @Override
+    public void processPacket(EntityPlayer player) {
+        LogisticsTileGenericPipe tile = MainProxy.proxy
+                .getPipeInDimensionAt(getInteger(), getPosX(), getPosY(), getPosZ(), player);
+        if (tile == null || !(tile.pipe instanceof RequestTablePipe)) {
+            return;
+        }
+        RequestTablePipe table = (RequestTablePipe) tile.pipe;
+        List<RequestTableNetworkEntry> entries = buildEntries(table);
+        MainProxy.sendPacketToPlayer(
+                PacketHandler.getPacket(RequestTableContentPacket.class).setEntries(entries)
+                        .setTilePos(table.container),
+                player);
+    }
+
+    /**
+     * Builds the combined network/internal request-table entry list.
+     */
+    public static List<RequestTableNetworkEntry> buildEntries(RequestTablePipe table) {
+        List<RequestTableNetworkEntry> entries = new ArrayList<>();
+        table.updateStorageUpgrades();
+        Map<ItemIdentifier, Integer> availableItems = SimpleServiceLocator.logisticsManager
+                .getAvailableItems(table.getRouter().getIRoutersByCost());
+        Map<ItemIdentifier, Integer> internalItems = getInternalItems(table);
+        LinkedList<ItemIdentifier> craftableItems = SimpleServiceLocator.logisticsManager
+                .getCraftableItems(table.getRouter().getIRoutersByCost());
+
+        Set<ItemIdentifier> itemIds = new HashSet<>();
+        itemIds.addAll(availableItems.keySet());
+        itemIds.addAll(internalItems.keySet());
+        for (ItemIdentifier item : itemIds) {
+            if (item.isFluidContainer()) {
+                continue;
+            }
+            int networkAmount = getAmount(availableItems, item);
+            int internalAmount = getAmount(internalItems, item);
+            entries.add(
+                    new RequestTableNetworkEntry(
+                            item.makeStack(networkAmount + internalAmount),
+                            false,
+                            networkAmount,
+                            internalAmount));
+        }
+        for (ItemIdentifier item : craftableItems) {
+            if (!itemIds.contains(item) && !item.isFluidContainer()) {
+                entries.add(new RequestTableNetworkEntry(item.makeStack(0), false, 0, 0));
+            }
+        }
+
+        TreeSet<ItemIdentifierStack> availableFluids = SimpleServiceLocator.logisticsFluidManager
+                .getAvailableFluid(table.getRouter().getIRoutersByCost());
+        Map<ItemIdentifier, Integer> networkFluids = new HashMap<>();
+        Set<ItemIdentifier> availableFluidIds = new HashSet<>();
+        for (ItemIdentifierStack fluid : availableFluids) {
+            availableFluidIds.add(fluid.getItem());
+            networkFluids.put(fluid.getItem(), fluid.getStackSize());
+        }
+        Map<ItemIdentifier, Integer> internalFluids = getInternalFluids(table);
+        Set<ItemIdentifier> fluidIds = new HashSet<>();
+        fluidIds.addAll(networkFluids.keySet());
+        fluidIds.addAll(internalFluids.keySet());
+        for (ItemIdentifier fluid : fluidIds) {
+            int networkAmount = getAmount(networkFluids, fluid);
+            int internalAmount = getAmount(internalFluids, fluid);
+            entries.add(
+                    new RequestTableNetworkEntry(
+                            fluid.makeStack(networkAmount + internalAmount),
+                            true,
+                            networkAmount,
+                            internalAmount));
+        }
+        for (ItemIdentifier item : craftableItems) {
+            if (item.isFluidContainer() && !availableFluidIds.contains(item) && !internalFluids.containsKey(item)) {
+                entries.add(new RequestTableNetworkEntry(item.makeStack(0), true, 0, 0));
+            }
+        }
+        return entries;
+    }
+
+    private static Map<ItemIdentifier, Integer> getInternalItems(RequestTablePipe table) {
+        Map<ItemIdentifier, Integer> items = new HashMap<>();
+        for (Pair<ItemStack, Integer> entry : table.inv) {
+            ItemStack stack = entry.getValue1();
+            if (stack != null) {
+                items.merge(ItemIdentifier.get(stack), stack.stackSize, Integer::sum);
+            }
+        }
+        return items;
+    }
+
+    private static Map<ItemIdentifier, Integer> getInternalFluids(RequestTablePipe table) {
+        Map<ItemIdentifier, Integer> fluids = new HashMap<>();
+        for (int slot = 0; slot < table.getFluidStorage().getSizeInventory(); slot++) {
+            FluidStack stack = table.getFluidStorage().getFluid(slot);
+            if (stack != null) {
+                fluids.merge(FluidIdentifier.get(stack).getItemIdentifier(), stack.amount, Integer::sum);
+            }
+        }
+        return fluids;
+    }
+
+    private static int getAmount(Map<ItemIdentifier, Integer> amounts, ItemIdentifier item) {
+        Integer amount = amounts.get(item);
+        return amount == null ? 0 : amount;
+    }
+}

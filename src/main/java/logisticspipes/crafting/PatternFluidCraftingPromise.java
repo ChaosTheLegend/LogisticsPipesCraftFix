@@ -1,0 +1,40 @@
+package logisticspipes.crafting;
+
+import logisticspipes.interfaces.routing.IProvideFluids;
+import logisticspipes.routing.FluidLogisticsPromise;
+import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
+import logisticspipes.utils.FluidIdentifier;
+import lombok.Getter;
+
+@Getter
+public class PatternFluidCraftingPromise extends FluidLogisticsPromise {
+
+    private final int patternSlot;
+    private final int resultAmountPerSet;
+
+    public PatternFluidCraftingPromise(FluidIdentifier fluid, int amount, IProvideFluids sender, int patternSlot,
+            int resultAmountPerSet) {
+        super(fluid, amount, sender, ResourceType.CRAFTING);
+        this.patternSlot = patternSlot;
+        this.resultAmountPerSet = resultAmountPerSet;
+    }
+
+    /**
+     * Copies the staged fluid promise without losing the pattern metadata used by the crafting module.
+     */
+    @Override
+    public PatternFluidCraftingPromise copy() {
+        return new PatternFluidCraftingPromise(getLiquid(), getAmount(), getSender(), patternSlot, resultAmountPerSet);
+    }
+
+    /**
+     * Returns a resized copy while preserving the source pattern slot and per-set result amount.
+     * <p>
+     * Staged branches slice promises as ingredients are requested in batches, so the copied promise must remain a
+     * pattern-fluid promise instead of degrading to a generic fluid promise.
+     */
+    @Override
+    public PatternFluidCraftingPromise copyWithAmount(int amount) {
+        return new PatternFluidCraftingPromise(getLiquid(), amount, getSender(), patternSlot, resultAmountPerSet);
+    }
+}

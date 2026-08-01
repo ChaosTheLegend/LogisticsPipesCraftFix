@@ -12,6 +12,19 @@ import net.minecraftforge.fluids.FluidTank;
 import net.minecraftforge.fluids.FluidTankInfo;
 import net.minecraftforge.fluids.IFluidHandler;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.RichTooltip;
+import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.slot.FluidSlot;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;

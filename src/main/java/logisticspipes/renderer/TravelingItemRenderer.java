@@ -44,7 +44,7 @@ public class TravelingItemRenderer {
             if (block instanceof BlockPane) {
                 GL11.glScalef(0.5F, 0.5F, 0.5F);
             }
-        } else if (item == LogisticsPipes.logisticsRequestTable) {
+        } else if (item == LogisticsPipes.logisticsRequestTable || item == LogisticsPipes.logisticsNewRequestTable) {
             GL11.glScalef(0.5F, 0.5F, 0.5F);
         }
 

@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeSet;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -26,6 +28,7 @@ import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
+import logisticspipes.request.resources.FluidResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.order.LinkedLogisticsOrderList;
 import logisticspipes.utils.FluidIdentifier;
@@ -234,41 +237,127 @@ public class RequestHandler {
         return status;
     }
 
+    public static Object[] computerFluidRequest(final FluidIdentifier fluid, final int amount,
+            final CoreRoutedPipe pipe, final IRequestFluid requester) {
+
+        if (!pipe.useEnergy(10)) {
+            return new Object[] { "NO_POWER" };
+        }
+        final Object[] status = new Object[2];
+        RequestTree.requestFluid(fluid, amount, requester, new RequestLog() {
+
+            @Override
+            public void handleMissingItems(List<IResource> resources) {
+                status[0] = "MISSING";
+                status[1] = resources;
+            }
+
+            @Override
+            public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
+                status[0] = "DONE";
+                List<IResource> itemList = new LinkedList<>();
+                itemList.add(item);
+                status[1] = itemList;
+            }
+
+            @Override
+            public void handleSucessfullRequestOfList(List<IResource> resources, LinkedLogisticsOrderList parts) {}
+        });
+        return status;
+    }
+
     public static void refreshFluid(EntityPlayer player, CoreRoutedPipe pipe) {
-        TreeSet<ItemIdentifierStack> _allItems = SimpleServiceLocator.logisticsFluidManager
-                .getAvailableFluid(pipe.getRouter().getIRoutersByCost());
+        refreshFluid(player, pipe, DisplayOptions.Both);
+    }
+
+    public static void refreshFluid(EntityPlayer player, CoreRoutedPipe pipe, DisplayOptions option) {
+        TreeSet<ItemIdentifierStack> _allItems = new TreeSet<>();
+        Set<ItemIdentifier> availableFluids = new HashSet<>();
+        if (option == DisplayOptions.SupplyOnly || option == DisplayOptions.Both) {
+            TreeSet<ItemIdentifierStack> suppliedFluids = SimpleServiceLocator.logisticsFluidManager
+                    .getAvailableFluid(pipe.getRouter().getIRoutersByCost());
+            _allItems.addAll(suppliedFluids);
+            for (ItemIdentifierStack fluid : suppliedFluids) {
+                availableFluids.add(fluid.getItem());
+            }
+        }
+        if (option == DisplayOptions.CraftOnly || option == DisplayOptions.Both) {
+            LinkedList<ItemIdentifier> craftableItems = SimpleServiceLocator.logisticsManager
+                    .getCraftableItems(pipe.getRouter().getIRoutersByCost());
+            for (ItemIdentifier item : craftableItems) {
+                if (!item.isFluidContainer() || availableFluids.contains(item)) {
+                    continue;
+                }
+                _allItems.add(item.makeStack(0));
+            }
+        }
         MainProxy.sendPacketToPlayer(PacketHandler.getPacket(OrdererContent.class).setIdentSet(_allItems), player);
     }
 
     public static void requestFluid(final EntityPlayer player, final ItemIdentifierStack stack, CoreRoutedPipe pipe,
             IRequestFluid requester) {
+        FluidIdentifier fluid = FluidIdentifier.get(stack.getItem());
+        if (fluid == null) {
+            return;
+        }
         if (!pipe.useEnergy(10)) {
             player.addChatMessage(new ChatComponentTranslation("lp.misc.noenergy"));
             return;
         }
 
-        RequestTree
-                .requestFluid(FluidIdentifier.get(stack.getItem()), stack.getStackSize(), requester, new RequestLog() {
+        RequestTree.requestFluid(fluid, stack.getStackSize(), requester, new RequestLog() {
 
-                    @Override
-                    public void handleMissingItems(List<IResource> resources) {
-                        MainProxy.sendPacketToPlayer(
-                                PacketHandler.getPacket(MissingItems.class).setItems(resources).setFlag(true),
-                                player);
-                    }
+            @Override
+            public void handleMissingItems(List<IResource> resources) {
+                MainProxy.sendPacketToPlayer(
+                        PacketHandler.getPacket(MissingItems.class).setItems(resources).setFlag(true),
+                        player);
+            }
 
-                    @Override
-                    public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
-                        Collection<IResource> coll = new ArrayList<>(1);
-                        coll.add(item);
-                        MainProxy.sendPacketToPlayer(
-                                PacketHandler.getPacket(MissingItems.class).setItems(coll).setFlag(false),
-                                player);
-                    }
+            @Override
+            public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {
+                Collection<IResource> coll = new ArrayList<>(1);
+                coll.add(item);
+                MainProxy.sendPacketToPlayer(
+                        PacketHandler.getPacket(MissingItems.class).setItems(coll).setFlag(false),
+                        player);
+            }
 
-                    @Override
-                    public void handleSucessfullRequestOfList(List<IResource> resources,
-                            LinkedLogisticsOrderList parts) {}
-                });
+            @Override
+            public void handleSucessfullRequestOfList(List<IResource> resources, LinkedLogisticsOrderList parts) {}
+        });
+    }
+
+    public static void simulateFluid(final EntityPlayer player, final ItemIdentifierStack stack, CoreRoutedPipe pipe,
+            IRequestFluid requester) {
+        FluidIdentifier fluid = FluidIdentifier.get(stack.getItem());
+        if (fluid == null) {
+            return;
+        }
+        final List<IResource> usedList = new ArrayList<>();
+        final List<IResource> missingList = new ArrayList<>();
+        FluidResource request = new FluidResource(fluid, stack.getStackSize(), requester);
+        RequestTree tree = new RequestTree(request, null, RequestTree.defaultRequestFlags, null);
+        if (!tree.isDone()) {
+            tree.recurseFailedRequestTree();
+        }
+        tree.sendUsedMessage(new RequestLog() {
+
+            @Override
+            public void handleMissingItems(List<IResource> resources) {
+                missingList.addAll(resources);
+            }
+
+            @Override
+            public void handleSucessfullRequestOf(IResource item, LinkedLogisticsOrderList parts) {}
+
+            @Override
+            public void handleSucessfullRequestOfList(List<IResource> resources, LinkedLogisticsOrderList parts) {
+                usedList.addAll(resources);
+            }
+        });
+        MainProxy.sendPacketToPlayer(
+                PacketHandler.getPacket(ComponentList.class).setUsed(usedList).setMissing(missingList),
+                player);
     }
 }

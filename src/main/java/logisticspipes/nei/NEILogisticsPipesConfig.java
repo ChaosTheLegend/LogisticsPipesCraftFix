@@ -1,7 +1,6 @@
 package logisticspipes.nei;
 
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
+// import com.glodblock.github.nei.recipes.FluidRecipe;
 
 import codechicken.nei.api.API;
 import codechicken.nei.api.IConfigureNEI;
@@ -9,9 +8,13 @@ import codechicken.nei.guihook.GuiContainerManager;
 import cpw.mods.fml.common.Mod;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.config.Configs;
+import logisticspipes.crafting.pattern.PatternGui;
+import logisticspipes.crafting.requesttable.RequestTableGui;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.GuiSolderingStation;
 import logisticspipes.gui.orderer.GuiRequestTable;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.oredict.OreDictionary;
 
 public class NEILogisticsPipesConfig implements IConfigureNEI {
 
@@ -49,9 +52,19 @@ public class NEILogisticsPipesConfig implements IConfigureNEI {
 
         API.registerGuiOverlayHandler(
                 GuiLogisticsCraftingTable.class,
-                new LogisticsCraftingOverlayHandler(),
+                LogisticsCraftingOverlayHandler.INSTANCE,
                 "crafting");
-        API.registerGuiOverlayHandler(GuiRequestTable.class, new LogisticsCraftingOverlayHandler(), "crafting");
+        API.registerGuiOverlayHandler(GuiRequestTable.class, LogisticsCraftingOverlayHandler.INSTANCE, "crafting");
+        API.registerGuiOverlayHandler(RequestTableGui.class, LogisticsCraftingOverlayHandler.INSTANCE, "crafting");
+
+        // register pattern handling
+        API.registerNEIGuiHandler(new LogisticsPattern_NEIGuiHandler());
+        API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, "crafting");
+        // for (String identifier : FluidRecipe.getSupportRecipes()) {
+        // if (!API.hasGuiOverlayHandler(PatternGui.class, identifier)) {
+        // API.registerGuiOverlayHandler(PatternGui.class, LogisticPatternHandler.INSTANCE, identifier);
+        // }
+        // }
 
         API.registerGuiOverlayHandler(
                 logisticspipes.gui.GuiCraftingPipe.class,

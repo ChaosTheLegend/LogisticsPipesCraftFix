@@ -4,29 +4,28 @@
  */
 package logisticspipes.utils.item;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
-
-import net.minecraft.entity.item.EntityItem;
+import logisticspipes.LogisticsPipes;
+import logisticspipes.interfaces.routing.ISaveState;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.utils.ISimpleInventoryEventHandler;
+import logisticspipes.utils.tuples.Pair;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.interfaces.routing.ISaveState;
-import logisticspipes.proxy.MainProxy;
-import logisticspipes.utils.ISimpleInventoryEventHandler;
-import logisticspipes.utils.tuples.Pair;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pair<ItemStack, Integer>> {
 
-    private final ItemStack[] _contents;
+    private ItemStack[] _contents;
     private final String _name;
-    private final int _stackLimit;
+    private int _stackLimit;
 
     private final LinkedList<ISimpleInventoryEventHandler> _listener = new LinkedList<>();
 
@@ -34,6 +33,36 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
         _contents = new ItemStack[size];
         _name = name;
         _stackLimit = stackLimit;
+    }
+
+    /**
+     * Resizes this inventory while preserving all stacks that still fit into the new slot range.
+     *
+     * @param size new inventory size
+     */
+    public void setSizeInventory(int size) {
+        if (size < 0) {
+            throw new IllegalArgumentException("Inventory size cannot be negative");
+        }
+        if (_contents.length == size) {
+            return;
+        }
+        _contents = Arrays.copyOf(_contents, size);
+        markDirty();
+    }
+
+    /**
+     * Changes the maximum amount accepted by a single slot.
+     *
+     * @param stackLimit new per-slot stack limit
+     */
+    public void setInventoryStackLimit(int stackLimit) {
+        int newStackLimit = Math.max(1, stackLimit);
+        if (_stackLimit == newStackLimit) {
+            return;
+        }
+        _stackLimit = newStackLimit;
+        markDirty();
     }
 
     @Override
@@ -106,6 +135,10 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
 
     public void readFromNBT(NBTTagCompound nbttagcompound, String prefix) {
         NBTTagList nbttaglist = nbttagcompound.getTagList(prefix + "items", nbttagcompound.getId());
+        int storedSize = nbttagcompound.getInteger(prefix + "itemsCount");
+        if (storedSize > _contents.length) {
+            setSizeInventory(storedSize);
+        }
 
         for (int j = 0; j < nbttaglist.tagCount(); ++j) {
             NBTTagCompound nbttagcompound2 = nbttaglist.getCompoundTagAt(j);
@@ -152,16 +185,7 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
     }
 
     private void dropItems(World world, ItemStack stack, int i, int j, int k) {
-        if (stack.stackSize <= 0) {
-            return;
-        }
-        float f1 = 0.7F;
-        double d = (world.rand.nextFloat() * f1) + (1.0F - f1) * 0.5D;
-        double d1 = (world.rand.nextFloat() * f1) + (1.0F - f1) * 0.5D;
-        double d2 = (world.rand.nextFloat() * f1) + (1.0F - f1) * 0.5D;
-        EntityItem entityitem = new EntityItem(world, i + d, j + d1, k + d2, stack);
-        entityitem.delayBeforeCanPickup = 10;
-        world.spawnEntityInWorld(entityitem);
+        ItemIdentifierInventory.dropItems(world, stack, i, j, k);
     }
 
     public void addListener(ISimpleInventoryEventHandler listner) {
@@ -193,7 +217,7 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
         }
         ItemIdentifier stackIdent = ItemIdentifier.get(stack);
         ItemIdentifier slotIdent = ItemIdentifier.get(slot);
-        if (slotIdent.equals(stackIdent)) {
+        if (slotIdent != null && slotIdent.equals(stackIdent)) {
             slot.stackSize += stack.stackSize;
             if (slot.stackSize > realstacklimit) {
                 int ans = stack.stackSize - (slot.stackSize - realstacklimit);
@@ -202,9 +226,8 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
             } else {
                 return stack.stackSize;
             }
-        } else {
-            return 0;
         }
+        return 0;
     }
 
     public int addCompressed(ItemStack stack, boolean ignoreMaxStackSize) {
@@ -216,7 +239,9 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
         ItemIdentifier stackIdent = ItemIdentifier.get(stack);
         int stacklimit = _stackLimit;
         if (!ignoreMaxStackSize) {
-            stacklimit = Math.min(stacklimit, stackIdent.getMaxStackSize());
+            if (stackIdent != null) {
+                stacklimit = Math.min(stacklimit, stackIdent.getMaxStackSize());
+            }
         }
 
         for (int i = 0; i < _contents.length; i++) {
@@ -255,9 +280,9 @@ public class SimpleStackInventory implements IInventory, ISaveState, Iterable<Pa
     }
 
     @Override
-    public Iterator<Pair<ItemStack, Integer>> iterator() {
+    public @NotNull Iterator<Pair<ItemStack, Integer>> iterator() {
         final Iterator<ItemStack> iter = Arrays.asList(_contents).iterator();
-        return new Iterator<Pair<ItemStack, Integer>>() {
+        return new Iterator<>() {
 
             int pos = -1;
 

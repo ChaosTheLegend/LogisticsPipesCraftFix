@@ -1,19 +1,10 @@
 package logisticspipes.nei;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.oredict.OreDictionary;
-
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import cpw.mods.fml.client.FMLClientHandler;
+import logisticspipes.crafting.requesttable.RequestTableGui;
 import logisticspipes.gui.GuiLogisticsCraftingTable;
 import logisticspipes.gui.orderer.GuiRequestTable;
 import logisticspipes.gui.popup.GuiRecipeImport;
@@ -21,13 +12,27 @@ import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.NEISetCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.oredict.OreDictionary;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
+
+    public LogisticsCraftingOverlayHandler() {
+    }
+
+    public static final LogisticsCraftingOverlayHandler INSTANCE = new LogisticsCraftingOverlayHandler();
 
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean shift) {
 
-        TileEntity tile;
+        TileEntity tile = null;
         LogisticsBaseGuiScreen gui;
         if (firstGui instanceof GuiLogisticsCraftingTable) {
             tile = ((GuiLogisticsCraftingTable) firstGui)._crafter;
@@ -35,6 +40,9 @@ public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
         } else if (firstGui instanceof GuiRequestTable) {
             tile = ((GuiRequestTable) firstGui)._table.container;
             gui = (GuiRequestTable) firstGui;
+        } else if (firstGui instanceof RequestTableGui) {
+            tile = ((RequestTableGui) firstGui).getTable().container;
+            gui = (RequestTableGui) firstGui;
         } else {
             return;
         }

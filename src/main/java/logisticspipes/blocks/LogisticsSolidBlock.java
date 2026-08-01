@@ -22,6 +22,7 @@ import logisticspipes.blocks.powertile.LogisticsIC2PowerProviderTileEntity;
 import logisticspipes.blocks.powertile.LogisticsPowerJunctionTileEntity;
 import logisticspipes.blocks.powertile.LogisticsRFPowerProviderTileEntity;
 import logisticspipes.blocks.stats.LogisticsStatisticsTileEntity;
+import logisticspipes.crafting.PatternLogisticsCraftingTableTileEntity;
 import logisticspipes.interfaces.IGuiTileEntity;
 import logisticspipes.interfaces.IRotationProvider;
 import logisticspipes.proxy.MainProxy;
@@ -34,6 +35,7 @@ public class LogisticsSolidBlock extends BlockContainer {
     public static final int LOGISTICS_AUTOCRAFTING_TABLE = 3;
     public static final int LOGISTICS_FUZZYCRAFTING_TABLE = 4;
     public static final int LOGISTICS_STATISTICS_TABLE = 5;
+    public static final int LOGISTICS_PATTERN_CRAFTING_TABLE = 6;
 
     // Power Provider
     public static final int LOGISTICS_RF_POWERPROVIDER = 11;
@@ -126,6 +128,9 @@ public class LogisticsSolidBlock extends BlockContainer {
         if (tile instanceof LogisticsCraftingTableTileEntity) {
             ((LogisticsCraftingTableTileEntity) tile).onBlockBreak();
         }
+        if (tile instanceof PatternLogisticsCraftingTableTileEntity) {
+            ((PatternLogisticsCraftingTableTileEntity) tile).onBlockBreak();
+        }
         super.breakBlock(par1World, par2, par3, par4, par5, par6);
     }
 
@@ -153,6 +158,8 @@ public class LogisticsSolidBlock extends BlockContainer {
                 return new LogisticsCraftingTableTileEntity();
             case LOGISTICS_STATISTICS_TABLE:
                 return new LogisticsStatisticsTileEntity();
+            case LOGISTICS_PATTERN_CRAFTING_TABLE:
+                return new PatternLogisticsCraftingTableTileEntity();
             case LOGISTICS_RF_POWERPROVIDER:
                 return new LogisticsRFPowerProviderTileEntity();
             case LOGISTICS_IC2_POWERPROVIDER:
@@ -171,6 +178,7 @@ public class LogisticsSolidBlock extends BlockContainer {
             case LOGISTICS_AUTOCRAFTING_TABLE:
             case LOGISTICS_FUZZYCRAFTING_TABLE:
             case LOGISTICS_STATISTICS_TABLE:
+            case LOGISTICS_PATTERN_CRAFTING_TABLE:
             case LOGISTICS_RF_POWERPROVIDER:
             case LOGISTICS_IC2_POWERPROVIDER:
                 return par1;
@@ -311,6 +319,15 @@ public class LogisticsSolidBlock extends BlockContainer {
                     default: // Front
                         return LogisticsSolidBlock.icons[10];
                 }
+            case LOGISTICS_PATTERN_CRAFTING_TABLE:
+                switch (side) {
+                    case 1: // TOP
+                        return LogisticsSolidBlock.icons[11];
+                    case 0: // Bottom
+                        return LogisticsSolidBlock.icons[12];
+                    default: // Front
+                        return LogisticsSolidBlock.icons[10];
+                }
             case LOGISTICS_STATISTICS_TABLE:
                 switch (side) {
                     case 1: // TOP
@@ -368,6 +385,8 @@ public class LogisticsSolidBlock extends BlockContainer {
                 return LogisticsSolidBlock.newTextures[4];
             case LOGISTICS_FUZZYCRAFTING_TABLE:
                 return LogisticsSolidBlock.newTextures[5];
+            case LOGISTICS_PATTERN_CRAFTING_TABLE:
+                return LogisticsSolidBlock.newTextures[4];
             case LOGISTICS_STATISTICS_TABLE:
                 return LogisticsSolidBlock.newTextures[6];
             case LOGISTICS_RF_POWERPROVIDER:

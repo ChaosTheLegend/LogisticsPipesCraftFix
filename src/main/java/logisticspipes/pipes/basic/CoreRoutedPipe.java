@@ -249,7 +249,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         if (from == null) {
             throw new NullPointerException();
         }
-        _sendQueue.addLast(new Triplet<>(routedItem, from, ItemSendMode.Normal));
+        addToSendQueue(new Triplet<>(routedItem, from, ItemSendMode.Normal));
         sendQueueChanged(false);
     }
 
@@ -257,8 +257,56 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         if (from == null) {
             throw new NullPointerException();
         }
-        _sendQueue.addLast(new Triplet<>(routedItem, from, mode));
+        addToSendQueue(new Triplet<>(routedItem, from, mode));
         sendQueueChanged(false);
+    }
+
+    private void addToSendQueue(Triplet<IRoutedItem, ForgeDirection, ItemSendMode> routedItem) {
+        _sendQueue.addLast(routedItem);
+        trackQueuedSend(routedItem.getValue1());
+    }
+
+    private Triplet<IRoutedItem, ForgeDirection, ItemSendMode> removeFirstFromSendQueueForSending() {
+        return _sendQueue.removeFirst();
+    }
+
+    private void refreshSendQueueTracking() {
+        for (Triplet<IRoutedItem, ForgeDirection, ItemSendMode> routedItem : _sendQueue) {
+            routedItem.getValue1().getInfo().resetDelay();
+            trackQueuedSend(routedItem.getValue1());
+        }
+    }
+
+    private void clearSendQueue() {
+        for (Triplet<IRoutedItem, ForgeDirection, ItemSendMode> routedItem : _sendQueue) {
+            untrackQueuedSend(routedItem.getValue1());
+        }
+        _sendQueue.clear();
+    }
+
+    private void trackQueuedSend(IRoutedItem routedItem) {
+        CoreRoutedPipe destinationPipe = getDestinationPipe(routedItem);
+        if (destinationPipe != null) {
+            destinationPipe.notifyOfSend(routedItem.getInfo());
+        }
+    }
+
+    private void untrackQueuedSend(IRoutedItem routedItem) {
+        CoreRoutedPipe destinationPipe = getDestinationPipe(routedItem);
+        if (destinationPipe != null) {
+            destinationPipe.notifyOfQueuedSendRemoval(routedItem.getInfo());
+        }
+    }
+
+    private CoreRoutedPipe getDestinationPipe(IRoutedItem routedItem) {
+        if (routedItem.getDestination() < 0) {
+            return null;
+        }
+        IRouter r = SimpleServiceLocator.routerManager.getRouterUnsafe(routedItem.getDestination(), false);
+        if (r != null) {
+            return r.getCachedPipe();
+        }
+        return null;
     }
 
     /**
@@ -277,14 +325,9 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
 
         transport.injectItem(routedItem, from.getOpposite());
 
-        IRouter r = SimpleServiceLocator.routerManager.getRouterUnsafe(routedItem.getDestination(), false);
-        if (r != null) {
-            CoreRoutedPipe pipe = r.getCachedPipe();
-            if (pipe != null) {
-                pipe.notifyOfSend(routedItem.getInfo());
-            } else {
-                // TODO: handle sending items to known chunk-unloaded destination?
-            }
+        CoreRoutedPipe destinationPipe = getDestinationPipe(routedItem);
+        if (destinationPipe != null) {
+            destinationPipe.notifyOfSend(routedItem.getInfo());
         } // should not be able to send to a non-existing router
           // router.startTrackingRoutedItem((RoutedEntityItem) routedItem.getTravelingItem());
         spawnParticle(Particles.OrangeParticle, 2);
@@ -294,19 +337,31 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
     }
 
     private void notifyOfSend(ItemRoutingInformation routedItem) {
-        _inTransitToMe.add(routedItem);
+        if (!_inTransitToMe.contains(routedItem)) {
+            _inTransitToMe.add(routedItem);
+        }
         // LogisticsPipes.log.info("Sending: "+routedItem.getIDStack().getItem().getFriendlyName());
     }
 
+    private void notifyOfQueuedSendRemoval(ItemRoutingInformation routedItem) {
+        removeFromInTransit(routedItem);
+    }
+
     public void notifyOfReroute(ItemRoutingInformation routedItem) {
-        _inTransitToMe.remove(routedItem);
+        removeFromInTransit(routedItem);
+    }
+
+    private void removeFromInTransit(ItemRoutingInformation routedItem) {
+        while (_inTransitToMe.remove(routedItem)) {
+            // Remove any duplicate queue/send markers that may have been created by older code paths.
+        }
     }
 
     // When Recreating the Item from the TE version we have the same hashCode but a different instance so we need to
     // refresh this
     public void refreshItem(ItemRoutingInformation routedItem) {
         if (_inTransitToMe.contains(routedItem)) {
-            _inTransitToMe.remove(routedItem);
+            removeFromInTransit(routedItem);
             _inTransitToMe.add(routedItem);
         }
     }
@@ -432,16 +487,17 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         ignoreDisableUpdateEntity();
         _initialInit = false;
         if (!_sendQueue.isEmpty()) {
+            refreshSendQueueTracking();
             if (getItemSendMode() == ItemSendMode.Normal) {
                 Triplet<IRoutedItem, ForgeDirection, ItemSendMode> itemToSend = _sendQueue.getFirst();
                 sendRoutedItem(itemToSend.getValue1(), itemToSend.getValue2());
-                _sendQueue.removeFirst();
+                removeFirstFromSendQueueForSending();
                 for (int i = 0; i < 16 && !_sendQueue.isEmpty()
                         && _sendQueue.getFirst().getValue3() == ItemSendMode.Fast; i++) {
                     if (!_sendQueue.isEmpty()) {
                         itemToSend = _sendQueue.getFirst();
                         sendRoutedItem(itemToSend.getValue1(), itemToSend.getValue2());
-                        _sendQueue.removeFirst();
+                        removeFirstFromSendQueueForSending();
                     }
                 }
                 sendQueueChanged(false);
@@ -450,7 +506,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
                     if (!_sendQueue.isEmpty()) {
                         Triplet<IRoutedItem, ForgeDirection, ItemSendMode> itemToSend = _sendQueue.getFirst();
                         sendRoutedItem(itemToSend.getValue1(), itemToSend.getValue2());
-                        _sendQueue.removeFirst();
+                        removeFirstFromSendQueueForSending();
                     }
                 }
                 sendQueueChanged(false);
@@ -819,7 +875,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
         upgradeManager.readFromNBT(nbttagcompound.getCompoundTag("upgradeManager"));
         powerHandler.readFromNBT(nbttagcompound.getCompoundTag("powerHandler"));
 
-        _sendQueue.clear();
+        clearSendQueue();
         NBTTagList sendqueue = nbttagcompound.getTagList("sendqueue", nbttagcompound.getId());
         for (int i = 0; i < sendqueue.tagCount(); i++) {
             NBTTagCompound tagentry = sendqueue.getCompoundTagAt(i);
@@ -827,7 +883,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
             LPTravelingItemServer item = new LPTravelingItemServer(tagentityitem);
             ForgeDirection from = ForgeDirection.values()[tagentry.getByte("from")];
             ItemSendMode mode = ItemSendMode.values()[tagentry.getByte("mode")];
-            _sendQueue.add(new Triplet<>(item, from, mode));
+            addToSendQueue(new Triplet<>(item, from, mode));
         }
         for (int i = 0; i < 6; i++) {
             if (nbttagcompound.getBoolean("PipeSign_" + i)) {
@@ -1361,7 +1417,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
     }
 
     public void notifyOfItemArival(ItemRoutingInformation information) {
-        _inTransitToMe.remove(information);
+        removeFromInTransit(information);
         if (this instanceof IRequireReliableTransport) {
             ((IRequireReliableTransport) this).itemArrived(information.getItem(), information.targetInfo);
         }

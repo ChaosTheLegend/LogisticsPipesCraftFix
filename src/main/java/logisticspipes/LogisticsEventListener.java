@@ -36,6 +36,7 @@ import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
 import cpw.mods.fml.common.network.FMLNetworkEvent.ClientConnectedToServerEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.commands.commands.debug.DebugGuiController;
 import logisticspipes.config.PlayerConfig;
 import logisticspipes.interfaces.IItemAdvancedExistance;
 import logisticspipes.modules.ModuleQuickSort;
@@ -180,6 +181,9 @@ public class LogisticsEventListener {
             int dim = MainProxy.getDimensionForWorld(event.world);
             SimpleServiceLocator.routerManager.dimensionUnloaded(dim);
         }
+        if (MainProxy.isClient(event.world)) {
+            DebugGuiController.instance().clearClientDebuggers();
+        }
     }
 
     @SubscribeEvent
@@ -215,6 +219,7 @@ public class LogisticsEventListener {
     @SubscribeEvent
     public void onPlayerLogout(PlayerLoggedOutEvent event) {
         SimpleServiceLocator.serverBufferHandler.clear(event.player);
+        DebugGuiController.instance().clearServerDebuggers(event.player);
         PlayerIdentifier ident = PlayerIdentifier.get(event.player);
         PlayerConfig config = LogisticsEventListener.playerConfigs.get(ident);
         if (config != null) {
@@ -285,6 +290,7 @@ public class LogisticsEventListener {
     @SubscribeEvent
     public void clientLoggedIn(ClientConnectedToServerEvent event) {
         SimpleServiceLocator.clientBufferHandler.clear();
+        DebugGuiController.instance().clearClientDebuggers();
     }
 
     public static void serverShutdown() {

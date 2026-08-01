@@ -1,20 +1,7 @@
 package logisticspipes.request;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
+import logisticspipes.crafting.IStagedCraftingProvider;
+import logisticspipes.crafting.PatternCraftingBranch;
 import logisticspipes.interfaces.IStack;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.ICraft;
@@ -24,6 +11,7 @@ import logisticspipes.pipes.basic.CoreRoutedPipe;
 import logisticspipes.proxy.SimpleServiceLocator;
 import logisticspipes.request.RequestTree.ActiveRequestType;
 import logisticspipes.request.RequestTree.workWeightedSorter;
+import logisticspipes.request.resources.DictResource;
 import logisticspipes.request.resources.IResource;
 import logisticspipes.routing.ExitRoute;
 import logisticspipes.routing.IRouter;
@@ -33,8 +21,25 @@ import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.IOrderInfoProvider.ResourceType;
 import logisticspipes.routing.order.LinkedLogisticsOrderList;
 import logisticspipes.routing.order.LogisticsOrderManager;
+import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class RequestTreeNode {
 
@@ -85,7 +90,10 @@ public class RequestTreeNode {
     private final List<IExtraPromise> byproducts = new ArrayList<>();
     private final SortedSet<ICraftingTemplate> usedCrafters = new TreeSet<>();
     private final Set<LogisticsOrderManager<?, ?>> usedExtrasFromManager = new HashSet<>();
+    private final Map<ItemIdentifier, List<IPromise>> collectedSameItemPromises = new LinkedHashMap<>();
     private ICraftingTemplate lastCrafterTried = null;
+    private boolean collectingSameItemPromises;
+    private ItemIdentifier sameItemLockedItem;
 
     private int promiseAmount = 0;
 
@@ -119,6 +127,13 @@ public class RequestTreeNode {
     public void addPromise(IPromise promise) {
         if (!promise.matches(requestType)) {
             throw new IllegalArgumentException("wrong item");
+        }
+        if (collectingSameItemPromises && isSameItemDictRequest()) {
+            collectSameItemPromise(promise);
+            return;
+        }
+        if (isSameItemDictRequest() && !acceptSameItemPromise(promise)) {
+            return;
         }
         if (getMissingAmount() == 0) {
             throw new IllegalArgumentException("zero count needed, promises not needed.");
@@ -182,10 +197,9 @@ public class RequestTreeNode {
             if (!item.matches(promise.getItemType(), IResource.MatchSettings.NORMAL)) {
                 continue;
             }
-            if (!(promise instanceof IExtraPromise)) {
+            if (!(promise instanceof IExtraPromise epromise)) {
                 continue;
             }
-            IExtraPromise epromise = (IExtraPromise) promise;
             if (epromise.isProvided()) {
                 continue;
             }
@@ -211,6 +225,9 @@ public class RequestTreeNode {
     }
 
     protected LinkedLogisticsOrderList fullFill() {
+        if (hasStagedCraftingPromise()) {
+            return fullFillStaged();
+        }
         LinkedLogisticsOrderList list = new LinkedLogisticsOrderList();
         for (RequestTreeNode subNode : subRequests) {
             list.getSubOrders().add(subNode.fullFill());
@@ -228,6 +245,104 @@ public class RequestTreeNode {
             promise.registerExtras(requestType);
         }
         return list;
+    }
+
+    /**
+     * Returns true when this node has at least one promise that should be fulfilled by staged crafting.
+     */
+    private boolean hasStagedCraftingPromise() {
+        for (IPromise promise : promises) {
+            if (isStagedCraftingPromise(promise)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether a promise belongs to a staged pattern crafting provider.
+     */
+    private boolean isStagedCraftingPromise(IPromise promise) {
+        return promise.getType() == ResourceType.CRAFTING && promise.getProvider() instanceof IStagedCraftingProvider;
+    }
+
+    /**
+     * Starts a staged request by handing each staged crafting promise a branch of the already-built request tree.
+     * <p>
+     * Provider promises inside that branch are reserved before the branch is handed off, then released later when the
+     * staged pipe places real provider orders for the ingredients it can currently store.
+     */
+    private LinkedLogisticsOrderList fullFillStaged() {
+        LinkedLogisticsOrderList list = new LinkedLogisticsOrderList();
+        PatternCraftingBranch branch = toPatternCraftingBranch();
+        for (IPromise promise : promises) {
+            IOrderInfoProvider result;
+            if (isStagedCraftingPromise(promise)) {
+                IPromise promiseCopy = promise.copy();
+                PatternCraftingBranch stagedBranch = branch.copyForAmount(promise.getAmount());
+                stagedBranch.reserveProviderPromises();
+                result = ((IStagedCraftingProvider) promise.getProvider()).fullFillStagedCrafting(
+                        promiseCopy,
+                        requestType.copyForDisplayWith(promise.getAmount()),
+                        info,
+                        stagedBranch);
+                if (result == null) {
+                    stagedBranch.releaseProviderPromises();
+                } else {
+                    branch.reserve(promise.getAmount());
+                }
+            } else {
+                result = promise.fullFill(requestType.copyForDisplayWith(promise.getAmount()), info);
+                if (result != null) {
+                    branch.reserve(promise.getAmount());
+                }
+            }
+            if (result != null) {
+                list.add(result);
+            }
+        }
+        for (IExtraPromise promise : extrapromises) {
+            promise.registerExtras(requestType);
+        }
+        for (IExtraPromise promise : byproducts) {
+            promise.registerExtras(requestType);
+        }
+        return list;
+    }
+
+    /**
+     * Converts this request node and all descendants into a staged crafting branch.
+     */
+    private PatternCraftingBranch toPatternCraftingBranch() {
+        List<IPromise> promiseCopies = new ArrayList<>();
+        for (IPromise promise : promises) {
+            promiseCopies.add(promise.copy());
+        }
+        List<IExtraPromise> extraCopies = copyExtraPromises(extrapromises);
+        List<IExtraPromise> byproductCopies = copyExtraPromises(byproducts);
+        List<PatternCraftingBranch> children = new ArrayList<>();
+        for (RequestTreeNode subRequest : subRequests) {
+            children.add(subRequest.toPatternCraftingBranch());
+        }
+        return new PatternCraftingBranch(
+                requestType.copyForDisplayWith(requestType.getRequestedAmount()),
+                info,
+                promiseCopies,
+                extraCopies,
+                byproductCopies,
+                children);
+    }
+
+    /**
+     * Copies extra promises into a staged crafting branch so branch fulfilment can register the matching extra output
+     * later.
+     */
+    private List<IExtraPromise> copyExtraPromises(List<IExtraPromise> promises) {
+        List<IExtraPromise> copies = new ArrayList<>();
+        for (IExtraPromise promise : promises) {
+            copies.add(promise.copy());
+        }
+        return copies;
     }
 
     protected void buildMissingMap(Map<IResource, Integer> missing) {
@@ -277,6 +392,7 @@ public class RequestTreeNode {
         if (thisPipe == null) {
             return false;
         }
+        beginSameItemPromiseCollection();
         for (Pair<IProvide, List<IFilter>> provider : RequestTreeNode
                 .getProviders(requestType.getRouter(), getRequestType())) {
             if (isDone()) {
@@ -290,7 +406,67 @@ public class RequestTreeNode {
                 provider.getValue1().canProvide(this, root, provider.getValue2());
             }
         }
+        finishSameItemPromiseCollection();
         return isDone();
+    }
+
+    private void beginSameItemPromiseCollection() {
+        if (!isSameItemDictRequest()) {
+            return;
+        }
+        collectedSameItemPromises.clear();
+        collectingSameItemPromises = true;
+    }
+
+    private void finishSameItemPromiseCollection() {
+        if (!collectingSameItemPromises) {
+            return;
+        }
+        collectingSameItemPromises = false;
+        List<IPromise> selected = null;
+        for (List<IPromise> promises : collectedSameItemPromises.values()) {
+            if (totalPromiseAmount(promises) >= getMissingAmount()) {
+                selected = promises;
+                break;
+            }
+        }
+        collectedSameItemPromises.clear();
+        if (selected == null) {
+            return;
+        }
+        for (IPromise promise : selected) {
+            if (isDone()) {
+                break;
+            }
+            addPromise(promise);
+        }
+    }
+
+    private void collectSameItemPromise(IPromise promise) {
+        if (promise.getAmount() <= 0) {
+            throw new IllegalArgumentException("zero count ... again");
+        }
+        collectedSameItemPromises.computeIfAbsent(promise.getItemType(), k -> new ArrayList<>()).add(promise.copy());
+    }
+
+    private boolean isSameItemDictRequest() {
+        return requestType instanceof DictResource && ((DictResource) requestType).match_same_item;
+    }
+
+    private boolean acceptSameItemPromise(IPromise promise) {
+        if (sameItemLockedItem == null) {
+            sameItemLockedItem = promise.getItemType();
+            return true;
+        }
+        return sameItemLockedItem.equals(promise.getItemType());
+    }
+
+    private int totalPromiseAmount(List<IPromise> promises) {
+        int amount = 0;
+        for (IPromise promise : promises) {
+            amount += Math.max(0, promise.getAmount());
+        }
+        return amount;
     }
 
     private static List<Pair<IProvide, List<IFilter>>> getProviders(IRouter destination, IResource item) {
@@ -736,5 +912,86 @@ public class RequestTreeNode {
             resources.add(entry.getKey().copyForDisplayWith(entry.getValue()));
         }
         return resources;
+    }
+
+    @Override
+    public String toString() {
+        var out = new StringBuilder();
+
+        appendToString(out, "", true, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
+
+        return out.toString();
+    }
+
+    private void appendToString(StringBuilder out, String prefix, boolean isLast,
+            java.util.Set<RequestTreeNode> visited) {
+        out.append(prefix).append(isLast ? "└── " : "├── ")
+                .append(parentNode == null ? "RequestTree@" : "RequestTreeNode@")
+                .append(Integer.toHexString(System.identityHashCode(this))).append(" ").append(requestType)
+                .append(" promised=").append(promiseAmount).append("/").append(requestType.getRequestedAmount());
+
+        if (getMissingAmount() > 0) {
+            out.append(" missing=").append(getMissingAmount());
+        }
+
+        if (info != null) {
+            out.append(" info=").append(info);
+        }
+
+        if (lastCrafterTried != null) {
+            out.append(" lastCrafterTried=").append(lastCrafterTried);
+        }
+
+        if (!visited.add(this)) {
+            out.append(" (already shown)\n");
+            return;
+        }
+
+        out.append("\n");
+
+        var childPrefix = prefix + (isLast ? "    " : "│   ");
+
+        var details = new java.util.ArrayList<String>();
+
+        if (!promises.isEmpty()) {
+            details.add("Promises: " + formatPromises(promises, true));
+        }
+
+        if (!extrapromises.isEmpty()) {
+            details.add("Extras: " + formatPromises(extrapromises, false));
+        }
+
+        if (!byproducts.isEmpty()) {
+            details.add("Byproducts: " + formatPromises(byproducts, false));
+        }
+
+        if (!usedCrafters.isEmpty()) {
+            details.add("Used crafters: " + usedCrafters);
+        }
+
+        for (int i = 0; i < details.size(); i++) {
+            boolean detailIsLast = subRequests.isEmpty() && i == details.size() - 1;
+
+            out.append(childPrefix).append(detailIsLast ? "└── " : "├── ").append(details.get(i)).append("\n");
+        }
+
+        for (int i = 0; i < subRequests.size(); i++) {
+            var child = subRequests.get(i);
+            boolean childIsLast = i == subRequests.size() - 1;
+
+            child.appendToString(out, childPrefix, childIsLast, visited);
+        }
+    }
+
+    private String formatPromises(java.util.Collection<? extends IPromise> promises, boolean includeType) {
+        return promises.stream().map(promise -> {
+            var text = promise.getAmount() + "x " + promise.getItemType();
+
+            if (includeType) {
+                text += " " + promise.getType();
+            }
+
+            return text;
+        }).collect(java.util.stream.Collectors.joining(", "));
     }
 }
