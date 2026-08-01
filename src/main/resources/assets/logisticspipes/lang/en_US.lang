@@ -47,6 +47,14 @@ item.PipeItemsProviderLogisticsMk2.tip2= - Attaches to an inventory
 item.PipeItemsProviderLogisticsMk2.tip3= - Sends a stack of items into the network on request
 item.PipeItemsProviderLogisticsMk2.tip4= - Ignores Suppliers on the same block.
 
+item.PipeItemsPatternCraftingLogistics=Pattern Crafting Pipe
+item.PipeItemsPatternCraftingLogistics.name=Pattern Crafting Pipe
+item.PipeItemsPatternCraftingLogistics.tip1=Type: Active Requester + Source
+item.PipeItemsPatternCraftingLogistics.tip2= - Crafts items from inserted patterns
+item.PipeItemsPatternCraftingLogistics.tip3= - Can be attached to Pattern Crafting Table
+item.PipeItemsPatternCraftingLogistics.tip4= - Automatically crafts items from patterns when requested.
+item.PipeItemsPatternCraftingLogistics.tip5= - Can use a pattern satellite pipes to send inputs elsewhere.
+
 item.PipeItemsCraftingLogistics=Crafting Logistics Pipe
 item.PipeItemsCraftingLogistics.name=Crafting Logistics Pipe
 item.PipeItemsCraftingLogistics.tip1=Type: Active Requester + Source
@@ -180,12 +188,18 @@ item.PipeFluidExtractor=Logistics Fluid Extractor Pipe
 item.PipeFluidExtractor.name=Logistics Fluid Extractor Pipe
 item.PipeFluidSatellite=Logistics Fluid Satellite Pipe
 item.PipeFluidSatellite.name=Logistics Fluid Satellite Pipe
+
 item.PipeFluidPatternSatelliteLogistics=Pattern Fluid Satellite Logistics Pipe
 item.PipeFluidPatternSatelliteLogistics.name=Pattern Fluid Satellite Logistics Pipe
+
+item.PipeItemsPatternSatelliteLogistics=Pattern Satellite Logistics Pipe
+item.PipeItemsPatternSatelliteLogistics.name=Pattern Satellite Logistics Pipe
+
 item.PipeBlockRequestTable=Logistics Request Table
 item.PipeBlockRequestTable.name=Logistics Request Table
-item.RequestTablePipe=New Logistics Request Table
-item.RequestTablePipe.name=New Logistics Request Table
+
+item.RequestTablePipe=Logistics Request Table Mk2
+item.RequestTablePipe.name=Logistics Request Table Mk2
 
 item.logisticspipes.tip.active_destination=Valid destination for %cYELLOW Active%cGRAY  routes
 item.logisticspipes.tip.passive_destination=Valid destination for %cYELLOW Passive%cGRAY  routes
@@ -230,6 +244,8 @@ item.ModuleCrafterMK3=Crafting module MK3
 item.ModuleActiveSupplier=Active Supplier Module
 item.ModuleCreativeTabBasedItemSink=Creative Tab Based ItemSink module
 item.ModuleTypeFilterItemSink=Type Filter ItemSink module
+
+item.logisticsPattern=Logistic Crafting Pattern
 
 # Items
 
@@ -340,6 +356,8 @@ tile.solderingstation=Soldering Station
 tile.logisticspowerjunction=Logistics Power Junction
 tile.logisticssecuritystation=Logistics Security Station
 tile.logisticscraftingtable=Logistics Crafting Table
+tile.logisticspatterncraftingtable=Logistics Pattern Crafting Table
+
 tile.logisticsfuzzycraftingtable=Logistics Fuzzy Crafting Table
 tile.logisticsbcpowerprovider=Logistics MJ Power Provider
 tile.logisticsic2powerprovider=Logistics EU Power Provider
