@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
 import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.DraggableWidget;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.PageButton;
@@ -24,6 +25,7 @@ import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.items.ItemModule;
+import logisticspipes.modules.ModuleCrafter;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.pipes.PipeLogisticsChassi;
 import net.minecraft.item.ItemStack;
@@ -175,6 +177,11 @@ public class ChassisGui extends LogisticsModularUI {
 
         if(module == null) {
             widget.child(new TextWidget<>("No module in slot" ).align(Alignment.Center));
+            return widget;
+        }
+
+        if(module instanceof ModuleCrafter) {
+            widget.child(new TextWidget<>("Crafting Modules are being replaced with Pattern Crafting Pipes, please use them").align(Alignment.Center));
             return widget;
         }
 

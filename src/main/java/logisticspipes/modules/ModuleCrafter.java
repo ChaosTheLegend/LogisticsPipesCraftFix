@@ -10,9 +10,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
-import cofh.core.util.fluid.FluidTankAdv;
-import com.cleanroommc.modularui.utils.FluidTankHandler;
-import com.cleanroommc.modularui.utils.fluid.IFluidTanksHandler;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
@@ -28,7 +25,6 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
-import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
@@ -135,7 +131,7 @@ import lombok.Getter;
 import net.minecraftforge.fluids.FluidTank;
 
 public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver,
-        ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
+        ISimpleInventoryEventHandler, IModuleInventoryReceive {
 
     private IRequestItems _invRequester;
     // private ForgeDirection _sneakyDirection = ForgeDirection.UNKNOWN;
@@ -1788,16 +1784,6 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
                             .setIdentList(ItemIdentifierStack.getListFromInventory(inventory)).setModulePos(this),
                     localModeWatchers);
         }
-    }
-
-    @Override
-    public LogisticsModularUI getHandGui() {
-        return null;
-    }
-
-    @Override
-    public LogisticsModularUI getPipeGui() {
-        return new ModuleCraftingMuiDynamic(this);
     }
 
     public static class CraftingChassieInformation extends ChassiTargetInformation {

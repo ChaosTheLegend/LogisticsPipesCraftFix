@@ -59,7 +59,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 
 @CCType(name = "LogisticsPipes:Crafting")
 public class PipeItemsCraftingLogistics extends CoreRoutedPipe implements ICraftItems, IRequireReliableTransport,
-        IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver, IHavePriority, IMUICompatiblePipeV2 {
+        IHeadUpDisplayRendererProvider, IChangeListener, IOrderManagerContentReceiver, IHavePriority {
 
     protected ModuleCrafter craftingModule;
 
@@ -298,10 +298,5 @@ public class PipeItemsCraftingLogistics extends CoreRoutedPipe implements ICraft
             }
         }
         return false;
-    }
-
-    @Override
-    public LogisticsModularUI getPipeGui() {
-        return PipeGuiFactory.fromModule(this, craftingModule);
     }
 }
