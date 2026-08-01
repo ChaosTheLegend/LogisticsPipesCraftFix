@@ -114,11 +114,9 @@ import logisticspipes.proxy.te.ThermalExpansionProgressProvider;
 import logisticspipes.recipes.CraftingPermissionManager;
 import logisticspipes.recipes.RecipeManager;
 import logisticspipes.recipes.SolderingStationRecipes;
-import logisticspipes.renderer.FluidContainerRenderer;
-import logisticspipes.renderer.ItemModuleRenderer;
-import logisticspipes.renderer.LogisticsHUDRenderer;
-import logisticspipes.renderer.LogisticsPipeItemRenderer;
-import logisticspipes.renderer.PatternItemRenderer;
+import logisticspipes.renderer.*;
+import logisticspipes.renderer.newpipe.LogisticsNewPipeItemRenderer;
+import logisticspipes.renderer.newpipe.LogisticsNewRenderPipe;
 import logisticspipes.routing.RouterManager;
 import logisticspipes.routing.ServerRouter;
 import logisticspipes.routing.pathfinder.PipeInformationManager;
@@ -341,6 +339,7 @@ public class LogisticsPipes {
         FMLCommonHandler.instance().bus().register(eventListener);
         MinecraftForge.EVENT_BUS.register(new LPChatListener());
         LogisticsPipes.textures.registerBlockIcons(null);
+        LogisticsNewRenderPipe.loadModels();
 
         RecipeManager.registerRecipeClasses();
 
@@ -353,7 +352,6 @@ public class LogisticsPipes {
         isGTNH = Loader.isModLoaded("dreamcraft") && Loader.isModLoaded("gregtech");
 
         LogisticsPipes.log = evt.getModLog();
-        loadClasses();
         ProxyManager.load();
         Configs.load();
         SimpleServiceLocator.setPipeInformationManager(new PipeInformationManager());
@@ -577,25 +575,6 @@ public class LogisticsPipes {
         if (parts != null) {
             SimpleServiceLocator.cofhPowerProxy.addCraftingRecipes(parts);
         }
-    }
-
-    private void loadClasses() {
-        // Try to load all classes to let out checksums get generated
-        forName("net.minecraft.tileentity.TileEntity");
-        forName("net.minecraft.world.World");
-        forName("net.minecraft.item.ItemStack");
-        forName("net.minecraftforge.fluids.FluidStack");
-        forName("net.minecraftforge.fluids.Fluid");
-        forName("dan200.computercraft.core.lua.LuaJLuaMachine");
-        forName("cofh.thermaldynamics.block.TileTDBase");
-        forName("cofh.thermaldynamics.duct.item.TravelingItem");
-        forName("cofh.thermaldynamics.render.RenderDuctItems");
-    }
-
-    private void forName(String string) {
-        try {
-            Class.forName(string);
-        } catch (Exception ignore) {}
     }
 
     @EventHandler
