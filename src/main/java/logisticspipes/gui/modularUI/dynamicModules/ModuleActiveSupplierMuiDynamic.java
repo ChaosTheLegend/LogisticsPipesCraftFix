@@ -37,7 +37,7 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
 
         if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        EnumSyncValue<ModuleActiveSupplier.SupplyMode> supplyModeSync = syncManager != null
+        var supplyModeSync = syncManager != null
             ? syncManager.getOrCreateSyncHandler(getFullId() + "_supply_mode", EnumSyncValue.class, () -> new EnumSyncValue<>(ModuleActiveSupplier.SupplyMode.class, module::getSupplyMode, module::setSupplyMode))
             : new EnumSyncValue<>(ModuleActiveSupplier.SupplyMode.class, module::getSupplyMode, module::setSupplyMode);
 

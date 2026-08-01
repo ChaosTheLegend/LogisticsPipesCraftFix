@@ -37,7 +37,7 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
 
         if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        EnumSyncValue<ExtractionMode> extractionModeSync = syncManager.getOrCreateSyncHandler(getFullId() + "_extraction_mode",  EnumSyncValue.class, () ->
+        var extractionModeSync = syncManager.getOrCreateSyncHandler(getFullId() + "_extraction_mode",  EnumSyncValue.class, () ->
             new EnumSyncValue<>(ExtractionMode.class, module::getExtractionMode, i -> module.setExtractionMode(i.ordinal())));
         BooleanSyncValue excludeFilterSync = syncManager.getOrCreateSyncHandler(getFullId() + "_exclude_filter", BooleanSyncValue.class, () ->
             new BooleanSyncValue(module::isExcludeFilter, module::setFilterExcluded));
