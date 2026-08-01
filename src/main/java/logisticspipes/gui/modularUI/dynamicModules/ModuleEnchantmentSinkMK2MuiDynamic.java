@@ -12,6 +12,7 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleEnchantmentSinkMK2;
 
@@ -32,18 +33,12 @@ public class ModuleEnchantmentSinkMK2MuiDynamic extends GenericModuleMUI<ModuleE
     @Override
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .left(9)
-                .top(4)
-                .childPadding(4)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .child(new TextWidget<>("Requested enchanted items"))
-                .child(buildFilterSlots(syncManager))
-            );
+        widget.child(
+                new Column().coverChildren().left(9).top(4).childPadding(4)
+                        .crossAxisAlignment(Alignment.CrossAxis.START)
+                        .child(new TextWidget<>("Requested enchanted items")).child(buildFilterSlots(syncManager)));
 
         return widget;
     }
@@ -60,7 +55,11 @@ public class ModuleEnchantmentSinkMK2MuiDynamic extends GenericModuleMUI<ModuleE
             int slotIndex = i;
             PhantomItemSlot slotWidget = new PhantomItemSlot();
             if (syncManager != null) {
-                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(id + "_filter", slotIndex, PhantomItemSlotSH.class, () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
+                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
+                        id + "_filter",
+                        slotIndex,
+                        PhantomItemSlotSH.class,
+                        () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
                 slotWidget.syncHandler(slotSH);
             } else {
                 slotWidget.slot(filterInventory, slotIndex);

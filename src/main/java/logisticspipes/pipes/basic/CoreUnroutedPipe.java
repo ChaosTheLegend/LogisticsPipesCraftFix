@@ -3,8 +3,6 @@ package logisticspipes.pipes.basic;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
-import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -16,6 +14,8 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldSettings.GameType;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.ItemStackHandler;
 import com.gtnewhorizon.gtnhlib.blockpos.IBlockPos;
 
 import cpw.mods.fml.relauncher.Side;

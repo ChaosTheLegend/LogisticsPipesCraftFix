@@ -1,17 +1,18 @@
 package logisticspipes.crafting.pattern;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import logisticspipes.items.LogisticsItem;
-import logisticspipes.network.NewGuiHandler;
-import logisticspipes.proxy.MainProxy;
+import java.util.List;
+
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 
-import java.util.List;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.items.LogisticsItem;
+import logisticspipes.network.NewGuiHandler;
+import logisticspipes.proxy.MainProxy;
 
 public class ItemPattern extends LogisticsItem {
 
@@ -37,7 +38,7 @@ public class ItemPattern extends LogisticsItem {
 
     public static boolean isProcessingPattern(ItemStack pattern) {
         return pattern != null && pattern.hasTagCompound()
-            && PROCESSING_TYPE.equals(pattern.getTagCompound().getString(PATTERN_TYPE_TAG));
+                && PROCESSING_TYPE.equals(pattern.getTagCompound().getString(PATTERN_TYPE_TAG));
     }
 
     /**

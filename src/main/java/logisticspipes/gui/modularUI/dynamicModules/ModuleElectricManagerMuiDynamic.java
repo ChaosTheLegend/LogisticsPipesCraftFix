@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleElectricManager;
 
@@ -35,34 +36,24 @@ public class ModuleElectricManagerMuiDynamic extends GenericModuleMUI<ModuleElec
     @Override
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         BooleanSyncValue dischargeModeSync = syncManager != null
-            ? syncManager.getOrCreateSyncHandler(getFullId() + "_discharge_mode", BooleanSyncValue.class, () -> new BooleanSyncValue(module::isDischargeMode, module::setDischargeMode))
-            : new BooleanSyncValue(module::isDischargeMode, module::setDischargeMode);
+                ? syncManager.getOrCreateSyncHandler(
+                        getFullId() + "_discharge_mode",
+                        BooleanSyncValue.class,
+                        () -> new BooleanSyncValue(module::isDischargeMode, module::setDischargeMode))
+                : new BooleanSyncValue(module::isDischargeMode, module::setDischargeMode);
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .left(9)
-                .top(4)
-                .childPadding(4)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .child(new TextWidget<>("Electric items"))
-                .child(buildFilterSlots(syncManager))
-                .child(new CycleButtonWidget()
-                    .width(86).height(20)
-                    .alignX(Alignment.END)
-                    .value(dischargeModeSync)
-                    .overlay(
-                        IKey.lang(
-                            () -> module.isDischargeMode() ?
-                                "Discharge items" :
-                                "Charge items"
-                        )
-                    )
-                )
-            );
+        widget.child(
+                new Column().coverChildren().left(9).top(4).childPadding(4)
+                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Electric items"))
+                        .child(buildFilterSlots(syncManager)).child(
+                                new CycleButtonWidget().width(86).height(20).alignX(Alignment.END)
+                                        .value(dischargeModeSync).overlay(
+                                                IKey.lang(
+                                                        () -> module.isDischargeMode() ? "Discharge items"
+                                                                : "Charge items"))));
 
         return widget;
     }
@@ -79,7 +70,11 @@ public class ModuleElectricManagerMuiDynamic extends GenericModuleMUI<ModuleElec
             int slotIndex = i;
             PhantomItemSlot slotWidget = new PhantomItemSlot();
             if (syncManager != null) {
-                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(id + "_filter", slotIndex, PhantomItemSlotSH.class, () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
+                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
+                        id + "_filter",
+                        slotIndex,
+                        PhantomItemSlotSH.class,
+                        () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
                 slotWidget.syncHandler(slotSH);
             } else {
                 slotWidget.slot(filterInventory, slotIndex);

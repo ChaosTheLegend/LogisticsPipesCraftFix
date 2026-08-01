@@ -1,5 +1,7 @@
 package logisticspipes.network.packets.satpipe;
 
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.PacketHandler;
@@ -7,7 +9,6 @@ import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.network.abstractpackets.StringCoordinatesPacket;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.proxy.MainProxy;
-import net.minecraft.entity.player.EntityPlayer;
 
 public class PatternSatelliteSetName extends StringCoordinatesPacket {
 
@@ -41,9 +42,9 @@ public class PatternSatelliteSetName extends StringCoordinatesPacket {
             return;
         }
         MainProxy.sendPacketToPlayer(
-            PacketHandler.getPacket(PatternSatelliteSetName.class)
-                .setString(resolvedName == null ? "" : resolvedName).setPosX(getPosX()).setPosY(getPosY())
-                .setPosZ(getPosZ()),
-            player);
+                PacketHandler.getPacket(PatternSatelliteSetName.class)
+                        .setString(resolvedName == null ? "" : resolvedName).setPosX(getPosX()).setPosY(getPosY())
+                        .setPosZ(getPosZ()),
+                player);
     }
 }

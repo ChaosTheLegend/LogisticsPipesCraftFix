@@ -1,5 +1,15 @@
 package logisticspipes.crafting.pattern;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.util.EnumChatFormatting;
+
 import logisticspipes.crafting.PatternSatelliteInfo;
 import logisticspipes.crafting.PatternSatelliteSelectorGui;
 import logisticspipes.crafting.patternStack.IPatternStack;
@@ -11,15 +21,6 @@ import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.util.EnumChatFormatting;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class PatternGui extends LogisticsBaseGuiScreen {
 
@@ -65,21 +66,21 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         addButton(typeButton);
 
         GuiButton oreDictButton = new SmallGuiButton(
-            ORE_DICT_BUTTON_ID,
-            guiLeft + 174,
-            guiTop + 66,
-            38,
-            12,
-            oreDictLabel());
+                ORE_DICT_BUTTON_ID,
+                guiLeft + 174,
+                guiTop + 66,
+                38,
+                12,
+                oreDictLabel());
         addButton(oreDictButton);
 
         GuiButton ignoreNbtButton = new SmallGuiButton(
-            IGNORE_NBT_BUTTON_ID,
-            guiLeft + 174,
-            guiTop + 82,
-            38,
-            12,
-            ignoreNbtLabel());
+                IGNORE_NBT_BUTTON_ID,
+                guiLeft + 174,
+                guiTop + 82,
+                38,
+                12,
+                ignoreNbtLabel());
         addButton(ignoreNbtButton);
     }
 
@@ -142,26 +143,26 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 ItemPattern.toggleProcessingPattern(patternInventory.getPatternStack());
                 updatePatternSlotLayout();
                 MainProxy.sendPacketToServer(
-                    PacketHandler.getPacket(PatternSlotActionPacket.class)
-                        .setInventorySlot(patternInventory.getInventorySlot())
-                        .setAction(PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()));
+                        PacketHandler.getPacket(PatternSlotActionPacket.class)
+                                .setInventorySlot(patternInventory.getInventorySlot())
+                                .setAction(PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()));
                 initGui();
                 break;
             case ORE_DICT_BUTTON_ID:
                 currentPattern().toggleOreDictSubstitution();
                 button.displayString = oreDictLabel();
                 MainProxy.sendPacketToServer(
-                    PacketHandler.getPacket(PatternSlotActionPacket.class)
-                        .setInventorySlot(patternInventory.getInventorySlot())
-                        .setAction(PatternSlotActionPacket.Action.TOGGLE_ORE_DICT.ordinal()));
+                        PacketHandler.getPacket(PatternSlotActionPacket.class)
+                                .setInventorySlot(patternInventory.getInventorySlot())
+                                .setAction(PatternSlotActionPacket.Action.TOGGLE_ORE_DICT.ordinal()));
                 break;
             case IGNORE_NBT_BUTTON_ID:
                 currentPattern().toggleIgnoreNbt();
                 button.displayString = ignoreNbtLabel();
                 MainProxy.sendPacketToServer(
-                    PacketHandler.getPacket(PatternSlotActionPacket.class)
-                        .setInventorySlot(patternInventory.getInventorySlot())
-                        .setAction(PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT.ordinal()));
+                        PacketHandler.getPacket(PatternSlotActionPacket.class)
+                                .setInventorySlot(patternInventory.getInventorySlot())
+                                .setAction(PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT.ordinal()));
                 break;
 
         }
@@ -192,7 +193,8 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 continue;
             }
             if (mouseX >= button.xPosition && mouseX < button.xPosition + button.width
-                && mouseY >= button.yPosition && mouseY < button.yPosition + button.height) {
+                    && mouseY >= button.yPosition
+                    && mouseY < button.yPosition + button.height) {
                 return button;
             }
         }
@@ -207,29 +209,29 @@ public class PatternGui extends LogisticsBaseGuiScreen {
                 new PatternSatelliteSelectorGui(
                         inputSlot,
                         currentSatelliteId,
-                    currentSatelliteUuid,
-                    fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
-                        : PatternSatelliteInfo.SatelliteType.ITEM,
+                        currentSatelliteUuid,
+                        fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
+                                : PatternSatelliteInfo.SatelliteType.ITEM,
                         satellites,
-                    (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(
-                        inputSlot,
-                        satelliteId,
-                        satelliteUuid,
-                        fluidTarget)));
+                        (satelliteId, satelliteUuid) -> setSatelliteForInputSlot(
+                                inputSlot,
+                                satelliteId,
+                                satelliteUuid,
+                                fluidTarget)));
     }
 
     private void setSatelliteForInputSlot(int inputSlot, int satelliteId, String satelliteUuid, boolean fluidTarget) {
         if (fluidTarget) {
             ItemPattern.fromStack(patternInventory.getPatternStack())
-                .setFluidSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+                    .setFluidSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         } else {
             ItemPattern.fromStack(patternInventory.getPatternStack())
-                .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
+                    .setSatelliteTargetForInputSlot(inputSlot, satelliteId, satelliteUuid);
         }
         MainProxy.sendPacketToServer(
                 PacketHandler.getPacket(PatternSatelliteAssignmentPacket.class)
                         .setInventorySlot(patternInventory.getInventorySlot()).setInputSlot(inputSlot)
-                    .setSatelliteId(satelliteId).setSatelliteUuid(satelliteUuid).setFluidTarget(fluidTarget));
+                        .setSatelliteId(satelliteId).setSatelliteUuid(satelliteUuid).setFluidTarget(fluidTarget));
     }
 
     private void drawSatelliteButtonTooltip(int mouseX, int mouseY) {
@@ -246,12 +248,12 @@ public class PatternGui extends LogisticsBaseGuiScreen {
         } else {
             PatternSatelliteInfo satellite = getSatelliteInfo(satelliteId, satelliteUuid, fluidTarget);
             tooltip.add(
-                (fluidTarget ? "Fluid satellite " : "Pattern satellite ")
-                    + (satellite == null ? "#" + satelliteId : satellite.displayName()));
+                    (fluidTarget ? "Fluid satellite " : "Pattern satellite ")
+                            + (satellite == null ? "#" + satelliteId : satellite.displayName()));
             if (satellite != null) {
                 tooltip.add(
-                    "Dim " + satellite
-                        .dimension() + " at " + satellite.x() + ", " + satellite.y() + ", " + satellite.z());
+                        "Dim " + satellite
+                                .dimension() + " at " + satellite.x() + ", " + satellite.y() + ", " + satellite.z());
                 tooltip.add(satellite.distance() >= 0 ? satellite.distance() + "m away" : "Other dimension");
                 if (satellite.favorite()) {
                     tooltip.add("Stored on memory chip");
@@ -265,10 +267,10 @@ public class PatternGui extends LogisticsBaseGuiScreen {
 
     private PatternSatelliteInfo getSatelliteInfo(int satelliteId, String satelliteUuid, boolean fluidTarget) {
         PatternSatelliteInfo.SatelliteType type = fluidTarget ? PatternSatelliteInfo.SatelliteType.FLUID
-            : PatternSatelliteInfo.SatelliteType.ITEM;
+                : PatternSatelliteInfo.SatelliteType.ITEM;
         for (PatternSatelliteInfo satellite : satellites) {
             if (satellite.type() == type && ((!satelliteUuid.isEmpty() && satelliteUuid.equals(satellite.uuid()))
-                || (satelliteUuid.isEmpty() && satellite.id() == satelliteId))) {
+                    || (satelliteUuid.isEmpty() && satellite.id() == satelliteId))) {
                 return satellite;
             }
         }
@@ -286,11 +288,11 @@ public class PatternGui extends LogisticsBaseGuiScreen {
             int y = guiTop + layout.inputY(inputSlot);
             boolean assigned = satelliteId > 0 || !satelliteUuid.isEmpty();
             Gui.drawRect(
-                x,
-                y,
-                x + SATELLITE_ICON_SIZE,
-                y + SATELLITE_ICON_SIZE,
-                assigned ? (fluidTarget ? 0xff00a8cc : 0xff2b6ee8) : 0xff777777);
+                    x,
+                    y,
+                    x + SATELLITE_ICON_SIZE,
+                    y + SATELLITE_ICON_SIZE,
+                    assigned ? (fluidTarget ? 0xff00a8cc : 0xff2b6ee8) : 0xff777777);
             mc.fontRenderer.drawString(assigned ? (fluidTarget ? "F" : "S") : "+", x + 1, y, 0xffffff);
         }
     }
@@ -321,8 +323,7 @@ public class PatternGui extends LogisticsBaseGuiScreen {
 
     private void updatePatternSlotLayout() {
         if (inventorySlots instanceof PatternContainer) {
-            ((PatternContainer) inventorySlots)
-                .updatePatternSlotLayout(
+            ((PatternContainer) inventorySlots).updatePatternSlotLayout(
                     currentPattern(),
                     INGREDIENT_LEFT + 1,
                     INGREDIENT_TOP + 1,
@@ -339,13 +340,13 @@ public class PatternGui extends LogisticsBaseGuiScreen {
     private int getSatelliteId(int inputSlot, boolean fluidTarget) {
         AbstractPattern pattern = currentPattern();
         return fluidTarget ? pattern.getFluidSatelliteIdForInputSlot(inputSlot)
-            : pattern.getSatelliteIdForInputSlot(inputSlot);
+                : pattern.getSatelliteIdForInputSlot(inputSlot);
     }
 
     private String getSatelliteUuid(int inputSlot, boolean fluidTarget) {
         AbstractPattern pattern = currentPattern();
         return fluidTarget ? pattern.getFluidSatelliteUuidForInputSlot(inputSlot)
-            : pattern.getSatelliteUuidForInputSlot(inputSlot);
+                : pattern.getSatelliteUuidForInputSlot(inputSlot);
     }
 
     private String typeLabel() {

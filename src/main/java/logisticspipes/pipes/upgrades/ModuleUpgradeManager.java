@@ -1,11 +1,12 @@
 package logisticspipes.pipes.upgrades;
 
-import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
-import com.cleanroommc.modularui.utils.item.InvWrapper;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.ForgeDirection;
+
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.InvWrapper;
 
 import logisticspipes.LogisticsPipes;
 import logisticspipes.interfaces.ISlotUpgradeManager;

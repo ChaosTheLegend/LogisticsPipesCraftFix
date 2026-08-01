@@ -17,6 +17,7 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleItemSink;
 
@@ -37,51 +38,33 @@ public class ModuleItemSinkMuiDynamic extends GenericModuleMUI<ModuleItemSink> {
     @Override
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         BooleanSyncValue defaultRouteSync = syncManager != null
-            ? syncManager.getOrCreateSyncHandler(getFullId() + "_default_route", BooleanSyncValue.class, () -> new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute))
-            : new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute);
+                ? syncManager.getOrCreateSyncHandler(
+                        getFullId() + "_default_route",
+                        BooleanSyncValue.class,
+                        () -> new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute))
+                : new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute);
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .left(9)
-                .top(4)
-                .childPadding(4)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .child(new TextWidget<>("Requested items"))
-                .child(buildFilterSlots(syncManager))
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .child(new ButtonWidget<>()
-                        .onMousePressed(i -> {
-                            if(i == 0) module.importFromInventory();
-                            return i == 0;
-                        })
-                        .overlay(IKey.lang("Import"))
-                        .width(40).height(16)
-                    )
-                    .child(new Row().expanded())
-                    .child(new Row()
-                        .coverChildren()
-                        .childPadding(4)
-                        .child(new TextWidget<>("Default route:"))
-                        .child(new CycleButtonWidget()
-                            .width(26).height(16)
-                            .value(defaultRouteSync)
-                            .overlay(
-                                IKey.lang(
-                                    () -> module.isDefaultRoute() ?
-                                        "On" :
-                                        "Off"
-                                )
-                            )
-                        )
-                    )
-                )
-            );
+        widget.child(
+                new Column().coverChildren().left(9).top(4).childPadding(4)
+                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Requested items"))
+                        .child(buildFilterSlots(syncManager)).child(
+                                new Row().coverChildrenHeight().widthRel(1f)
+                                        .child(new ButtonWidget<>().onMousePressed(i -> {
+                                            if (i == 0) module.importFromInventory();
+                                            return i == 0;
+                                        }).overlay(IKey.lang("Import")).width(40).height(16))
+                                        .child(new Row().expanded()).child(
+                                                new Row().coverChildren().childPadding(4)
+                                                        .child(new TextWidget<>("Default route:")).child(
+                                                                new CycleButtonWidget().width(26).height(16)
+                                                                        .value(defaultRouteSync).overlay(
+                                                                                IKey.lang(
+                                                                                        () -> module.isDefaultRoute()
+                                                                                                ? "On"
+                                                                                                : "Off"))))));
 
         return widget;
     }
@@ -98,7 +81,11 @@ public class ModuleItemSinkMuiDynamic extends GenericModuleMUI<ModuleItemSink> {
             int slotIndex = i;
             PhantomItemSlot slotWidget = new PhantomItemSlot();
             if (syncManager != null) {
-                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(id + "_filter", slotIndex, PhantomItemSlotSH.class, () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
+                PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
+                        id + "_filter",
+                        slotIndex,
+                        PhantomItemSlotSH.class,
+                        () -> new PhantomItemSlotSH(new ModularSlot(filterInventory, slotIndex)));
                 slotWidget.syncHandler(slotSH);
             } else {
                 slotWidget.slot(filterInventory, slotIndex);

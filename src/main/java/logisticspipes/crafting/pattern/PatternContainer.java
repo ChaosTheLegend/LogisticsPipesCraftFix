@@ -1,9 +1,8 @@
 package logisticspipes.crafting.pattern;
 
-import logisticspipes.crafting.patternStack.PatternFluidStack;
-import logisticspipes.proxy.MainProxy;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.gui.DummyContainer;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.IInventory;
@@ -11,8 +10,10 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.util.ArrayList;
-import java.util.List;
+import logisticspipes.crafting.patternStack.PatternFluidStack;
+import logisticspipes.proxy.MainProxy;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.gui.DummyContainer;
 
 public class PatternContainer extends DummyContainer {
 
@@ -38,8 +39,7 @@ public class PatternContainer extends DummyContainer {
      * @param outputLeft left position of the first visible output slot
      * @param outputTop  top position of the first visible output slot
      */
-    public void addPatternSlots(
-        AbstractPattern pattern, int inputLeft, int inputTop, int outputLeft, int outputTop) {
+    public void addPatternSlots(AbstractPattern pattern, int inputLeft, int inputTop, int outputLeft, int outputTop) {
         if (patternSlots.isEmpty()) {
             for (int slot = 0; slot < ItemPattern.MAX_ITEM_SLOT_COUNT; slot++) {
                 patternSlots.add(addDummySlot(slot, HIDDEN_SLOT_X, HIDDEN_SLOT_Y));
@@ -57,8 +57,8 @@ public class PatternContainer extends DummyContainer {
      * @param outputLeft left position of the first visible output slot
      * @param outputTop  top position of the first visible output slot
      */
-    public void updatePatternSlotLayout(
-        AbstractPattern pattern, int inputLeft, int inputTop, int outputLeft, int outputTop) {
+    public void updatePatternSlotLayout(AbstractPattern pattern, int inputLeft, int inputTop, int outputLeft,
+            int outputTop) {
         this.inputLeft = inputLeft;
         this.inputTop = inputTop;
         this.outputLeft = outputLeft;

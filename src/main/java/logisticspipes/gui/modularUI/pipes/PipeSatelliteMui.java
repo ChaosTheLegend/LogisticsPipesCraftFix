@@ -9,12 +9,12 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+
 import logisticspipes.gui.modularUI.LogisticsPipeMUI;
 import logisticspipes.pipes.ISatellitePipe;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 
 public class PipeSatelliteMui extends LogisticsPipeMUI {
-
 
     public PipeSatelliteMui(CoreRoutedPipe pipe) {
         super(pipe);
@@ -30,30 +30,20 @@ public class PipeSatelliteMui extends LogisticsPipeMUI {
 
         ISatellitePipe satellitePipe = (ISatellitePipe) pipe;
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .top(4)
-                .childPadding(4)
-                .align(Alignment.Center)
-                .crossAxisAlignment(Alignment.CrossAxis.CENTER)
-                .child(new TextWidget<>("Satellite id"))
-                .child(new TextFieldWidget()
-                    .width(80)
-                    .setNumbers(0, Integer.MAX_VALUE)
-                    .value(SyncHandlers.intNumber(satellitePipe::getSatelliteId, satellitePipe::setSatelliteId))
-                )
-                .child(new ButtonWidget<>()
-                    .width(80)
-                    .overlay(IKey.lang("Next free"))
-                    .syncHandler(new InteractionSyncHandler()
-                        .setOnMousePressed(i-> {
-                            if(i.mouseButton != 0) return;
-                            satellitePipe.setNextFreeId();
-                        })
-                    )
-                )
-            );
+        widget.child(
+                new Column().coverChildren().top(4).childPadding(4).align(Alignment.Center)
+                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).child(new TextWidget<>("Satellite id"))
+                        .child(
+                                new TextFieldWidget().width(80).setNumbers(0, Integer.MAX_VALUE).value(
+                                        SyncHandlers.intNumber(
+                                                satellitePipe::getSatelliteId,
+                                                satellitePipe::setSatelliteId)))
+                        .child(
+                                new ButtonWidget<>().width(80).overlay(IKey.lang("Next free"))
+                                        .syncHandler(new InteractionSyncHandler().setOnMousePressed(i -> {
+                                            if (i.mouseButton != 0) return;
+                                            satellitePipe.setNextFreeId();
+                                        }))));
 
         return widget;
     }

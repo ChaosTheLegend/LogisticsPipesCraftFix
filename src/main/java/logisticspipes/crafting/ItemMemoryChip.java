@@ -1,10 +1,9 @@
 package logisticspipes.crafting;
 
-import com.github.bsideup.jabel.Desugar;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import logisticspipes.items.LogisticsItem;
-import logisticspipes.utils.string.ChatColor;
+import java.util.Arrays;
+import java.util.List;
+import java.util.TreeSet;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -12,9 +11,12 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.World;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.TreeSet;
+import com.github.bsideup.jabel.Desugar;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.items.LogisticsItem;
+import logisticspipes.utils.string.ChatColor;
 
 public class ItemMemoryChip extends LogisticsItem {
 
@@ -107,10 +109,10 @@ public class ItemMemoryChip extends LogisticsItem {
             return false;
         }
         return addPatternSatellite(
-            stack,
-            satellite.satelliteId,
-            satellite.getSatelliteUuid(),
-            satellite.getDisplayName());
+                stack,
+                satellite.satelliteId,
+                satellite.getSatelliteUuid(),
+                satellite.getDisplayName());
     }
 
     public static boolean addPatternSatellite(ItemStack stack, int satelliteId, String satelliteUuid,

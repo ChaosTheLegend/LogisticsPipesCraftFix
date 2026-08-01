@@ -20,8 +20,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.items.ItemLegacyWrench;
 import net.minecraft.client.Minecraft;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.player.EntityPlayer;
@@ -39,6 +37,7 @@ import net.minecraftforge.fluids.FluidStack;
 import logisticspipes.LPConstants;
 import logisticspipes.LogisticsPipes;
 import logisticspipes.api.ILogisticsPowerProvider;
+import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.asm.te.ILPTEInformation;
 import logisticspipes.blocks.LogisticsSecurityTileEntity;
 import logisticspipes.config.Configs;
@@ -59,6 +58,7 @@ import logisticspipes.interfaces.routing.IRequest;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.interfaces.routing.IRequireReliableFluidTransport;
 import logisticspipes.interfaces.routing.IRequireReliableTransport;
+import logisticspipes.items.ItemLegacyWrench;
 import logisticspipes.items.ItemPipeSignCreator;
 import logisticspipes.logisticspipes.ExtractionMode;
 import logisticspipes.logisticspipes.IAdjacentWorldAccess;
@@ -1016,10 +1016,10 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
 
         if (SimpleServiceLocator.toolWrenchHandler.isWrenchEquipped(entityplayer)
                 && SimpleServiceLocator.toolWrenchHandler.canWrench(entityplayer, getX(), getY(), getZ())) {
-            if(!(entityplayer.getHeldItem().getItem() instanceof ItemLegacyWrench) && this instanceof IMUICompatiblePipeV2){
-                ((IMUICompatiblePipeV2)this).openGui(entityplayer, this);
-            }
-            else if (MainProxy.isServer(entityplayer.worldObj)) {
+            if (!(entityplayer.getHeldItem().getItem() instanceof ItemLegacyWrench)
+                    && this instanceof IMUICompatiblePipeV2) {
+                ((IMUICompatiblePipeV2) this).openGui(entityplayer, this);
+            } else if (MainProxy.isServer(entityplayer.worldObj)) {
                 if (settings == null || settings.openGui) {
                     if (getLogisticsModule() != null && getLogisticsModule() instanceof LogisticsGuiModule) {
                         ((LogisticsGuiModule) getLogisticsModule()).getPipeGuiProviderForModule().setTilePos(container)

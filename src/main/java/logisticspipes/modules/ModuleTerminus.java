@@ -5,10 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleTerminusMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleTerminusMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -17,7 +13,11 @@ import net.minecraft.util.IIcon;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDSimpleFilterModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleTerminusMuiDynamic;
+import logisticspipes.gui.modularUI.modules.ModuleTerminusMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -43,8 +43,9 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "Terminus Module")
-public class ModuleTerminus extends LogisticsSimpleFilterModule implements IClientInformationProvider,
-        IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler, IModuleInventoryReceive, IMUICompatibleModule {
+public class ModuleTerminus extends LogisticsSimpleFilterModule
+        implements IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, ISimpleInventoryEventHandler,
+        IModuleInventoryReceive, IMUICompatibleModule {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,

@@ -1,5 +1,14 @@
 package logisticspipes.crafting;
 
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.SlotCrafting;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.nbt.NBTTagCompound;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.blocks.LogisticsSolidTileEntity;
 import logisticspipes.blocks.crafting.AutoCraftingInventory;
@@ -18,14 +27,6 @@ import logisticspipes.utils.ISimpleInventoryEventHandler;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.SimpleStackInventory;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.SlotCrafting;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.nbt.NBTTagCompound;
-
-import java.util.List;
 
 public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileEntity
         implements IInventory, IGuiTileEntity, ISimpleInventoryEventHandler {
@@ -274,8 +275,7 @@ public class PatternLogisticsCraftingTableTileEntity extends LogisticsSolidTileE
         if (stack == null || slot < 0 || slot >= INPUT_SIZE) return false;
 
         ItemStack existing = input.getStackInSlot(slot);
-        return existing == null
-            || ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(stack));
+        return existing == null || ItemIdentifier.get(existing).equalsForCrafting(ItemIdentifier.get(stack));
     }
 
     public int insertFromPatternPipe(int slot, ItemStack stack) {

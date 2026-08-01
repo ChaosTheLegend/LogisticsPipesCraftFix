@@ -1,5 +1,11 @@
 package logisticspipes.crafting.pattern;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.crafting.PatternSatelliteInfo;
 import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
@@ -7,11 +13,6 @@ import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.network.abstractguis.GuiProvider;
 import logisticspipes.utils.gui.DummyContainer;
-import net.minecraft.entity.player.EntityPlayer;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PatternGuiProvider extends GuiProvider {
 
@@ -49,7 +50,7 @@ public class PatternGuiProvider extends GuiProvider {
     }
 
     public static void addPatternSlots(DummyContainer dummy, AbstractPattern pattern, int inputLeft, int inputTop,
-                                       int outputLeft, int outputTop) {
+            int outputLeft, int outputTop) {
         if (pattern == null) {
             pattern = ItemPattern.fromStack(null);
         }

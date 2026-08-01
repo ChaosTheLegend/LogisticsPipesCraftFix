@@ -1,9 +1,10 @@
 package logisticspipes.crafting.patternStack;
 
-import logisticspipes.utils.item.ItemIdentifierStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+
+import logisticspipes.utils.item.ItemIdentifierStack;
 
 public class PatternItemStack implements IPatternStack {
 
@@ -41,8 +42,7 @@ public class PatternItemStack implements IPatternStack {
 
     @Override
     public boolean canMerge(IPatternStack other) {
-        return other instanceof PatternItemStack
-            && stack.getItem().equals(((PatternItemStack) other).stack.getItem());
+        return other instanceof PatternItemStack && stack.getItem().equals(((PatternItemStack) other).stack.getItem());
     }
 
     @Override

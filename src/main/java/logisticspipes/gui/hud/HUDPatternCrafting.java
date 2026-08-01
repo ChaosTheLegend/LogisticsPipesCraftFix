@@ -1,5 +1,13 @@
 package logisticspipes.gui.hud;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+
+import org.lwjgl.opengl.GL11;
+
 import logisticspipes.crafting.PatternCraftingHudState;
 import logisticspipes.crafting.PatternCraftingHudState.IngredientInfo;
 import logisticspipes.crafting.PatternCraftingHudState.OutputInfo;
@@ -13,12 +21,6 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.item.ItemStackRenderer;
 import logisticspipes.utils.item.ItemStackRenderer.DisplayAmount;
 import logisticspipes.utils.string.StringUtils;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import org.lwjgl.opengl.GL11;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class HUDPatternCrafting extends BasicHUDGui {
 
@@ -123,12 +125,12 @@ public class HUDPatternCrafting extends BasicHUDGui {
         }
 
         drawScaledTrimmedString(
-            mc.fontRenderer,
-            topString,
-            HEADER_LEFT,
-            HEADER_TOP,
-            WINDOW_RIGHT - WINDOW_LEFT - 32,
-            HEADER_SCALE);
+                mc.fontRenderer,
+                topString,
+                HEADER_LEFT,
+                HEADER_TOP,
+                WINDOW_RIGHT - WINDOW_LEFT - 32,
+                HEADER_SCALE);
 
         if (patterns.isEmpty()) {
             return;
@@ -144,17 +146,17 @@ public class HUDPatternCrafting extends BasicHUDGui {
         }
         ItemStackRenderer renderer = new ItemStackRenderer(0, 0, 100.0F, false, shifted, true);
         renderer.setScaleX(ITEM_SCALE_X).setScaleY(ITEM_SCALE_Y).setScaleZ(ITEM_SCALE_Z)
-            .setDisplayAmount(DisplayAmount.ALWAYS);
+                .setDisplayAmount(DisplayAmount.ALWAYS);
         renderIngredients(mc, renderer, pattern.getIngredients());
         renderOutputs(mc, renderer, pattern.getOutputs());
         GL11.glPopMatrix();
 
         drawWrappedStatus(
-            mc.fontRenderer,
-            pattern.getStatus(),
-            WINDOW_LEFT + 8,
-            STATUS_TOP,
-            WINDOW_RIGHT - WINDOW_LEFT - 16);
+                mc.fontRenderer,
+                pattern.getStatus(),
+                WINDOW_LEFT + 8,
+                STATUS_TOP,
+                WINDOW_RIGHT - WINDOW_LEFT - 16);
     }
 
     @Override
@@ -237,21 +239,21 @@ public class HUDPatternCrafting extends BasicHUDGui {
         GL11.glTranslatef(0.0F, 0.0F, 145.0F);
         GL11.glScalef(0.5F, 0.5F, 1.0F);
         SimpleGraphics.drawStringWithTranslatedShadow(
-            mc.fontRenderer,
-            amountString,
-            (x + 17) * 2 - mc.fontRenderer.getStringWidth(amountString),
-            (y - 2) * 2,
-            BUFFER_BLUE);
+                mc.fontRenderer,
+                amountString,
+                (x + 17) * 2 - mc.fontRenderer.getStringWidth(amountString),
+                (y - 2) * 2,
+                BUFFER_BLUE);
         GL11.glPopAttrib();
         GL11.glPopMatrix();
     }
 
     private void drawWrappedStatus(FontRenderer fontRenderer, String status, int x, int y, int width) {
         List<String> lines = wrap(
-            fontRenderer,
-            status == null ? "" : status,
-            Math.round(width / TEXT_SCALE),
-            MAX_STATUS_LINES);
+                fontRenderer,
+                status == null ? "" : status,
+                Math.round(width / TEXT_SCALE),
+                MAX_STATUS_LINES);
         for (int i = 0; i < lines.size(); i++) {
             drawScaledString(fontRenderer, lines.get(i), x, y + i * STATUS_LINE_HEIGHT, TEXT_SCALE);
         }

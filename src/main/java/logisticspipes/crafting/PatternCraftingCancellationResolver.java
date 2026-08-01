@@ -1,20 +1,20 @@
 package logisticspipes.crafting;
 
-import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
-import logisticspipes.routing.order.LogisticsFluidOrder;
-import logisticspipes.routing.order.LogisticsItemOrder;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
+import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
+import logisticspipes.routing.order.LogisticsFluidOrder;
+import logisticspipes.routing.order.LogisticsItemOrder;
+
 /**
  * Resolves a user cancellation request to the staged request tree it belongs to.
  * <p>
- * The pipe UI can only address a pattern slot, but a staged craft can contain several nested pattern slots. Cancelling a
- * middle node would leave its parent waiting for ingredients that can no longer arrive, so this resolver expands the
+ * The pipe UI can only address a pattern slot, but a staged craft can contain several nested pattern slots. Cancelling
+ * a middle node would leave its parent waiting for ingredients that can no longer arrive, so this resolver expands the
  * selected slot to the owning parent chain first and then includes every descendant staged order.
  */
 final class PatternCraftingCancellationResolver {
@@ -115,7 +115,7 @@ final class PatternCraftingCancellationResolver {
     }
 
     private List<PatternCraftingOrder> orderLike(List<PatternCraftingOrder> outputOrders,
-                                                 Set<PatternCraftingOrder> group) {
+            Set<PatternCraftingOrder> group) {
         List<PatternCraftingOrder> result = new ArrayList<>();
         for (PatternCraftingOrder order : outputOrders) {
             if (group.contains(order)) {

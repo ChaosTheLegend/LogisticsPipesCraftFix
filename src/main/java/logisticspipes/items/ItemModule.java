@@ -4,12 +4,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import logisticspipes.api.IMUICompatibleModule;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
@@ -24,9 +18,16 @@ import net.minecraft.world.World;
 
 import org.lwjgl.input.Keyboard;
 
+import com.cleanroommc.modularui.api.IGuiHolder;
+import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.LogisticsPipes;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.interfaces.IPipeServiceProvider;
 import logisticspipes.interfaces.IWorldProvider;
 import logisticspipes.logisticspipes.ItemModuleInformationManager;
@@ -73,7 +74,7 @@ import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 
-public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInventoryGuiData>{
+public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInventoryGuiData> {
 
     // PASSIVE MODULES
     public static final int BLANK = 0;
@@ -130,14 +131,15 @@ public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInvent
         LogisticsModule module = getModuleForItem(item, null, null, null);
 
         if (!(module instanceof IMUICompatibleModule compatibleModule)) {
-            throw new UnsupportedOperationException("Module " + module.getClass().getSimpleName() + " is not compatible with MUI");
+            throw new UnsupportedOperationException(
+                    "Module " + module.getClass().getSimpleName() + " is not compatible with MUI");
         }
 
         ItemModuleInformationManager.readInformation(item, module);
 
         var gui = compatibleModule.getHandGui();
 
-        //Save item nbt on close
+        // Save item nbt on close
         guiSyncManager.addCloseListener(e -> {
             var heldItem = guiData.getPlayer().getHeldItem();
             ItemModuleInformationManager.saveInfotmation(heldItem, module);
@@ -292,8 +294,8 @@ public class ItemModule extends LogisticsItem implements IGuiHolder<PlayerInvent
             return;
         }
 
-        if(module instanceof IMUICompatibleModule){
-            if(!(module instanceof LogisticsGuiModule)) return;
+        if (module instanceof IMUICompatibleModule) {
+            if (!(module instanceof LogisticsGuiModule)) return;
 
             ((IMUICompatibleModule) module).openGui(par2EntityPlayer, (LogisticsGuiModule) module, par3World);
             return;

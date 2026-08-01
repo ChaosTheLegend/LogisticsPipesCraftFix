@@ -1,12 +1,13 @@
 package logisticspipes.proxy.gtnh;
 
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
+
 import gregtech.api.items.MetaBaseItem;
 import logisticspipes.proxy.ic2.IC2Proxy;
 import logisticspipes.proxy.interfaces.ICraftingParts;
 import logisticspipes.proxy.interfaces.IIC2Proxy;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
 
 /**
  * Proxy for GTNH and related mods
@@ -23,8 +24,7 @@ public class GTNHProxy implements IIC2Proxy {
     @Override
     public boolean isElectricItem(ItemStack stack) {
 
-
-        if(stack == null) return false;
+        if (stack == null) return false;
 
         if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)) {
             return (ic2Proxy.isElectricItem(stack));
@@ -36,9 +36,9 @@ public class GTNHProxy implements IIC2Proxy {
 
     @Override
     public boolean isSimilarElectricItem(ItemStack stack, ItemStack template) {
-        if(ic2Proxy.isSimilarElectricItem(stack, template)) return true;
+        if (ic2Proxy.isSimilarElectricItem(stack, template)) return true;
 
-        if(stack == null || template == null || !isElectricItem(template)) return false;
+        if (stack == null || template == null || !isElectricItem(template)) return false;
 
         return template.getItem() == stack.getItem();
     }
@@ -46,7 +46,7 @@ public class GTNHProxy implements IIC2Proxy {
     @Override
     public boolean isFullyCharged(ItemStack stack) {
 
-        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)){
+        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)) {
             return (ic2Proxy.isFullyCharged(stack));
         }
 
@@ -55,7 +55,7 @@ public class GTNHProxy implements IIC2Proxy {
 
     @Override
     public boolean isFullyDischarged(ItemStack stack) {
-        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)){
+        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)) {
             return (ic2Proxy.isFullyDischarged(stack));
         }
         var charge = gtMetaItem.getCharge(stack);
@@ -65,7 +65,7 @@ public class GTNHProxy implements IIC2Proxy {
 
     @Override
     public boolean isPartiallyCharged(ItemStack stack) {
-        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)){
+        if (!(stack.getItem() instanceof MetaBaseItem gtMetaItem)) {
             return (ic2Proxy.isPartiallyCharged(stack));
         }
 

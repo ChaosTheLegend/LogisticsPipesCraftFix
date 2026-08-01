@@ -1,5 +1,11 @@
 package logisticspipes.crafting;
 
+import java.util.UUID;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fluids.FluidStack;
+
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IProvideFluids;
 import logisticspipes.interfaces.routing.IProvideItems;
@@ -29,11 +35,6 @@ import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.routing.order.LogisticsOrder;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.FluidStack;
-
-import java.util.UUID;
 
 final class PatternCraftingPersistence {
 
@@ -318,7 +319,7 @@ final class PatternCraftingPersistence {
             return null;
         }
         int inputSlot = tag.hasKey(INPUT_SLOT_TAG) ? tag.getInteger(INPUT_SLOT_TAG)
-            : PatternTargetInformation.NO_INPUT_SLOT;
+                : PatternTargetInformation.NO_INPUT_SLOT;
         return new PatternTargetInformation(tag.getInteger(PATTERN_SLOT_TAG), inputSlot);
     }
 

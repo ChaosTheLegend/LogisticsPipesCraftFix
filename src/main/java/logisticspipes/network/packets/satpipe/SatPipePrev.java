@@ -1,5 +1,7 @@
 package logisticspipes.network.packets.satpipe;
 
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
@@ -7,7 +9,6 @@ import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.pipes.PipeFluidSatellite;
 import logisticspipes.pipes.PipeItemsSatelliteLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
-import net.minecraft.entity.player.EntityPlayer;
 
 public class SatPipePrev extends CoordinatesPacket {
 
@@ -28,7 +29,7 @@ public class SatPipePrev extends CoordinatesPacket {
         }
 
         if (pipe.pipe instanceof PipeItemsPatternSatelliteLogistics
-            || pipe.pipe instanceof PipeFluidPatternSatelliteLogistics) {
+                || pipe.pipe instanceof PipeFluidPatternSatelliteLogistics) {
             return;
         }
 

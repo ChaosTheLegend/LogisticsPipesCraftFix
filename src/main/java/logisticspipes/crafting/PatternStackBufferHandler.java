@@ -1,5 +1,16 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.world.World;
+
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.crafting.patternStack.PatternStackHelper;
 import logisticspipes.interfaces.routing.ISaveState;
@@ -7,16 +18,6 @@ import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.world.World;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 class PatternStackBufferHandler implements ISaveState {
 

@@ -1,5 +1,8 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.interfaces.routing.ICraftFluids;
 import logisticspipes.interfaces.routing.ICraftItems;
@@ -12,9 +15,6 @@ import logisticspipes.routing.FluidExtraPromise;
 import logisticspipes.routing.LogisticsExtraPromise;
 import logisticspipes.utils.FluidIdentifierStack;
 import logisticspipes.utils.item.ItemIdentifierStack;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class PatternCraftingTemplate extends BaseCraftingTemplate {
 
@@ -29,7 +29,7 @@ public class PatternCraftingTemplate extends BaseCraftingTemplate {
     }
 
     public PatternCraftingTemplate(ItemIdentifierStack result, ICraftItems crafter, int priority, int patternSlot,
-                                   int ingredientSlots) {
+            int ingredientSlots) {
         super(ingredientSlots, priority);
         this.result = result;
         this.crafter = crafter;

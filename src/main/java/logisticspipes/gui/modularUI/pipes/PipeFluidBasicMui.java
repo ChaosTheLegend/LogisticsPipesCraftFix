@@ -7,12 +7,12 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.FluidSlot;
+
 import logisticspipes.gui.modularUI.LogisticsPipeMUI;
 import logisticspipes.pipes.PipeFluidBasic;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
 
 public class PipeFluidBasicMui extends LogisticsPipeMUI {
-
 
     public PipeFluidBasicMui(CoreRoutedPipe pipe) {
         super(pipe);
@@ -28,21 +28,14 @@ public class PipeFluidBasicMui extends LogisticsPipeMUI {
 
         PipeFluidBasic providerPipe = (PipeFluidBasic) pipe;
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .top(4)
-                .left(9)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .childPadding(4)
-                .child(new TextWidget<>("Fluid filter")
-                )
-                .child(new FluidSlot()
-                    .syncHandler(SyncHandlers.fluidSlot(providerPipe.filterTank).phantom(true).controlsAmount(false))
-                )
-            );
+        widget.child(
+                new Column().coverChildren().top(4).left(9).crossAxisAlignment(Alignment.CrossAxis.START)
+                        .childPadding(4).child(new TextWidget<>("Fluid filter")).child(
+                                new FluidSlot().syncHandler(
+                                        SyncHandlers.fluidSlot(providerPipe.filterTank).phantom(true)
+                                                .controlsAmount(false))));
 
         return widget;
     }

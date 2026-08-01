@@ -1,17 +1,18 @@
 package logisticspipes.crafting;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import com.github.bsideup.jabel.Desugar;
+
 import logisticspipes.network.LPDataInputStream;
 import logisticspipes.network.LPDataOutputStream;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 @Getter
 public class PatternCraftingHudState {
@@ -28,7 +29,7 @@ public class PatternCraftingHudState {
     }
 
     public PatternCraftingHudState(PipeItemsPatternCraftingLogistics.BlockingMode blockingMode,
-                                   List<PatternInfo> patterns) {
+            List<PatternInfo> patterns) {
         this.blockingMode = blockingMode == null ? PipeItemsPatternCraftingLogistics.BlockingMode.OFF : blockingMode;
         this.patterns = patterns == null ? new ArrayList<>() : patterns;
     }
@@ -44,7 +45,7 @@ public class PatternCraftingHudState {
 
     public static PatternCraftingHudState readData(LPDataInputStream data) throws IOException {
         PipeItemsPatternCraftingLogistics.BlockingMode blockingMode = data
-            .readEnum(PipeItemsPatternCraftingLogistics.BlockingMode.class);
+                .readEnum(PipeItemsPatternCraftingLogistics.BlockingMode.class);
         return new PatternCraftingHudState(blockingMode, data.readList(PatternInfo::readData));
     }
 
@@ -79,7 +80,7 @@ public class PatternCraftingHudState {
         }
 
         private PatternInfo(int slot, List<IngredientInfo> ingredients, List<OutputInfo> outputs, String status,
-                            boolean active) {
+                boolean active) {
             this.slot = slot;
             this.ingredients = ingredients == null ? new ArrayList<>() : ingredients;
             this.outputs = outputs == null ? new ArrayList<>() : outputs;
@@ -101,11 +102,11 @@ public class PatternCraftingHudState {
 
         private static PatternInfo readData(LPDataInputStream data) throws IOException {
             return new PatternInfo(
-                data.readInt(),
-                data.readList(IngredientInfo::readData),
-                data.readList(OutputInfo::readData),
-                data.readUTF(),
-                data.readBoolean());
+                    data.readInt(),
+                    data.readList(IngredientInfo::readData),
+                    data.readList(OutputInfo::readData),
+                    data.readUTF(),
+                    data.readBoolean());
         }
 
         @Override
@@ -117,9 +118,9 @@ public class PatternCraftingHudState {
                 return false;
             }
             return slot == that.slot && active == that.active
-                && ingredients.equals(that.ingredients)
-                && outputs.equals(that.outputs)
-                && status.equals(that.status);
+                    && ingredients.equals(that.ingredients)
+                    && outputs.equals(that.outputs)
+                    && status.equals(that.status);
         }
 
         @Override

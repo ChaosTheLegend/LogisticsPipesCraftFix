@@ -1,10 +1,11 @@
 package logisticspipes.crafting.pattern;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
+
+import logisticspipes.LogisticsPipes;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 
 public class PipePatternInventory implements IInventory {
 

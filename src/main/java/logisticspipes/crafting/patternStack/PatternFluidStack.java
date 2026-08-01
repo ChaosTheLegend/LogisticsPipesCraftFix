@@ -1,16 +1,17 @@
 package logisticspipes.crafting.patternStack;
 
-import codechicken.nei.recipe.StackInfo;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifierStack;
-import lombok.Getter;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.FluidContainerRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidContainerItem;
+
+import codechicken.nei.recipe.StackInfo;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifierStack;
+import lombok.Getter;
 
 @Getter
 public class PatternFluidStack implements IPatternStack {

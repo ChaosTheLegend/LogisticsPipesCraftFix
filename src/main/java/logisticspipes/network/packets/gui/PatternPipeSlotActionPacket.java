@@ -1,5 +1,10 @@
 package logisticspipes.network.packets.gui;
 
+import java.io.IOException;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.PatternCraftingPipeGuiProvider;
 import logisticspipes.crafting.pattern.AbstractPattern;
@@ -13,10 +18,6 @@ import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
-import java.io.IOException;
 
 @Setter
 @Getter
@@ -55,7 +56,7 @@ public class PatternPipeSlotActionPacket extends CoordinatesPacket {
         } else if (action == PatternSlotActionPacket.Action.TOGGLE_PROCESSING.ordinal()) {
             ItemPattern.toggleProcessingPattern(pattern);
             ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
-                .setSelectedPatternSlot(patternSlot).setTilePos(pipe.container).open(player);
+                    .setSelectedPatternSlot(patternSlot).setTilePos(pipe.container).open(player);
         } else if (action == PatternSlotActionPacket.Action.TOGGLE_ORE_DICT.ordinal()) {
             configuredPattern.toggleOreDictSubstitution();
         } else if (action == PatternSlotActionPacket.Action.TOGGLE_IGNORE_NBT.ordinal()) {

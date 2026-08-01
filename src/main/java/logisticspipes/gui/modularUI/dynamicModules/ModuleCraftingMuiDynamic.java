@@ -1,5 +1,7 @@
 package logisticspipes.gui.modularUI.dynamicModules;
 
+import net.minecraft.client.Minecraft;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -15,9 +17,9 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleCrafter;
-import net.minecraft.client.Minecraft;
 
 public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
 
@@ -44,101 +46,78 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
         if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         widget.child(
-            new Column()
-                .coverChildrenHeight()
-                .fullWidth()
-                .childPadding(4)
-                // Input slots label
-                .child(new TextWidget<>("Inputs").left(4).height(10))
-                // 9 input phantom slots (slots 0-8)
-                .child(buildInputSlots(syncManager))
-                // Output slot row
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .childPadding(4)
-                    .child(new TextWidget<>("Output").height(10).alignY(Alignment.END))
-                    .child(buildSingleSlot(syncManager, 9, "_output"))
-                )
-                // Satellite row: < [id] >
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .childPadding(4)
-                    .child(new TextWidget<>("Satellite:").height(10).alignY(Alignment.CENTER))
-                    .child(new ButtonWidget<>()
-                        .width(14).height(14)
-                        .overlay(IKey.str("<"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.setPrevSatellite(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                    .child(IKey.lang(() -> module.satelliteId == 0 ? "Off" : String.valueOf(module.satelliteId))
-                        .asWidget().width(30).height(14).align(Alignment.Center))
-                    .child(new ButtonWidget<>()
-                        .width(14).height(14)
-                        .overlay(IKey.str(">"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.setNextSatellite(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                )
-                // Priority row: v [priority] ^
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .childPadding(4)
-                    .child(new TextWidget<>("Priority:").height(10).alignY(Alignment.CENTER))
-                    .child(new ButtonWidget<>()
-                        .width(14).height(14)
-                        .overlay(IKey.str("v"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.priorityDown(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                    .child(IKey.lang(() -> String.valueOf(module.priority))
-                        .asWidget().width(30).height(14).align(Alignment.Center))
-                    .child(new ButtonWidget<>()
-                        .width(14).height(14)
-                        .overlay(IKey.str("^"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.priorityUp(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                )
-                // Action buttons row
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .childPadding(4)
-                    .child(new ButtonWidget<>()
-                        .width(60).height(14)
-                        .overlay(IKey.str("Import"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.importFromCraftingTable(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                    .child(new ButtonWidget<>()
-                        .width(60).height(14)
-                        .overlay(IKey.str("Open"))
-                        .onMousePressed(btn -> {
-                            if (btn != 0) return false;
-                            module.openAttachedGui(Minecraft.getMinecraft().thePlayer);
-                            return true;
-                        })
-                    )
-                )
-        );
+                new Column().coverChildrenHeight().fullWidth().childPadding(4)
+                        // Input slots label
+                        .child(new TextWidget<>("Inputs").left(4).height(10))
+                        // 9 input phantom slots (slots 0-8)
+                        .child(buildInputSlots(syncManager))
+                        // Output slot row
+                        .child(
+                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                        .child(new TextWidget<>("Output").height(10).alignY(Alignment.END))
+                                        .child(buildSingleSlot(syncManager, 9, "_output")))
+                        // Satellite row: < [id] >
+                        .child(
+                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                        .child(new TextWidget<>("Satellite:").height(10).alignY(Alignment.CENTER))
+                                        .child(
+                                                new ButtonWidget<>().width(14).height(14).overlay(IKey.str("<"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.setPrevSatellite(Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        }))
+                                        .child(
+                                                IKey.lang(
+                                                        () -> module.satelliteId == 0 ? "Off"
+                                                                : String.valueOf(module.satelliteId))
+                                                        .asWidget().width(30).height(14).align(Alignment.Center))
+                                        .child(
+                                                new ButtonWidget<>().width(14).height(14).overlay(IKey.str(">"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.setNextSatellite(Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        })))
+                        // Priority row: v [priority] ^
+                        .child(
+                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                        .child(new TextWidget<>("Priority:").height(10).alignY(Alignment.CENTER))
+                                        .child(
+                                                new ButtonWidget<>().width(14).height(14).overlay(IKey.str("v"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.priorityDown(Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        }))
+                                        .child(
+                                                IKey.lang(() -> String.valueOf(module.priority)).asWidget().width(30)
+                                                        .height(14).align(Alignment.Center))
+                                        .child(
+                                                new ButtonWidget<>().width(14).height(14).overlay(IKey.str("^"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.priorityUp(Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        })))
+                        // Action buttons row
+                        .child(
+                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                        .child(
+                                                new ButtonWidget<>().width(60).height(14).overlay(IKey.str("Import"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.importFromCraftingTable(
+                                                                    Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        }))
+                                        .child(
+                                                new ButtonWidget<>().width(60).height(14).overlay(IKey.str("Open"))
+                                                        .onMousePressed(btn -> {
+                                                            if (btn != 0) return false;
+                                                            module.openAttachedGui(Minecraft.getMinecraft().thePlayer);
+                                                            return true;
+                                                        }))));
 
         return widget;
     }
@@ -153,8 +132,10 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                 PhantomItemSlot slotWidget = new PhantomItemSlot();
                 if (syncManager != null) {
                     PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
-                        id + "_input", slotIndex, PhantomItemSlotSH.class,
-                        () -> new PhantomItemSlotSH(new ModularSlot(craftingInventory, slotIndex)));
+                            id + "_input",
+                            slotIndex,
+                            PhantomItemSlotSH.class,
+                            () -> new PhantomItemSlotSH(new ModularSlot(craftingInventory, slotIndex)));
                     slotWidget.syncHandler(slotSH);
                 } else {
                     slotWidget.slot(craftingInventory, slotIndex);
@@ -171,8 +152,10 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
         PhantomItemSlot slotWidget = new PhantomItemSlot();
         if (syncManager != null) {
             PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
-                id + suffix, slotIndex, PhantomItemSlotSH.class,
-                () -> new PhantomItemSlotSH(new ModularSlot(craftingInventory, slotIndex)));
+                    id + suffix,
+                    slotIndex,
+                    PhantomItemSlotSH.class,
+                    () -> new PhantomItemSlotSH(new ModularSlot(craftingInventory, slotIndex)));
             slotWidget.syncHandler(slotSH);
         } else {
             slotWidget.slot(craftingInventory, slotIndex);

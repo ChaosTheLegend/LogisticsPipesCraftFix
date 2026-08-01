@@ -1,5 +1,23 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.WeakHashMap;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTankInfo;
+import net.minecraftforge.fluids.IFluidHandler;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.logisticspipes.IRoutedItem;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
@@ -15,28 +33,11 @@ import logisticspipes.routing.IRouter;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.Pair;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTankInfo;
-import net.minecraftforge.fluids.IFluidHandler;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.WeakHashMap;
 
 public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.PipeFluidSatellite {
 
     private static final Set<PipeFluidPatternSatelliteLogistics> ALL_PATTERN_FLUID_SATELLITES = Collections
-        .newSetFromMap(new WeakHashMap<>());
+            .newSetFromMap(new WeakHashMap<>());
     private static final String UUID_TAG = "patternFluidSatelliteUuid";
     private static final String NAME_TAG = "patternFluidSatelliteName";
 
@@ -80,25 +81,25 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
     public static List<PatternSatelliteInfo> getKnownSatellitesFor(EntityPlayer player) {
         List<PatternSatelliteInfo> satellites = new ArrayList<>();
         int playerDimension = player != null && player.worldObj != null
-            ? MainProxy.getDimensionForWorld(player.worldObj)
-            : Integer.MIN_VALUE;
+                ? MainProxy.getDimensionForWorld(player.worldObj)
+                : Integer.MIN_VALUE;
         for (PipeFluidPatternSatelliteLogistics satellite : ALL_PATTERN_FLUID_SATELLITES) {
             if (!isSelectableSatellite(satellite)) {
                 continue;
             }
             int dimension = MainProxy.getDimensionForWorld(satellite.getWorld());
             satellites.add(
-                new PatternSatelliteInfo(
-                    satellite.satelliteId,
-                    satellite.getX(),
-                    satellite.getY(),
-                    satellite.getZ(),
-                    dimension,
-                    getDistance(player, playerDimension, satellite, dimension),
-                    false,
-                    satellite.satelliteUuid,
-                    satellite.getDisplayName(),
-                    PatternSatelliteInfo.SatelliteType.FLUID));
+                    new PatternSatelliteInfo(
+                            satellite.satelliteId,
+                            satellite.getX(),
+                            satellite.getY(),
+                            satellite.getZ(),
+                            dimension,
+                            getDistance(player, playerDimension, satellite, dimension),
+                            false,
+                            satellite.satelliteUuid,
+                            satellite.getDisplayName(),
+                            PatternSatelliteInfo.SatelliteType.FLUID));
         }
         satellites.sort((left, right) -> {
             boolean leftSameDimension = left.distance() >= 0;
@@ -116,13 +117,13 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
 
     private static boolean isSelectableSatellite(PipeFluidPatternSatelliteLogistics satellite) {
         return satellite != null && satellite.satelliteId > 0
-            && satellite.container != null
-            && !satellite.container.isInvalid()
-            && satellite.getWorld() != null;
+                && satellite.container != null
+                && !satellite.container.isInvalid()
+                && satellite.getWorld() != null;
     }
 
     private static int getDistance(EntityPlayer player, int playerDimension,
-                                   PipeFluidPatternSatelliteLogistics satellite, int satelliteDimension) {
+            PipeFluidPatternSatelliteLogistics satellite, int satelliteDimension) {
         if (player == null || playerDimension != satelliteDimension) {
             return -1;
         }
@@ -138,7 +139,7 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
 
     public String getDisplayName() {
         return satelliteName == null || satelliteName.trim().isEmpty() ? Integer.toString(satelliteId)
-            : satelliteName.trim();
+                : satelliteName.trim();
     }
 
     /**
@@ -360,10 +361,10 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
     @Override
     public void onWrenchClicked(EntityPlayer entityplayer) {
         ModernPacket idPacket = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
-            .setPosY(getY()).setPosZ(getZ());
+                .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(idPacket, entityplayer);
         ModernPacket namePacket = PacketHandler.getPacket(PatternSatelliteSetName.class).setString(getSatelliteName())
-            .setPosX(getX()).setPosY(getY()).setPosZ(getZ());
+                .setPosX(getX()).setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(namePacket, entityplayer);
         entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
     }
@@ -372,7 +373,7 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
     public void readFromNBT(NBTTagCompound nbttagcompound) {
         super.readFromNBT(nbttagcompound);
         satelliteUuid = nbttagcompound.hasKey(UUID_TAG) ? nbttagcompound.getString(UUID_TAG)
-            : UUID.randomUUID().toString();
+                : UUID.randomUUID().toString();
         satelliteName = nbttagcompound.getString(NAME_TAG);
         ensureAllSatelliteStatus();
     }
@@ -424,7 +425,7 @@ public class PipeFluidPatternSatelliteLogistics extends logisticspipes.pipes.Pip
             IRouter router = getRouter();
             IRouter otherRouter = other.getRouter();
             return router == otherRouter
-                || (router != null && otherRouter != null && !router.getDistanceTo(otherRouter).isEmpty());
+                    || (router != null && otherRouter != null && !router.getDistanceTo(otherRouter).isEmpty());
         } catch (RuntimeException ignored) {
             return false;
         }

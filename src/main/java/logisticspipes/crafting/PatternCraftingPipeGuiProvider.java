@@ -1,5 +1,12 @@
 package logisticspipes.crafting;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.pattern.PatternContainer;
@@ -12,12 +19,6 @@ import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
 import logisticspipes.utils.gui.DummyContainer;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider {
 
@@ -62,12 +63,12 @@ public class PatternCraftingPipeGuiProvider extends ModuleCoordinatesGuiProvider
                 player.inventory,
                 new PipePatternInventory(pipe, selectedPatternSlot));
         PatternGuiProvider.addPatternSlots(
-            dummy,
-            ItemPattern.fromStack(pipe.getPatternModule().getPatternItemStack(selectedPatternSlot)),
-            27,
-            57,
-            117,
-            75);
+                dummy,
+                ItemPattern.fromStack(pipe.getPatternModule().getPatternItemStack(selectedPatternSlot)),
+                27,
+                57,
+                117,
+                75);
         addPatternSlots(dummy, pipe);
         dummy.addNormalSlotsForPlayerInventory(32, 156);
         return dummy;

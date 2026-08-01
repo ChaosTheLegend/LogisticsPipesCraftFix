@@ -1,6 +1,7 @@
 package logisticspipes.crafting;
 
 import com.github.bsideup.jabel.Desugar;
+
 import logisticspipes.crafting.patternStack.IPatternStack;
 
 /**
@@ -9,5 +10,4 @@ import logisticspipes.crafting.patternStack.IPatternStack;
  * The stack is the actual item or fluid that arrived, not necessarily the representative stack stored in the pattern.
  */
 @Desugar
-record PatternIngredientAssignment(int inputSlot, IPatternStack stack) {
-}
+record PatternIngredientAssignment(int inputSlot, IPatternStack stack) {}

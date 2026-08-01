@@ -13,6 +13,7 @@ import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleItemSink;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -23,7 +24,7 @@ public class ModuleItemSinkMui extends LogisticsModuleMUI {
 
     public ModuleItemSinkMui(LogisticsModule module) {
         super(module);
-        filterInventory = new InvWrapper(((ModuleItemSink)module).getFilterInventory());
+        filterInventory = new InvWrapper(((ModuleItemSink) module).getFilterInventory());
     }
 
     @Override
@@ -36,54 +37,32 @@ public class ModuleItemSinkMui extends LogisticsModuleMUI {
 
         ModuleItemSink itemSinkModule = (ModuleItemSink) module;
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .left(9)
-                .top(4)
-                .childPadding(4)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .child(new TextWidget<>("Requested items"))
-                .child(SlotGroupWidget.builder()
-                    .row("IIIIIIIII")
-                    .key('I', i -> new PhantomItemSlot()
-                        .slot(filterInventory, i))
-                    .build()
-                )
-                .child(new Row()
-                    .coverChildrenHeight()
-                    .widthRel(1f)
-                    .child(new ButtonWidget<>()
-                        .onMousePressed(i -> {
-                            if(i == 0) itemSinkModule.importFromInventory();
-                            return i == 0;
-                        })
-                        .overlay(IKey.lang("Import"))
-                        .width(40).height(16)
-                    )
-                    .child(new Row().expanded())
-                    .child(new Row()
-                        .coverChildren()
-                        .childPadding(4)
-                        .child(new TextWidget<>("Default route:"))
-                        .child(new CycleButtonWidget()
-                            .width(26).height(16)
-                            .value(
-                                SyncHandlers.bool(itemSinkModule::isDefaultRoute, itemSinkModule::setDefaultRoute))
-                            .overlay(
-                                IKey.lang(
-                                    () -> itemSinkModule.isDefaultRoute() ?
-                                        "On" :
-                                        "Off"
-                                )
-                            )
-                        )
-                    )
-                )
-            );
-
+        widget.child(
+                new Column().coverChildren().left(9).top(4).childPadding(4)
+                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Requested items"))
+                        .child(
+                                SlotGroupWidget.builder().row("IIIIIIIII")
+                                        .key('I', i -> new PhantomItemSlot().slot(filterInventory, i)).build())
+                        .child(
+                                new Row().coverChildrenHeight().widthRel(1f)
+                                        .child(new ButtonWidget<>().onMousePressed(i -> {
+                                            if (i == 0) itemSinkModule.importFromInventory();
+                                            return i == 0;
+                                        }).overlay(IKey.lang("Import")).width(40).height(16))
+                                        .child(new Row().expanded()).child(
+                                                new Row().coverChildren().childPadding(4)
+                                                        .child(new TextWidget<>("Default route:")).child(
+                                                                new CycleButtonWidget().width(26).height(16).value(
+                                                                        SyncHandlers.bool(
+                                                                                itemSinkModule::isDefaultRoute,
+                                                                                itemSinkModule::setDefaultRoute))
+                                                                        .overlay(
+                                                                                IKey.lang(
+                                                                                        () -> itemSinkModule
+                                                                                                .isDefaultRoute() ? "On"
+                                                                                                        : "Off"))))));
 
         return widget;
     }

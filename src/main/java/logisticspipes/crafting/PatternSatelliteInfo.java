@@ -1,12 +1,12 @@
 package logisticspipes.crafting;
 
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
-import lombok.Getter;
-
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Objects;
+
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
+import lombok.Getter;
 
 @Getter
 public final class PatternSatelliteInfo {
@@ -24,12 +24,12 @@ public final class PatternSatelliteInfo {
     private final String displayName;
 
     public PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite, String uuid,
-                                String displayName) {
+            String displayName) {
         this(id, x, y, z, dimension, distance, favorite, uuid, displayName, SatelliteType.ITEM);
     }
 
     public PatternSatelliteInfo(int id, int x, int y, int z, int dimension, int distance, boolean favorite, String uuid,
-                                String displayName, SatelliteType type) {
+            String displayName, SatelliteType type) {
         uuid = uuid == null ? "" : uuid;
         displayName = displayName == null || displayName.trim().isEmpty() ? Integer.toString(id) : displayName.trim();
         this.id = id;
@@ -46,46 +46,46 @@ public final class PatternSatelliteInfo {
 
     public static PatternSatelliteInfo readData(LPDataInputStream data) throws IOException {
         return new PatternSatelliteInfo(
-            data.readInt(),
-            data.readInt(),
-            data.readInt(),
-            data.readInt(),
-            data.readInt(),
-            data.readInt(),
-            data.readBoolean(),
-            data.readUTF(),
-            data.readUTF(),
-            data.readEnum(SatelliteType.class));
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                data.readBoolean(),
+                data.readUTF(),
+                data.readUTF(),
+                data.readEnum(SatelliteType.class));
     }
 
     public String getSearchText() {
         return (displayName + " #"
-            + id
-            + " s"
-            + id
-            + " satellite "
-            + id
-            + " "
-            + uuid
-            + " d"
-            + dimension
-            + " dim "
-            + dimension
-            + " "
-            + x
-            + " "
-            + y
-            + " "
-            + z
-            + " "
-            + x
-            + ","
-            + y
-            + ","
-            + z
-            + " "
-            + type.name().toLowerCase(Locale.ROOT)
-            + (favorite ? " favorite chip memory" : "")).toLowerCase(Locale.ROOT);
+                + id
+                + " s"
+                + id
+                + " satellite "
+                + id
+                + " "
+                + uuid
+                + " d"
+                + dimension
+                + " dim "
+                + dimension
+                + " "
+                + x
+                + " "
+                + y
+                + " "
+                + z
+                + " "
+                + x
+                + ","
+                + y
+                + ","
+                + z
+                + " "
+                + type.name().toLowerCase(Locale.ROOT)
+                + (favorite ? " favorite chip memory" : "")).toLowerCase(Locale.ROOT);
     }
 
     public void writeData(LPDataOutputStream data) throws IOException {
@@ -147,14 +147,14 @@ public final class PatternSatelliteInfo {
         if (obj == null || obj.getClass() != this.getClass()) return false;
         var that = (PatternSatelliteInfo) obj;
         return this.id == that.id && this.x == that.x
-            && this.y == that.y
-            && this.z == that.z
-            && this.dimension == that.dimension
-            && this.distance == that.distance
-            && this.favorite == that.favorite
-            && Objects.equals(this.uuid, that.uuid)
-            && Objects.equals(this.displayName, that.displayName)
-            && this.type == that.type;
+                && this.y == that.y
+                && this.z == that.z
+                && this.dimension == that.dimension
+                && this.distance == that.distance
+                && this.favorite == that.favorite
+                && Objects.equals(this.uuid, that.uuid)
+                && Objects.equals(this.displayName, that.displayName)
+                && this.type == that.type;
     }
 
     @Override
@@ -165,35 +165,35 @@ public final class PatternSatelliteInfo {
     @Override
     public String toString() {
         return "PatternSatelliteInfo[" + "id="
-            + id
-            + ", "
-            + "x="
-            + x
-            + ", "
-            + "y="
-            + y
-            + ", "
-            + "z="
-            + z
-            + ", "
-            + "dimension="
-            + dimension
-            + ", "
-            + "distance="
-            + distance
-            + ", "
-            + "favorite="
-            + favorite
-            + ", "
-            + "uuid="
-            + uuid
-            + ", "
-            + "displayName="
-            + displayName
-            + ", "
-            + "type="
-            + type
-            + ']';
+                + id
+                + ", "
+                + "x="
+                + x
+                + ", "
+                + "y="
+                + y
+                + ", "
+                + "z="
+                + z
+                + ", "
+                + "dimension="
+                + dimension
+                + ", "
+                + "distance="
+                + distance
+                + ", "
+                + "favorite="
+                + favorite
+                + ", "
+                + "uuid="
+                + uuid
+                + ", "
+                + "displayName="
+                + displayName
+                + ", "
+                + "type="
+                + type
+                + ']';
     }
 
     public enum SatelliteType {

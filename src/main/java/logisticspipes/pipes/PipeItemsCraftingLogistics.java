@@ -10,10 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;

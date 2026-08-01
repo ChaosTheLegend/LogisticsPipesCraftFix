@@ -1,19 +1,19 @@
 package logisticspipes.gui.modularUI.modules;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+
 import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleApiaristAnalyser;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class ModuleBeeAnalyzerMui extends LogisticsModuleMUI {
-
 
     public ModuleBeeAnalyzerMui(LogisticsModule module) {
         super(module);
@@ -25,6 +25,7 @@ public class ModuleBeeAnalyzerMui extends LogisticsModuleMUI {
     }
 
     private enum ExtractMode {
+
         OFF(0),
         ON(1);
 
@@ -50,22 +51,20 @@ public class ModuleBeeAnalyzerMui extends LogisticsModuleMUI {
             return value;
         }
     }
+
     @Override
     public ParentWidget addWidgets(ParentWidget widget, boolean addPlayerInventory) {
 
         ModuleApiaristAnalyser apiaristAnalyser = (ModuleApiaristAnalyser) module;
 
-        widget
-            .child(new CycleButtonWidget()
-                .value(SyncHandlers.bool(apiaristAnalyser::getExtractModeBool, apiaristAnalyser::setExtractMode))
-                .overlay(IKey.lang(
-                    () -> apiaristAnalyser.getExtractModeBool() ?
-                        "Extract items: On" :
-                        "Extract items: Off")
-                    )
-                .width(120).height(22)
-                .align(Alignment.CENTER)
-            );
+        widget.child(
+                new CycleButtonWidget().value(
+                        SyncHandlers.bool(apiaristAnalyser::getExtractModeBool, apiaristAnalyser::setExtractMode))
+                        .overlay(
+                                IKey.lang(
+                                        () -> apiaristAnalyser.getExtractModeBool() ? "Extract items: On"
+                                                : "Extract items: Off"))
+                        .width(120).height(22).align(Alignment.CENTER));
 
         return widget;
     }

@@ -1,13 +1,5 @@
 package logisticspipes.request.debug;
 
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.pipes.basic.CoreRoutedPipe;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.request.RequestTree;
-import logisticspipes.routing.IRouter;
-import logisticspipes.routing.order.IOrderInfoProvider;
-import logisticspipes.routing.order.LinkedLogisticsOrderList;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -20,13 +12,21 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.pipes.basic.CoreRoutedPipe;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.request.RequestTree;
+import logisticspipes.routing.IRouter;
+import logisticspipes.routing.order.IOrderInfoProvider;
+import logisticspipes.routing.order.LinkedLogisticsOrderList;
+
 public final class CraftingRequestDebugManager {
 
     private static final int MAX_SNAPSHOTS = 24;
     private static final int MAX_EVENTS = 60000;
     private static final Pattern PIPE_MESSAGE_PATTERN = Pattern.compile("^(pipe=\\([^)]*\\))\\s+(.*)$");
     private static final Pattern TARGET_SLOT_PATTERN = Pattern
-        .compile("PatternTargetInformation\\[patternSlot=(\\d+)(?:, inputSlot=-?\\d+)?]");
+            .compile("PatternTargetInformation\\[patternSlot=(\\d+)(?:, inputSlot=-?\\d+)?]");
     private static final Pattern STAGED_START_PATTERN = Pattern
             .compile("^staged craft start promise=(.*?) amount=(\\d+) request=.* info=(.*?) branch=.*$");
     private static final Pattern STAGED_REGISTERED_PATTERN = Pattern
@@ -194,8 +194,8 @@ public final class CraftingRequestDebugManager {
         }
         if ("SCHED".equals(event.category)) {
             return message.contains("selectedSets=0") || message.contains("paused: no selectable sets")
-                || message.contains("requested no sets")
-                || message.contains("skipped:");
+                    || message.contains("requested no sets")
+                    || message.contains("skipped:");
         }
         if ("STAGED".equals(event.category)) {
             return message.startsWith("staged craft start") || message.startsWith("staged craft rejected");
@@ -532,7 +532,7 @@ public final class CraftingRequestDebugManager {
             for (int i = crafts.size() - 1; i >= 0; i--) {
                 FlowCraft craft = crafts.get(i);
                 if (samePipe(pipeKey, craft.pipeKey) && craft.patternSlot == patternSlot
-                    && (!craft.ingredientsComplete)) {
+                        && (!craft.ingredientsComplete)) {
                     return craft;
                 }
             }

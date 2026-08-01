@@ -11,12 +11,6 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.pipes.PipeSatelliteMui;
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -27,7 +21,11 @@ import net.minecraft.util.ChatComponentTranslation;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.gui.hud.HUDSatellite;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.pipes.PipeSatelliteMui;
 import logisticspipes.interfaces.IChestContentReceiver;
 import logisticspipes.interfaces.IHeadUpDisplayRenderer;
 import logisticspipes.interfaces.IHeadUpDisplayRendererProvider;
@@ -59,9 +57,11 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.SidedInventoryMinecraftAdapter;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
+import lombok.Getter;
+import lombok.Setter;
 
-public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
-        implements IRequestItems, IRequireReliableTransport, IHeadUpDisplayRendererProvider, IChestContentReceiver, ISatellitePipe, IMUICompatiblePipeV2 {
+public class PipeItemsSatelliteLogistics extends CoreRoutedPipe implements IRequestItems, IRequireReliableTransport,
+        IHeadUpDisplayRendererProvider, IChestContentReceiver, ISatellitePipe, IMUICompatiblePipeV2 {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     public final LinkedList<ItemIdentifierStack> itemList = new LinkedList<>();
@@ -291,14 +291,13 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
         }
     }
 
-    public void setNextFreeId(){
+    public void setNextFreeId() {
         var potentialId = findId(1);
         ensureAllSatelliteStatus();
         setSatelliteId(potentialId);
     }
 
-
-    //public void setSatelliteId(int id) {satelliteId = id;}
+    // public void setSatelliteId(int id) {satelliteId = id;}
 
     public void setNextId(EntityPlayer player) {
         satelliteId = findId(1);

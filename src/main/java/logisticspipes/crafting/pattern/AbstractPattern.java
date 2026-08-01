@@ -1,5 +1,12 @@
 package logisticspipes.crafting.pattern;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.crafting.patternStack.PatternFluidStack;
 import logisticspipes.crafting.patternStack.PatternItemStack;
@@ -9,12 +16,6 @@ import logisticspipes.utils.string.ChatColor;
 import logisticspipes.utils.string.StringUtils;
 import lombok.Getter;
 import lombok.NonNull;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 public abstract class AbstractPattern {
@@ -197,11 +198,11 @@ public abstract class AbstractPattern {
 
     public void setSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid) {
         setSatelliteTargetForInputSlot(
-            slot,
-            satelliteId,
-            satelliteUuid,
-            SATELLITE_TARGETS_TAG,
-            SATELLITE_TARGET_UUIDS_TAG);
+                slot,
+                satelliteId,
+                satelliteUuid,
+                SATELLITE_TARGETS_TAG,
+                SATELLITE_TARGET_UUIDS_TAG);
     }
 
     public int getFluidSatelliteIdForInputSlot(int slot) {
@@ -218,11 +219,11 @@ public abstract class AbstractPattern {
 
     public void setFluidSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid) {
         setSatelliteTargetForInputSlot(
-            slot,
-            satelliteId,
-            satelliteUuid,
-            FLUID_SATELLITE_TARGETS_TAG,
-            FLUID_SATELLITE_TARGET_UUIDS_TAG);
+                slot,
+                satelliteId,
+                satelliteUuid,
+                FLUID_SATELLITE_TARGETS_TAG,
+                FLUID_SATELLITE_TARGET_UUIDS_TAG);
     }
 
     private int getSatelliteIdForInputSlot(int slot, String targetTag) {
@@ -242,7 +243,7 @@ public abstract class AbstractPattern {
     }
 
     private void setSatelliteTargetForInputSlot(int slot, int satelliteId, String satelliteUuid, String targetTag,
-                                                String uuidTag) {
+            String uuidTag) {
         if (patternStack == null || slot < 0 || slot >= getIngredientSlotCount()) {
             return;
         }
@@ -419,7 +420,8 @@ public abstract class AbstractPattern {
     }
 
     private boolean getBooleanTag(String tagName) {
-        return patternStack != null && patternStack.hasTagCompound() && patternStack.getTagCompound().getBoolean(tagName);
+        return patternStack != null && patternStack.hasTagCompound()
+                && patternStack.getTagCompound().getBoolean(tagName);
     }
 
     private void setBooleanTag(String tagName, boolean enabled) {

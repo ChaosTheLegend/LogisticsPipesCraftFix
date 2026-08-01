@@ -19,16 +19,16 @@ public class PatternSlotLayout {
 
     public PatternSlotLayout(AbstractPattern pattern, int inputLeft, int inputTop, int outputLeft, int outputTop) {
         this(
-            pattern instanceof ProcessingPattern ? 4 : 3,
-            pattern != null && pattern.getResultSlotCount() > DefaultPattern.RESULT_SLOTS ? 2 : 3,
-            inputLeft,
-            inputTop,
-            outputLeft,
-            outputTop);
+                pattern instanceof ProcessingPattern ? 4 : 3,
+                pattern != null && pattern.getResultSlotCount() > DefaultPattern.RESULT_SLOTS ? 2 : 3,
+                inputLeft,
+                inputTop,
+                outputLeft,
+                outputTop);
     }
 
     private PatternSlotLayout(int inputColumns, int outputColumns, int inputLeft, int inputTop, int outputLeft,
-                              int outputTop) {
+            int outputTop) {
         this.inputColumns = Math.max(1, inputColumns);
         this.outputColumns = Math.max(1, outputColumns);
         this.inputLeft = inputLeft;

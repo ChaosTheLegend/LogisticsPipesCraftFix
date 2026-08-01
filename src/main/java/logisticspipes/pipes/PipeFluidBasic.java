@@ -1,9 +1,5 @@
 package logisticspipes.pipes;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.PipeGuiFactory;
-import logisticspipes.gui.modularUI.pipes.PipeFluidBasicMui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
@@ -14,6 +10,10 @@ import net.minecraftforge.fluids.FluidTank;
 import net.minecraftforge.fluids.IFluidHandler;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.api.IMUICompatiblePipeV2;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
+import logisticspipes.gui.modularUI.pipes.PipeFluidBasicMui;
 import logisticspipes.interfaces.routing.IFluidSink;
 import logisticspipes.network.GuiIDs;
 import logisticspipes.pipes.basic.fluid.FluidRoutedPipe;
@@ -54,8 +54,8 @@ public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink, IMUIC
             return 0; // Don't sink when the gui is open
         }
 
-        if(filterTank.getFluid() == null) return 0;
-        if(!filterTank.getFluid().isFluidEqual(stack)) return 0;
+        if (filterTank.getFluid() == null) return 0;
+        if (!filterTank.getFluid().isFluidEqual(stack)) return 0;
 
         FluidIdentifier ident = FluidIdentifier.get(stack);
 
@@ -131,7 +131,7 @@ public class PipeFluidBasic extends FluidRoutedPipe implements IFluidSink, IMUIC
     }
 
     public String getFluidName() {
-        if(filterTank.getFluid() == null) return "None";
+        if (filterTank.getFluid() == null) return "None";
         return filterTank.getFluid().getLocalizedName();
     }
 }

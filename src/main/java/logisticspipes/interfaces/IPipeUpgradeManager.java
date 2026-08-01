@@ -1,8 +1,8 @@
 package logisticspipes.interfaces;
 
-import com.cleanroommc.modularui.factory.inventory.ItemHandler;
-import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import net.minecraftforge.common.util.ForgeDirection;
+
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 
 public interface IPipeUpgradeManager {
 

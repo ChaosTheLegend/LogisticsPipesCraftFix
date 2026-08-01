@@ -1,11 +1,10 @@
 package logisticspipes.crafting;
 
-import logisticspipes.network.LPDataInputStream;
-import logisticspipes.network.LPDataOutputStream;
-import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
-import logisticspipes.proxy.SimpleServiceLocator;
-import logisticspipes.utils.AdjacentTile;
-import logisticspipes.utils.WorldUtil;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.nbt.NBTTagCompound;
@@ -14,10 +13,12 @@ import net.minecraft.util.ChatComponentText;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.IFluidHandler;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import logisticspipes.network.LPDataInputStream;
+import logisticspipes.network.LPDataOutputStream;
+import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
+import logisticspipes.proxy.SimpleServiceLocator;
+import logisticspipes.utils.AdjacentTile;
+import logisticspipes.utils.WorldUtil;
 
 /**
  * Maintains the adjacent inventory or fluid handler selected as the pattern crafting target.
@@ -64,7 +65,7 @@ public class PatternCraftingTargetSelector {
     public boolean isSelectedInventory(TileEntity tile, ForgeDirection direction) {
         AdjacentTile selected = getConnectedInventoryTile();
         return selected != null && selected.tile == tile
-            && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
+                && (selected.orientation == direction || selected.orientation == getDirectionTo(tile));
     }
 
     /**
@@ -223,8 +224,8 @@ public class PatternCraftingTargetSelector {
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()) != null
                 && ((IFluidHandler) tile).getTankInfo(direction.getOpposite()).length > 0;
         return (hasInventory || hasTank) && !SimpleServiceLocator.pipeInformationManager.isPipe(tile, false)
-            && !pipe.isSideBlocked(direction, false)
-            && pipe.transport.canPipeConnect(tile, direction);
+                && !pipe.isSideBlocked(direction, false)
+                && pipe.transport.canPipeConnect(tile, direction);
     }
 
     /**

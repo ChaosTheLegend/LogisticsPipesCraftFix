@@ -1,17 +1,18 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import net.minecraft.item.ItemStack;
+
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder.CacheTypes;
-import net.minecraft.item.ItemStack;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Decides when staged pattern crafting orders may request their next ingredient sets.
@@ -28,7 +29,7 @@ class PatternStagedCraftingScheduler {
     private final Set<Integer> requestingPatterns = new HashSet<>();
 
     PatternStagedCraftingScheduler(ModulePatternCrafting module, PipeItemsPatternCraftingLogistics pipe,
-                                   AdjacentInventoryHandler adjacentInventory, List<PatternCraftingOrder> stagedCrafts) {
+            AdjacentInventoryHandler adjacentInventory, List<PatternCraftingOrder> stagedCrafts) {
         this.module = module;
         this.pipe = pipe;
         this.adjacentInventory = adjacentInventory;
@@ -124,9 +125,9 @@ class PatternStagedCraftingScheduler {
             return false;
         }
         module.debugEvent(
-            "SCHED",
-            "request ingredients slot=%d removing staged order: pattern missing",
-            order.patternSlot);
+                "SCHED",
+                "request ingredients slot=%d removing staged order: pattern missing",
+                order.patternSlot);
         order.releaseReservations();
         stagedCrafts.remove(order);
         module.markHudStateDirty();

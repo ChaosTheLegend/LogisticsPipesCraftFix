@@ -1,5 +1,16 @@
 package logisticspipes.gui.modularUI;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.ResourceLocation;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
+
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.GuiTextures;
 import com.cleanroommc.modularui.drawable.UITexture;
@@ -11,7 +22,6 @@ import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
 import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.widget.DraggableWidget;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.PageButton;
@@ -22,23 +32,13 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
+
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.items.ItemModule;
 import logisticspipes.modules.ModuleCrafter;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
 import logisticspipes.pipes.PipeLogisticsChassi;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.ResourceLocation;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.Nullable;
-import org.stringtemplate.v4.ST;
-
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class ChassisGui extends LogisticsModularUI {
 
@@ -50,14 +50,15 @@ public class ChassisGui extends LogisticsModularUI {
 
     private final List<DynamicSyncHandler> moduleSyncHandlers;
     private static final ResourceLocation ModuleSlotTexture1 = new ResourceLocation(
-        "logisticspipes",
-        "textures/gui/module_slot_1.png");
+            "logisticspipes",
+            "textures/gui/module_slot_1.png");
     private static final ResourceLocation ModuleSlotTexture2 = new ResourceLocation(
-        "logisticspipes",
-        "textures/gui/module_slot_2.png");
+            "logisticspipes",
+            "textures/gui/module_slot_2.png");
     private static final ResourceLocation ModuleSlotTexture3 = new ResourceLocation(
-        "logisticspipes",
-        "textures/gui/module_slot_3.png");
+            "logisticspipes",
+            "textures/gui/module_slot_3.png");
+
     public ChassisGui(PipeLogisticsChassi pipe) {
         this(pipe, "");
     }
@@ -77,63 +78,50 @@ public class ChassisGui extends LogisticsModularUI {
     }
 
     @Override
-    public ModularPanel getPanel(GuiData guiData, PanelSyncManager guiSyncManager){
+    public ModularPanel getPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
 
         log.info("Creating ChassisGui");
 
         for (int i = 0; i < pipe.getChassieSize(); i++) {
             int slotId = i;
-            moduleSyncHandlers.add(new DynamicSyncHandler()
-                .widgetProvider((PanelSyncManager innerSyncManager, PacketBuffer packet) -> buildModuleWidget(innerSyncManager, packet, slotId))
-            );
+            moduleSyncHandlers.add(
+                    new DynamicSyncHandler().widgetProvider(
+                            (PanelSyncManager innerSyncManager,
+                                    PacketBuffer packet) -> buildModuleWidget(innerSyncManager, packet, slotId)));
         }
-
-
-
 
         var panel = new ModularPanel(getId());
 
-        panel.width(getWidth()).height(getHeight())
-            .background(IDrawable.EMPTY);
+        panel.width(getWidth()).height(getHeight()).background(IDrawable.EMPTY);
 
         addWidgets(panel, guiSyncManager, true);
 
-
-        var row = new Row()
-            .height(28)
-            .left(2)
-            .top(0);
+        var row = new Row().height(28).left(2).top(0);
 
         guiSyncManager.registerSlotGroup("module_inventory", pipe.getChassieSize());
 
         for (int i = 0; i < pipe.getChassieSize(); i++) {
             final int slot = i;
-            var buttonContainer = new ParentWidget<>()
-                .size(28, 28);
-            buttonContainer.child(new PageButton(i, controller)
-                .size(28, 28)
-                .tab(GuiTextures.TAB_TOP, i == 7 || i == 0 ? i == 0 ? -1 : 1 : 0)
-                .pos(0, 0));
-            buttonContainer.child(new ItemSlot()
-                .slot(new ModularSlot(moduleInventory, i)
-                    .slotGroup("module_inventory")
-                    .filter(this::isModuleItem)
-                    .changeListener(((newItem, onlyAmountChanged, client, init) -> {
-                        if (client && !onlyAmountChanged){
-                            moduleSyncHandlers.get(slot).notifyUpdate(packet -> NetworkUtils.writeItemStack(packet, newItem));
-                        }
-                    })
-                ))
-                .background(UITexture.fullImage(ModuleSlotTexture1))
-                .pos(5, 5));
+            var buttonContainer = new ParentWidget<>().size(28, 28);
+            buttonContainer.child(
+                    new PageButton(i, controller).size(28, 28)
+                            .tab(GuiTextures.TAB_TOP, i == 7 || i == 0 ? i == 0 ? -1 : 1 : 0).pos(0, 0));
+            buttonContainer.child(
+                    new ItemSlot().slot(
+                            new ModularSlot(moduleInventory, i).slotGroup("module_inventory").filter(this::isModuleItem)
+                                    .changeListener(((newItem, onlyAmountChanged, client, init) -> {
+                                        if (client && !onlyAmountChanged) {
+                                            moduleSyncHandlers.get(slot).notifyUpdate(
+                                                    packet -> NetworkUtils.writeItemStack(packet, newItem));
+                                        }
+                                    })))
+                            .background(UITexture.fullImage(ModuleSlotTexture1)).pos(5, 5));
             row.child(buttonContainer);
         }
         panel.child(row);
 
-
         var upgrades = PipeGuiFactory.getUpgradeGui(upgradeHandler, guiSyncManager);
-        upgrades.top(30)
-                .right(4);
+        upgrades.top(30).right(4);
 
         panel.child(upgrades);
 
@@ -142,9 +130,11 @@ public class ChassisGui extends LogisticsModularUI {
 
     private @Nullable ParentWidget buildModuleWidget(PanelSyncManager innerSyncManager, PacketBuffer packet, int slot) {
 
-
-        return addModuleUI(new Row()
-            .fullWidth().height(100),innerSyncManager, NetworkUtils.readItemStack(packet), slot);
+        return addModuleUI(
+                new Row().fullWidth().height(100),
+                innerSyncManager,
+                NetworkUtils.readItemStack(packet),
+                slot);
     }
 
     @Override
@@ -152,40 +142,43 @@ public class ChassisGui extends LogisticsModularUI {
         return null;
     }
 
-    private ParentWidget addModuleUI(ParentWidget widget, PanelSyncManager innerSyncManager, ItemStack moduleStack, int slot){
+    private ParentWidget addModuleUI(ParentWidget widget, PanelSyncManager innerSyncManager, ItemStack moduleStack,
+            int slot) {
 
         ItemStack stack = moduleStack;
 
-        if(stack == null) {
+        if (stack == null) {
             widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
             return widget;
         }
 
         var item = stack.getItem();
 
-        if(item == null) {
+        if (item == null) {
             widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
             return widget;
         }
 
-        if(!(item instanceof ItemModule itemModule)) {
+        if (!(item instanceof ItemModule itemModule)) {
             widget.child(new TextWidget<>("Item is not a module").align(Alignment.Center));
             return widget;
         }
 
         LogisticsModule module = itemModule.getModuleForItem(stack, null, null, null);
 
-        if(module == null) {
-            widget.child(new TextWidget<>("No module in slot" ).align(Alignment.Center));
+        if (module == null) {
+            widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
             return widget;
         }
 
-        if(module instanceof ModuleCrafter) {
-            widget.child(new TextWidget<>("Crafting Modules are being replaced with Pattern Crafting Pipes, please use them").align(Alignment.Center));
+        if (module instanceof ModuleCrafter) {
+            widget.child(
+                    new TextWidget<>("Crafting Modules are being replaced with Pattern Crafting Pipes, please use them")
+                            .align(Alignment.Center));
             return widget;
         }
 
-        if(!(module instanceof IMUICompatibleModule)) {
+        if (!(module instanceof IMUICompatibleModule)) {
             widget.child(new TextWidget<>("Module not compatible with MUI yet ＞﹏＜").align(Alignment.Center));
             return widget;
         }
@@ -196,48 +189,29 @@ public class ChassisGui extends LogisticsModularUI {
             return widget;
         }
 
-
         var moduleUI = new Column().width(gui.getWidth()).fullHeight();
-        gui.addWidgets(moduleUI, innerSyncManager,false);
+        gui.addWidgets(moduleUI, innerSyncManager, false);
 
         moduleUI.alignX(Alignment.Center);
 
-
         /*
-        var upgrades = new Column()
-            .width(26)
-            .child(SlotGroupWidget.builder()
-                .row("I").row("I").row("I").row("I")
-                .key('I', i -> {
-                    var upgradeSlot = new ModularSlot(pipe.getModuleUpgradeManager(slot).getUpgradeInventory(), i)
-                        .filter(PipeGuiFactory::isUpgradeItem)
-                        .accessibility(true, true);
-                    if (innerSyncManager != null) {
-                        innerSyncManager.syncValue("chassis_upgrade_" + slot + "_" + i, upgradeSlot.getSyncHandler());
-                    }
-                    return new ItemSlot()
-                        .slot(upgradeSlot)
-                        .background(UITexture.fullImage(PipeGuiFactory.UpgradeSlotTexture));
-                })
-                .build())
-            .padding(4)
-            .coverChildrenHeight();
-
-        upgrades.right(4)
-            .alignY(Alignment.CENTER);
-        */
-
+         * var upgrades = new Column() .width(26) .child(SlotGroupWidget.builder() .row("I").row("I").row("I").row("I")
+         * .key('I', i -> { var upgradeSlot = new ModularSlot(pipe.getModuleUpgradeManager(slot).getUpgradeInventory(),
+         * i) .filter(PipeGuiFactory::isUpgradeItem) .accessibility(true, true); if (innerSyncManager != null) {
+         * innerSyncManager.syncValue("chassis_upgrade_" + slot + "_" + i, upgradeSlot.getSyncHandler()); } return new
+         * ItemSlot() .slot(upgradeSlot) .background(UITexture.fullImage(PipeGuiFactory.UpgradeSlotTexture)); })
+         * .build()) .padding(4) .coverChildrenHeight(); upgrades.right(4) .alignY(Alignment.CENTER);
+         */
 
         widget.fullWidth().fullHeight();
         widget.child(moduleUI);
-            //.child(upgrades);
-
+        // .child(upgrades);
 
         return widget;
     }
 
     private boolean isModuleItem(ItemStack itemStack) {
-        if(itemStack == null) return false;
+        if (itemStack == null) return false;
 
         return itemStack.getItem() instanceof ItemModule;
     }
@@ -247,33 +221,22 @@ public class ChassisGui extends LogisticsModularUI {
 
         var mainPanel = new Column();
 
-        mainPanel.width(224)
-            .height(180)
-            .left(2)
-            .top(28)
-            .background(ModularUIHelper.BACKGROUND_TEXTURE);
+        mainPanel.width(224).height(180).left(2).top(28).background(ModularUIHelper.BACKGROUND_TEXTURE);
 
-        var pages = new PagedWidget<>()
-            .controller(controller)
-            .fullWidth()
-            .height(100);
+        var pages = new PagedWidget<>().controller(controller).fullWidth().height(100);
 
         for (int i = 0; i < pipe.getChassieSize(); i++) {
-            pages.addPage(new DynamicSyncedWidget<>()
-                .fullWidth().height(100)
-                .syncHandler(moduleSyncHandlers.get(i)));
+            pages.addPage(new DynamicSyncedWidget<>().fullWidth().height(100).syncHandler(moduleSyncHandlers.get(i)));
         }
         /*
-        addModuleUI(new Row()
-            .fullWidth().height(100), i, syncManager)
-        */
+         * addModuleUI(new Row() .fullWidth().height(100), i, syncManager)
+         */
 
         mainPanel.child(pages);
 
+        if (addPlayerInventory) mainPanel.child(SlotGroupWidget.playerInventory(true));
 
-        if(addPlayerInventory) mainPanel.child(SlotGroupWidget.playerInventory(true));
-
-        return (ParentWidget)widget.child(mainPanel);
+        return (ParentWidget) widget.child(mainPanel);
     }
 
     @Override

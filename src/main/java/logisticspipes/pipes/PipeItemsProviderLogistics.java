@@ -14,18 +14,20 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.PipeGuiFactory;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-import logisticspipes.LogisticsPipes;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.crafting.IStagedProviderReservation;
 import logisticspipes.gui.hud.HUDProvider;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.PipeGuiFactory;
 import logisticspipes.interfaces.IChangeListener;
 import logisticspipes.interfaces.IChestContentReceiver;
 import logisticspipes.interfaces.IHeadUpDisplayRenderer;
@@ -72,11 +74,10 @@ import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 import logisticspipes.utils.item.ItemIdentifierStack;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvideItems, IHeadUpDisplayRendererProvider,
-        IChestContentReceiver, IChangeListener, IOrderManagerContentReceiver, IMUICompatiblePipeV2, IStagedProviderReservation {
+public class PipeItemsProviderLogistics extends CoreRoutedPipe
+        implements IProvideItems, IHeadUpDisplayRendererProvider, IChestContentReceiver, IChangeListener,
+        IOrderManagerContentReceiver, IMUICompatiblePipeV2, IStagedProviderReservation {
 
     private static final Logger log = LogManager.getLogger(PipeItemsProviderLogistics.class);
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
@@ -589,7 +590,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     /*** GUI ***/
     public ItemIdentifierInventory getprovidingInventory() {
-        return (ItemIdentifierInventory)myModule.getFilterInventory();
+        return (ItemIdentifierInventory) myModule.getFilterInventory();
     }
 
     @Override
@@ -608,11 +609,11 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
      * INTERFACE TO PIPE
      **/
     public boolean hasFilter() {
-        return !((ItemIdentifierInventory)myModule.getFilterInventory()).isEmpty();
+        return !((ItemIdentifierInventory) myModule.getFilterInventory()).isEmpty();
     }
 
     public boolean itemIsFiltered(ItemIdentifier item) {
-        return ((ItemIdentifierInventory)myModule.getFilterInventory()).containsItem(item);
+        return ((ItemIdentifierInventory) myModule.getFilterInventory()).containsItem(item);
     }
 
     public boolean isExcludeFilter() {
@@ -641,7 +642,7 @@ public class PipeItemsProviderLogistics extends CoreRoutedPipe implements IProvi
 
     @Deprecated
     /*
-    * replaced by modular ui handlers
+     * replaced by modular ui handlers
      */
     public void nextExtractionMode() {
         return;

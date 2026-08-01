@@ -1,12 +1,9 @@
 package logisticspipes.items;
 
-import buildcraft.api.tools.IToolWrench;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 
-import java.util.List;
+import buildcraft.api.tools.IToolWrench;
 
 public class ItemLegacyWrench extends LogisticsItem implements IToolWrench {
 

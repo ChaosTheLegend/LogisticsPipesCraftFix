@@ -1,5 +1,15 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
+
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
 import logisticspipes.crafting.pattern.PatternHandler;
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.crafting.patternStack.PatternStackHelper;
@@ -15,15 +25,6 @@ import logisticspipes.routing.FluidLogisticsPromise;
 import logisticspipes.routing.order.IOrderInfoProvider;
 import logisticspipes.routing.order.LogisticsFluidOrder;
 import logisticspipes.routing.order.LogisticsItemOrder;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Owns the lifecycle of staged pattern crafting output orders.
@@ -60,11 +61,7 @@ class PatternStagedCraftingCoordinator {
         this.pipe = pipe;
         this.patternHandler = patternHandler;
         this.requestedIngredient = requestedIngredient;
-        this.scheduler = new PatternStagedCraftingScheduler(
-                module,
-                pipe,
-                adjacentInventory,
-                stagedCrafts);
+        this.scheduler = new PatternStagedCraftingScheduler(module, pipe, adjacentInventory, stagedCrafts);
     }
 
     IOrderInfoProvider fulfill(IPromise promise, IResource requestType, IAdditionalTargetInformation info,
@@ -273,11 +270,11 @@ class PatternStagedCraftingCoordinator {
         List<PatternCraftingOrder> ordersToCancel = cancellationResolver.resolve(patternSlot, outputOrders);
         if (ordersToCancel.size() > directOrders) {
             module.debugEvent(
-                "CANCEL",
-                "cancel slot=%d expanded to request tree directOrders=%d resolvedOrders=%d",
-                patternSlot,
-                directOrders,
-                ordersToCancel.size());
+                    "CANCEL",
+                    "cancel slot=%d expanded to request tree directOrders=%d resolvedOrders=%d",
+                    patternSlot,
+                    directOrders,
+                    ordersToCancel.size());
         }
         Set<PatternCraftingOrder> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         for (PatternCraftingOrder order : ordersToCancel) {
@@ -290,7 +287,7 @@ class PatternStagedCraftingCoordinator {
     }
 
     private void cancelOrderAndChildren(PatternCraftingOrder order, Set<PatternCraftingOrder> visited,
-                                        Set<Integer> cancelledSlots) {
+            Set<Integer> cancelledSlots) {
         if (order == null || !visited.add(order)) {
             return;
         }
@@ -298,10 +295,10 @@ class PatternStagedCraftingCoordinator {
             cancelOrderAndChildren(child, visited, cancelledSlots);
         }
         module.debugEvent(
-            "CANCEL",
-            "cancel staged order slot=%d remainingSets=%d",
-            order.patternSlot,
-            order.remainingSets);
+                "CANCEL",
+                "cancel staged order slot=%d remainingSets=%d",
+                order.patternSlot,
+                order.remainingSets);
         cancelledSlots.add(order.patternSlot);
         order.retrieveSatelliteDeliveries();
         order.releaseReservations();

@@ -1,18 +1,19 @@
 package logisticspipes.crafting;
 
-import logisticspipes.crafting.patternStack.IPatternStack;
-import logisticspipes.crafting.patternStack.PatternStackHelper;
-import logisticspipes.interfaces.routing.ISaveState;
-import logisticspipes.utils.FluidIdentifier;
-import logisticspipes.utils.item.ItemIdentifier;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
+import logisticspipes.crafting.patternStack.IPatternStack;
+import logisticspipes.crafting.patternStack.PatternStackHelper;
+import logisticspipes.interfaces.routing.ISaveState;
+import logisticspipes.utils.FluidIdentifier;
+import logisticspipes.utils.item.ItemIdentifier;
 
 class PatternStackRequestHandler implements ISaveState {
 

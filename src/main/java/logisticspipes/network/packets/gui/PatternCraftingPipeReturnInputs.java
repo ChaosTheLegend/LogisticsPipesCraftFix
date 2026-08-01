@@ -1,10 +1,11 @@
 package logisticspipes.network.packets.gui;
 
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.network.abstractpackets.CoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
-import net.minecraft.entity.player.EntityPlayer;
 
 /**
  * Returns all inputs currently stored by a pattern crafting pipe to network storage.

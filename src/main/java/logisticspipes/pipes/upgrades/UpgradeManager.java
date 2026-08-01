@@ -3,16 +3,15 @@ package logisticspipes.pipes.upgrades;
 import java.util.EnumSet;
 import java.util.UUID;
 
-import buildcraft.core.lib.inventory.InventoryWrapper;
-import com.cleanroommc.modularui.factory.inventory.ItemHandler;
-import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
-import com.cleanroommc.modularui.utils.item.InvWrapper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
+
+import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
+import com.cleanroommc.modularui.utils.item.InvWrapper;
 
 import logisticspipes.LogisticsPipes;
 import logisticspipes.interfaces.IGuiOpenControler;

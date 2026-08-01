@@ -1,5 +1,7 @@
 package logisticspipes.gui.modularUI;
 
+import net.minecraft.util.ResourceLocation;
+
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.GuiData;
@@ -11,9 +13,9 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
+
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.pipes.basic.CoreRoutedPipe;
-import net.minecraft.util.ResourceLocation;
 
 public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
 
@@ -22,8 +24,8 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
     private final IItemHandlerModifiable upgradeHandler;
 
     private static final ResourceLocation UpgradeSlotTexture = new ResourceLocation(
-        "logisticspipes",
-        "textures/gui/upgrade_slot.png");
+            "logisticspipes",
+            "textures/gui/upgrade_slot.png");
 
     public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui, String prefix) {
         super(prefix);
@@ -31,6 +33,7 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
         this.pipe = pipeMui.getPipe();
         upgradeHandler = pipe.getUpgradeManager().getUpgradeInventory();
     }
+
     public GenericSimplePipeLogisticsGui(LogisticsPipeMUI pipeMui) {
         this(pipeMui, "");
     }
@@ -49,27 +52,22 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
     @Override
     public ModularPanel getPanel(GuiData guiData, PanelSyncManager guiSyncManager) {
 
-        var panel = ModularPanel
-            .defaultPanel(getId(), getWidth(), getHeight())
-            .background(IDrawable.EMPTY);
+        var panel = ModularPanel.defaultPanel(getId(), getWidth(), getHeight()).background(IDrawable.EMPTY);
 
-        panel.child(addWidgets(new Column()
-            .width(pipeMUI.getWidth())
-            .height(pipeMUI.getHeight())
-        , true)
-            .background(ModularUIHelper.BACKGROUND_TEXTURE));
+        panel.child(
+                addWidgets(new Column().width(pipeMUI.getWidth()).height(pipeMUI.getHeight()), true)
+                        .background(ModularUIHelper.BACKGROUND_TEXTURE));
 
+        // Disabled until all pipes have a Mui gui
 
-        //Disabled until all pipes have a Mui gui
-
-        //addUpgradeGui(panel);
+        // addUpgradeGui(panel);
 
         return panel;
     }
 
     @Override
     public int getWidth() {
-        return pipeMUI.getWidth(); //+ 28; for upgrade slots
+        return pipeMUI.getWidth(); // + 28; for upgrade slots
     }
 
     @Override
@@ -77,21 +75,17 @@ public class GenericSimplePipeLogisticsGui extends LogisticsModularUI {
         return pipeMUI.getHeight();
     }
 
-    private void addUpgradeGui(ModularPanel panel){
-        panel.child(new Column()
-            .background(ModularUIHelper.BACKGROUND_TEXTURE)
-            .width(26)
-            .right(0)
-            .child(SlotGroupWidget.builder()
-                .row("I").row("I").row("I").row("I")
-                .key('I', i -> new ItemSlot()
-                    .slot(
-                        new ModularSlot(upgradeHandler, i)
-                        .filter(PipeGuiFactory::isUpgradeItem)
-                        .accessibility(true, true))
-                    .background(UITexture.fullImage(UpgradeSlotTexture)))
-                .build())
-            .padding(4)
-            .coverChildrenHeight());
+    private void addUpgradeGui(ModularPanel panel) {
+        panel.child(
+                new Column().background(ModularUIHelper.BACKGROUND_TEXTURE).width(26).right(0).child(
+                        SlotGroupWidget.builder().row("I").row("I").row("I").row("I").key(
+                                'I',
+                                i -> new ItemSlot()
+                                        .slot(
+                                                new ModularSlot(upgradeHandler, i).filter(PipeGuiFactory::isUpgradeItem)
+                                                        .accessibility(true, true))
+                                        .background(UITexture.fullImage(UpgradeSlotTexture)))
+                                .build())
+                        .padding(4).coverChildrenHeight());
     }
 }

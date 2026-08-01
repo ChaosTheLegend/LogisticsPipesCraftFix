@@ -1,11 +1,11 @@
 package logisticspipes.crafting.patternStack;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class PatternStackHelper {
 

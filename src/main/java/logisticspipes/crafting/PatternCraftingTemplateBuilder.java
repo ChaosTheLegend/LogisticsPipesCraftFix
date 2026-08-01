@@ -1,5 +1,9 @@
 package logisticspipes.crafting;
 
+import java.util.List;
+
+import net.minecraft.item.ItemStack;
+
 import logisticspipes.crafting.pattern.AbstractPattern;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.pattern.PatternHandler;
@@ -14,9 +18,6 @@ import logisticspipes.request.resources.IResource;
 import logisticspipes.request.resources.ItemResource;
 import logisticspipes.utils.FluidIdentifierStack;
 import logisticspipes.utils.item.ItemIdentifierStack;
-import net.minecraft.item.ItemStack;
-
-import java.util.List;
 
 /**
  * Builds request-tree crafting templates from configured pattern items.
@@ -79,11 +80,11 @@ class PatternCraftingTemplateBuilder {
             }
             module.debug("crafting template matched item output slot=%d result=%s request=%s", slot, result, toCraft);
             PatternCraftingTemplate template = new PatternCraftingTemplate(
-                result.clone(),
-                module,
-                0,
-                slot,
-                configuredPattern.getIngredientSlotCount());
+                    result.clone(),
+                    module,
+                    0,
+                    slot,
+                    configuredPattern.getIngredientSlotCount());
             addPatternIngredients(template, configuredPattern, slot);
             addItemResultByproducts(template, result, outputs);
             return template;
@@ -167,15 +168,15 @@ class PatternCraftingTemplateBuilder {
             if (item != null) {
                 module.debug("template ingredient slot=%d inputSlot=%d item=%s", slot, inputSlot, item);
                 template.addIngredient(
-                    createItemIngredientResource(item, pattern),
-                    new PatternTargetInformation(slot, inputSlot));
+                        createItemIngredientResource(item, pattern),
+                        new PatternTargetInformation(slot, inputSlot));
                 continue;
             }
             if (ingredient instanceof PatternFluidStack fluid) {
                 module.debug("template ingredient slot=%d inputSlot=%d fluid=%s", slot, inputSlot, fluid);
                 template.addIngredient(
                         new FluidResource(fluid.getFluid(), fluid.getAmount(), module),
-                    new PatternTargetInformation(slot, inputSlot));
+                        new PatternTargetInformation(slot, inputSlot));
             }
         }
     }
@@ -189,7 +190,7 @@ class PatternCraftingTemplateBuilder {
     private IResource createItemIngredientResource(ItemIdentifierStack item, AbstractPattern pattern) {
         ItemIdentifierStack ingredient = item.clone();
         boolean useOreDict = pattern.isOreDictSubstitutionEnabled()
-            && ingredient.getItem().getDictIdentifiers() != null;
+                && ingredient.getItem().getDictIdentifiers() != null;
         boolean ignoreNbt = pattern.isIgnoreNbtEnabled();
         if (!useOreDict && !ignoreNbt) {
             return new ItemResource(ingredient, module);

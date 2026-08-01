@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleApiaristAnalyser;
 
@@ -24,20 +25,16 @@ public class ModuleBeeAnalyzerMuiDynamic extends GenericModuleMUI<ModuleApiarist
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
         BooleanSyncValue extractModeSync = syncManager != null
-            ? syncManager.getOrCreateSyncHandler(getFullId() + "_extract_mode", BooleanSyncValue.class, () -> new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode))
-            : new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode);
+                ? syncManager.getOrCreateSyncHandler(
+                        getFullId() + "_extract_mode",
+                        BooleanSyncValue.class,
+                        () -> new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode))
+                : new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode);
 
-        widget
-            .child(new CycleButtonWidget()
-                .value(extractModeSync)
-                .overlay(IKey.lang(
-                    () -> module.getExtractModeBool() ?
-                        "Extract items: On" :
-                        "Extract items: Off")
-                    )
-                .width(120).height(22)
-                .align(Alignment.CENTER)
-            );
+        widget.child(
+                new CycleButtonWidget().value(extractModeSync).overlay(
+                        IKey.lang(() -> module.getExtractModeBool() ? "Extract items: On" : "Extract items: Off"))
+                        .width(120).height(22).align(Alignment.CENTER));
 
         return widget;
     }

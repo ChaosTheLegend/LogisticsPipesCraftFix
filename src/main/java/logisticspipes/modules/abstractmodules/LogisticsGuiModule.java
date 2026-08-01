@@ -1,15 +1,5 @@
 package logisticspipes.modules.abstractmodules;
 
-import com.cleanroommc.modularui.api.IGuiHolder;
-import com.cleanroommc.modularui.factory.PlayerInventoryGuiData;
-import com.cleanroommc.modularui.factory.PosGuiData;
-import com.cleanroommc.modularui.network.NetworkUtils;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.api.IMUICompatiblePipe;
-import logisticspipes.items.ItemModule;
 import logisticspipes.network.abstractguis.ModuleCoordinatesGuiProvider;
 import logisticspipes.network.abstractguis.ModuleInHandGuiProvider;
 

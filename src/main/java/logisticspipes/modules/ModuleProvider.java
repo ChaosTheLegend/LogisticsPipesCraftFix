@@ -7,10 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.modules.ModuleProviderMui;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleProviderMuiDynamic;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -21,8 +17,12 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.crafting.IStagedProviderReservation;
 import logisticspipes.gui.hud.modules.HUDProviderModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleProviderMuiDynamic;
+import logisticspipes.gui.modularUI.modules.ModuleProviderMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -73,8 +73,9 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 
 @CCType(name = "Provider Module")
-public class ModuleProvider extends LogisticsSneakyDirectionModule implements ILegacyActiveModule,
-        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IModuleInventoryReceive, IMUICompatibleModule, IStagedProviderReservation {
+public class ModuleProvider extends LogisticsSneakyDirectionModule
+        implements ILegacyActiveModule, IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver,
+        IModuleInventoryReceive, IMUICompatibleModule, IStagedProviderReservation {
 
     private final ItemIdentifierInventory _filterInventory = new ItemIdentifierInventory(
             9,

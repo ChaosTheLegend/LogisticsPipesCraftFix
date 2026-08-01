@@ -1,5 +1,27 @@
 package logisticspipes.pipes;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidHandler;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.ItemMemoryChip;
 import logisticspipes.crafting.ModulePatternCrafting;
@@ -49,27 +71,6 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.ChatComponentTranslation;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidHandler;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * Pattern crafting pipe that can stage item and fluid ingredients while still behaving like an item crafting pipe for
@@ -123,7 +124,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                 }
                 if (tile instanceof IFluidHandler handler) {
                     return handler.getTankInfo(dir.getOpposite()) != null
-                        && handler.getTankInfo(dir.getOpposite()).length > 0;
+                            && handler.getTankInfo(dir.getOpposite()).length > 0;
                 }
                 return false;
             }
@@ -170,17 +171,17 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
                         entityplayer.addChatComponentMessage(
                                 new ChatComponentText(
                                         changed == 0 ? "No pattern ingredients changed"
-                                            : "Assigned " + changed
-                                            + " ingredient slot"
-                                            + (changed == 1 ? "" : "s")
-                                            + " to the last satellite"));
+                                                : "Assigned " + changed
+                                                        + " ingredient slot"
+                                                        + (changed == 1 ? "" : "s")
+                                                        + " to the last satellite"));
                     } else {
                         int added = addLinkedPatternSatellites(
                                 ItemMemoryChip.getPatternSatellites(entityplayer.getCurrentEquippedItem()));
                         entityplayer.addChatComponentMessage(
                                 new ChatComponentText(
                                         added == 0 ? "No new pattern satellites linked"
-                                            : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
+                                                : "Linked " + added + " pattern satellite" + (added == 1 ? "" : "s")));
                     }
                 } else {
                     entityplayer.addChatComponentMessage(new ChatComponentTranslation("lp.chat.permissiondenied"));
@@ -264,7 +265,7 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
      * Resolves a fluid pattern satellite stored on a fluid input slot and persists the link when it is first seen.
      */
     public PipeFluidPatternSatelliteLogistics resolvePatternFluidSatelliteTarget(String satelliteUuid,
-                                                                                 int satelliteId) {
+            int satelliteId) {
         PipeFluidPatternSatelliteLogistics satellite = findPatternFluidSatellite(satelliteUuid, satelliteId);
         if (satellite != null && getWorld() != null && MainProxy.isServer(getWorld())) {
             linkPatternFluidSatellite(satellite.satelliteId, satellite.getSatelliteUuid());
@@ -288,14 +289,14 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
      */
     public boolean linkPatternFluidSatellite(int satelliteId, String satelliteUuid) {
         return linkPatternSatellite(
-            satelliteId,
-            satelliteUuid,
-            linkedPatternFluidSatelliteIds,
-            linkedPatternFluidSatelliteUuids);
+                satelliteId,
+                satelliteUuid,
+                linkedPatternFluidSatelliteIds,
+                linkedPatternFluidSatelliteUuids);
     }
 
     private boolean linkPatternSatellite(int satelliteId, String satelliteUuid, Set<Integer> linkedIds,
-                                         Set<String> linkedUuids) {
+            Set<String> linkedUuids) {
         boolean added = false;
         if (satelliteId > 0) {
             added |= linkedIds.add(satelliteId);
@@ -353,10 +354,10 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
         }
         List<ItemMemoryChip.StoredPatternSatellite> satellites = new ArrayList<>();
         satellites.add(
-            new ItemMemoryChip.StoredPatternSatellite(
-                satelliteId,
-                satelliteUuid,
-                ItemMemoryChip.getLastPatternSatelliteName(memoryChip)));
+                new ItemMemoryChip.StoredPatternSatellite(
+                        satelliteId,
+                        satelliteUuid,
+                        ItemMemoryChip.getLastPatternSatelliteName(memoryChip)));
         addLinkedPatternSatellites(satellites);
         int changed = module.assignSatelliteToAllPatternIngredients(satelliteId, satelliteUuid);
         if (changed > 0) {
@@ -745,8 +746,8 @@ public class PipeItemsPatternCraftingLogistics extends FluidRoutedPipe
             PatternCraftingHudState state = module.getHudState();
             oldHudState = state;
             MainProxy.sendPacketToPlayer(
-                PacketHandler.getPacket(PatternCraftingHudContent.class).setState(state).setPosX(getX())
-                    .setPosY(getY()).setPosZ(getZ()),
+                    PacketHandler.getPacket(PatternCraftingHudContent.class).setState(state).setPosX(getX())
+                            .setPosY(getY()).setPosZ(getZ()),
                     player);
         } else {
             super.playerStartWatching(player, mode);

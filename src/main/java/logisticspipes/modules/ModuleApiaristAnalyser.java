@@ -3,10 +3,6 @@ package logisticspipes.modules;
 import java.util.ArrayList;
 import java.util.List;
 
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleBeeAnalyzerMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleBeeAnalyzerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -15,6 +11,10 @@ import net.minecraft.util.IIcon;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatibleModule;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleBeeAnalyzerMuiDynamic;
+import logisticspipes.gui.modularUI.modules.ModuleBeeAnalyzerMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IInventoryUtil;
 import logisticspipes.interfaces.IModuleWatchReciver;
@@ -233,6 +233,8 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
     }
 
     @Override
-    public LogisticsModularUI getPipeGui() {return new ModuleBeeAnalyzerMuiDynamic(this);}
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleBeeAnalyzerMuiDynamic(this);
+    }
 
 }

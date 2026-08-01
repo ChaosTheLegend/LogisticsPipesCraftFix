@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import logisticspipes.api.IMUICompatiblePipeV2;
-import logisticspipes.routing.pathfinder.PipeInformationManager;
 import net.minecraft.block.Block;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.player.EntityPlayer;
@@ -25,13 +23,6 @@ import net.minecraftforge.fluids.IFluidHandler;
 
 import org.apache.logging.log4j.Level;
 
-import buildcraft.api.core.EnumColor;
-import buildcraft.api.transport.IPipe;
-import buildcraft.api.transport.IPipeConnection;
-import buildcraft.api.transport.IPipeTile;
-import buildcraft.api.transport.pluggable.PipePluggable;
-import buildcraft.transport.TileGenericPipe;
-import cofh.api.transport.IItemDuct;
 import com.cleanroommc.modularui.api.IGuiHolder;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.network.NetworkUtils;
@@ -41,6 +32,14 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.gtnewhorizon.gtnhlib.blockpos.BlockPos;
 import com.gtnewhorizon.gtnhlib.blockpos.IBlockPos;
+
+import buildcraft.api.core.EnumColor;
+import buildcraft.api.transport.IPipe;
+import buildcraft.api.transport.IPipeConnection;
+import buildcraft.api.transport.IPipeTile;
+import buildcraft.api.transport.pluggable.PipePluggable;
+import buildcraft.transport.TileGenericPipe;
+import cofh.api.transport.IItemDuct;
 import cpw.mods.fml.common.Optional;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -57,6 +56,7 @@ import logisticspipes.Tags;
 import logisticspipes.api.ILPPipe;
 import logisticspipes.api.ILPPipeTile;
 import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.api.IMUICompatiblePipeV2;
 import logisticspipes.blocks.LogisticsSolidTileEntity;
 import logisticspipes.interfaces.IClientState;
 import logisticspipes.interfaces.routing.IFilter;
@@ -92,27 +92,6 @@ import logisticspipes.utils.WorldUtil;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.tuples.LPPosition;
 import lombok.Getter;
-import net.minecraft.block.Block;
-import net.minecraft.crash.CrashReportCategory;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.Packet;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTankInfo;
-import net.minecraftforge.fluids.IFluidHandler;
-import org.apache.logging.log4j.Level;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 
 @Optional.InterfaceList({ @Optional.Interface(modid = "CoFHCore", iface = "cofh.api.transport.IItemDuct"),
         @Optional.Interface(modid = LPConstants.openComputersModID, iface = "li.cil.oc.api.network.ManagedPeripheral"),
@@ -307,7 +286,7 @@ public class LogisticsTileGenericPipe extends TileEntity
      */
     private boolean shouldRenderPipeConnection(ForgeDirection side) {
         return pipeConnectionsBuffer[side.ordinal()] || (pipe instanceof PipeItemsPatternCraftingLogistics patternPipe
-            && patternPipe.shouldRenderCraftingTargetConnection(side));
+                && patternPipe.shouldRenderCraftingTargetConnection(side));
     }
 
     @Override
@@ -1218,7 +1197,7 @@ public class LogisticsTileGenericPipe extends TileEntity
             }
         });
 
-        if(pipe instanceof IMUICompatiblePipeV2) {
+        if (pipe instanceof IMUICompatiblePipeV2) {
 
             return ((IMUICompatiblePipeV2) pipe).getPipeGui().getPanel(data, syncManager);
         }

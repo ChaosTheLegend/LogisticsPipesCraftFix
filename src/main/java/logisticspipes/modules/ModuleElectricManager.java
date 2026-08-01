@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleElectricManagerMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleElectricManagerMui;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
@@ -17,7 +13,11 @@ import net.minecraft.util.IIcon;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDElectricManager;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleElectricManagerMuiDynamic;
+import logisticspipes.gui.modularUI.modules.ModuleElectricManagerMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;

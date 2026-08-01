@@ -1,5 +1,14 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IRequestFluid;
 import logisticspipes.interfaces.routing.IRequestItems;
@@ -17,14 +26,6 @@ import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 
 public class PatternCraftingBranch {
 
@@ -95,8 +96,8 @@ public class PatternCraftingBranch {
     }
 
     private PatternCraftingBranch(IResource requestType, IAdditionalTargetInformation info, int originalAmount,
-                                  int remainingAmount, int originalCraftingAmount, int remainingCraftingAmount, List<PromiseState> promises,
-                                  List<ExtraState> extraPromises, List<ExtraState> byproducts, List<PatternCraftingBranch> subRequests) {
+            int remainingAmount, int originalCraftingAmount, int remainingCraftingAmount, List<PromiseState> promises,
+            List<ExtraState> extraPromises, List<ExtraState> byproducts, List<PatternCraftingBranch> subRequests) {
         this.requestType = requestType;
         this.info = info;
         this.originalAmount = originalAmount;
@@ -308,12 +309,12 @@ public class PatternCraftingBranch {
     }
 
     private int request(int amount, IRequestItems targetOverride, IRequestFluid fluidTargetOverride,
-                        IAdditionalTargetInformation infoOverride) {
+            IAdditionalTargetInformation infoOverride) {
         int wanted = Math.min(amount, remainingAmount);
         int requested = 0;
         debugBranchEvent(
                 "BRANCH",
-            "branch request start resource=%s amount=%d wanted=%d remaining=%d craftingRemaining=%d promises=%d itemTarget=%s fluidTarget=%s info=%s",
+                "branch request start resource=%s amount=%d wanted=%d remaining=%d craftingRemaining=%d promises=%d itemTarget=%s fluidTarget=%s info=%s",
                 requestType,
                 amount,
                 wanted,
@@ -321,7 +322,7 @@ public class PatternCraftingBranch {
                 remainingCraftingAmount,
                 promises.size(),
                 targetOverride,
-            fluidTargetOverride,
+                fluidTargetOverride,
                 infoOverride);
         for (int promiseIndex = 0; promiseIndex < promises.size() && requested < wanted; promiseIndex++) {
             PromiseState promiseState = promises.get(promiseIndex);
@@ -358,7 +359,7 @@ public class PatternCraftingBranch {
                         stagedBranch.remainingCraftingAmount,
                         stagedBranch.subRequests.size(),
                         promise.getProvider(),
-                    infoOverride);
+                        infoOverride);
                 result = ((IStagedCraftingProvider) promise.getProvider())
                         .fullFillStagedCrafting(promise, request, infoOverride, stagedBranch);
                 if (result == null) {
@@ -430,7 +431,7 @@ public class PatternCraftingBranch {
     }
 
     private IResource copyRequestForTarget(int amount, IRequestItems targetOverride,
-                                           IRequestFluid fluidTargetOverride) {
+            IRequestFluid fluidTargetOverride) {
         if (targetOverride == null && fluidTargetOverride == null) {
             return requestType.copyForDisplayWith(amount);
         }
@@ -784,7 +785,7 @@ public class PatternCraftingBranch {
         }
         if (first instanceof PatternCraftingPromise || candidate instanceof PatternCraftingPromise) {
             if (!(first instanceof PatternCraftingPromise firstPattern)
-                || !(candidate instanceof PatternCraftingPromise candidatePattern)) {
+                    || !(candidate instanceof PatternCraftingPromise candidatePattern)) {
                 return false;
             }
             return firstPattern.getPatternSlot() == candidatePattern.getPatternSlot()

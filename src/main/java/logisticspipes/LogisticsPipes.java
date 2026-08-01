@@ -9,10 +9,7 @@ import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import logisticspipes.items.*;
 import net.minecraft.block.Block;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -54,6 +51,7 @@ import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.crafting.pattern.ItemPattern;
 import logisticspipes.crafting.requesttable.RequestTablePipe;
+import logisticspipes.items.*;
 import logisticspipes.items.ItemDisk;
 import logisticspipes.items.ItemHUDArmor;
 import logisticspipes.items.ItemLogisticsPipe;
@@ -139,7 +137,6 @@ import logisticspipes.recipes.CraftingPermissionManager;
 import logisticspipes.recipes.RecipeManager;
 import logisticspipes.recipes.SolderingStationRecipes;
 import logisticspipes.renderer.*;
-import logisticspipes.renderer.newpipe.LogisticsNewPipeItemRenderer;
 import logisticspipes.renderer.newpipe.LogisticsNewRenderPipe;
 import logisticspipes.routing.RouterManager;
 import logisticspipes.routing.ServerRouter;
@@ -155,25 +152,6 @@ import logisticspipes.ticks.ServerPacketBufferHandlerThread;
 import logisticspipes.utils.FluidIdentifier;
 import logisticspipes.utils.InventoryUtilFactory;
 import logisticspipes.utils.RoutedItemHelper;
-import net.minecraft.block.Block;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.CraftingManager;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.MinecraftForgeClient;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.util.ForgeDirection;
-import org.apache.logging.log4j.Logger;
-
-import java.lang.reflect.Field;
-import java.util.Calendar;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 
 // @formatter:off
 // CHECKSTYLE:OFF
@@ -561,16 +539,13 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsPipeControllerItem = new ItemPipeController();
         LogisticsPipes.LogisticsPipeControllerItem.setUnlocalizedName("pipeController");
         GameRegistry.registerItem(
-            LogisticsPipes.LogisticsPipeControllerItem,
-            LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
+                LogisticsPipes.LogisticsPipeControllerItem,
+                LogisticsPipes.LogisticsPipeControllerItem.getUnlocalizedName());
 
         LogisticsPipes.LegacyWrenchItem = new ItemLegacyWrench();
         LogisticsPipes.LegacyWrenchItem.setUnlocalizedName("legacyWrench");
-        GameRegistry.registerItem(
-            LogisticsPipes.LegacyWrenchItem,
-            LogisticsPipes.LegacyWrenchItem.getUnlocalizedName());
-
-
+        GameRegistry
+                .registerItem(LogisticsPipes.LegacyWrenchItem, LogisticsPipes.LegacyWrenchItem.getUnlocalizedName());
 
         LogisticsPipes.LogisticsPattern = new ItemPattern();
         LogisticsPipes.LogisticsPattern.setUnlocalizedName("logisticsPattern");
@@ -670,10 +645,10 @@ public class LogisticsPipes {
         LogisticsPipes.LogisticsPatternSatellitePipe = createPipe(
                 PipeItemsPatternSatelliteLogistics.class,
                 "Pattern Satellite Logistics Pipe",
-            side);
+                side);
         LogisticsPipes.LogisticsPatternFluidSatellitePipe = createPipe(
-            PipeFluidPatternSatelliteLogistics.class,
-            "Pattern Fluid Satellite Logistics Pipe",
+                PipeFluidPatternSatelliteLogistics.class,
+                "Pattern Fluid Satellite Logistics Pipe",
                 side);
         LogisticsPipes.LogisticsSatellitePipe = createPipe(
                 PipeItemsSatelliteLogistics.class,

@@ -1,18 +1,21 @@
 package logisticspipes.crafting;
 
-import com.github.bsideup.jabel.Desugar;
-import logisticspipes.utils.gui.GuiGraphics;
-import logisticspipes.utils.gui.SmallGuiButton;
-import logisticspipes.utils.gui.SubGuiScreen;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiTextField;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiTextField;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+
+import com.github.bsideup.jabel.Desugar;
+
+import logisticspipes.utils.gui.GuiGraphics;
+import logisticspipes.utils.gui.SmallGuiButton;
+import logisticspipes.utils.gui.SubGuiScreen;
 
 public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
@@ -41,8 +44,8 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     }
 
     public PatternSatelliteSelectorGui(int inputSlot, int currentSatelliteId, String currentSatelliteUuid,
-                                       PatternSatelliteInfo.SatelliteType satelliteType, List<PatternSatelliteInfo> satellites,
-                                       SelectionHandler handler) {
+            PatternSatelliteInfo.SatelliteType satelliteType, List<PatternSatelliteInfo> satellites,
+            SelectionHandler handler) {
         super(228, 178, 0, 0);
         this.inputSlot = inputSlot;
         this.currentSatelliteId = currentSatelliteId;
@@ -60,7 +63,7 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
         searchField.setMaxStringLength(64);
         searchField.setFocused(true);
         buttonList
-            .add(new SmallGuiButton(PREVIOUS_PAGE_BUTTON, guiLeft + xSize - 52, guiTop + ySize - 17, 20, 10, "<"));
+                .add(new SmallGuiButton(PREVIOUS_PAGE_BUTTON, guiLeft + xSize - 52, guiTop + ySize - 17, 20, 10, "<"));
         buttonList.add(new SmallGuiButton(NEXT_PAGE_BUTTON, guiLeft + xSize - 29, guiTop + ySize - 17, 20, 10, ">"));
     }
 
@@ -76,10 +79,10 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
     protected void renderGuiBackground(int mouseX, int mouseY) {
         GuiGraphics.drawGuiBackGround(mc, guiLeft, guiTop, right, bottom, zLevel, true);
         fontRendererObj.drawString(
-            "Input " + (inputSlot + 1) + " " + satelliteType.name().toLowerCase(Locale.ROOT) + " satellite",
-            guiLeft + 10,
-            guiTop + 8,
-            0x404040);
+                "Input " + (inputSlot + 1) + " " + satelliteType.name().toLowerCase(Locale.ROOT) + " satellite",
+                guiLeft + 10,
+                guiTop + 8,
+                0x404040);
         searchField.drawTextBox();
     }
 
@@ -252,17 +255,17 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
         String prefix = satellite.favorite() ? "* " : "";
         String distance = satellite.distance() >= 0 ? satellite.distance() + "m" : "other dim";
         return prefix + satellite.displayName()
-            + " "
-            + distance
-            + " D"
-            + satellite.dimension()
-            + " ("
-            + satellite.x()
-            + ","
-            + satellite.y()
-            + ","
-            + satellite.z()
-            + ")";
+                + " "
+                + distance
+                + " D"
+                + satellite.dimension()
+                + " ("
+                + satellite.x()
+                + ","
+                + satellite.y()
+                + ","
+                + satellite.z()
+                + ")";
     }
 
     @Desugar
@@ -270,7 +273,7 @@ public class PatternSatelliteSelectorGui extends SubGuiScreen {
 
         private boolean matches(int currentId, String currentUuid) {
             return (!currentUuid.isEmpty() && currentUuid.equals(satelliteUuid))
-                || (currentUuid.isEmpty() && satelliteId == currentId);
+                    || (currentUuid.isEmpty() && satelliteId == currentId);
         }
     }
 }

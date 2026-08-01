@@ -15,6 +15,7 @@ import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.GenericModuleMUI;
 import logisticspipes.modules.ModuleActiveSupplier;
 
@@ -35,42 +36,33 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
     @Override
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         var supplyModeSync = syncManager != null
-            ? syncManager.getOrCreateSyncHandler(getFullId() + "_supply_mode", EnumSyncValue.class, () -> new EnumSyncValue<>(ModuleActiveSupplier.SupplyMode.class, module::getSupplyMode, module::setSupplyMode))
-            : new EnumSyncValue<>(ModuleActiveSupplier.SupplyMode.class, module::getSupplyMode, module::setSupplyMode);
+                ? syncManager.getOrCreateSyncHandler(
+                        getFullId() + "_supply_mode",
+                        EnumSyncValue.class,
+                        () -> new EnumSyncValue<>(
+                                ModuleActiveSupplier.SupplyMode.class,
+                                module::getSupplyMode,
+                                module::setSupplyMode))
+                : new EnumSyncValue<>(
+                        ModuleActiveSupplier.SupplyMode.class,
+                        module::getSupplyMode,
+                        module::setSupplyMode);
 
-        widget
-            .child(new Column()
-                .fullWidth()
-                .coverChildrenHeight()
-                .left(9)
-                .right(9)
-                .top(4)
-                .childPadding(4)
-                .child(new TextWidget<>("Items to keep stocked").alignX(Alignment.START))
-                .child(buildSupplySlots(syncManager)
-                    .coverChildren()
-                    .alignX(Alignment.CENTER)
-                )
-                .child(new CycleButtonWidget()
-                    .width(120).height(16)
-                    .value(supplyModeSync)
-                    .overlay(
-                        IKey.lang(
-                            () -> switch (module.getSupplyMode()){
-                                case Partial -> "Request mode: Partial";
-                                case Full -> "Request mode: Full";
-                                case Bulk50 -> "Request mode: Bulk50";
-                                case Bulk100 -> "Request mode: Bulk100";
-                                case Infinite -> "Request mode: Infinite";
-                            }
-                        )
-                    )
-                    .alignX(Alignment.START)
-                )
-            );
+        widget.child(
+                new Column().fullWidth().coverChildrenHeight().left(9).right(9).top(4).childPadding(4)
+                        .child(new TextWidget<>("Items to keep stocked").alignX(Alignment.START))
+                        .child(buildSupplySlots(syncManager).coverChildren().alignX(Alignment.CENTER)).child(
+                                new CycleButtonWidget().width(120).height(16).value(supplyModeSync)
+                                        .overlay(IKey.lang(() -> switch (module.getSupplyMode()) {
+                                        case Partial -> "Request mode: Partial";
+                                        case Full -> "Request mode: Full";
+                                        case Bulk50 -> "Request mode: Bulk50";
+                                        case Bulk100 -> "Request mode: Bulk100";
+                                        case Infinite -> "Request mode: Infinite";
+                                        })).alignX(Alignment.START)));
 
         return widget;
     }
@@ -89,7 +81,11 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
                 int slotIndex = row * 3 + col2;
                 PhantomItemSlot slotWidget = new PhantomItemSlot();
                 if (syncManager != null) {
-                    PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(id + "_supply", slotIndex, PhantomItemSlotSH.class, () -> new PhantomItemSlotSH(new ModularSlot(supplyInventory, slotIndex)));
+                    PhantomItemSlotSH slotSH = syncManager.getOrCreateSyncHandler(
+                            id + "_supply",
+                            slotIndex,
+                            PhantomItemSlotSH.class,
+                            () -> new PhantomItemSlotSH(new ModularSlot(supplyInventory, slotIndex)));
                     slotWidget.syncHandler(slotSH);
                 } else {
                     slotWidget.slot(supplyInventory, slotIndex);

@@ -4,6 +4,15 @@
  */
 package logisticspipes.gui;
 
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
+import net.minecraft.util.ResourceLocation;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+
 import logisticspipes.crafting.PipeFluidPatternSatelliteLogistics;
 import logisticspipes.crafting.PipeItemsPatternSatelliteLogistics;
 import logisticspipes.network.PacketHandler;
@@ -15,13 +24,6 @@ import logisticspipes.utils.gui.GuiGraphics;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
 import logisticspipes.utils.gui.SmallGuiButton;
 import logisticspipes.utils.string.StringUtils;
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.Container;
-import net.minecraft.util.ResourceLocation;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
 
 public class GuiSatellitePipe extends LogisticsBaseGuiScreen {
 
@@ -68,27 +70,27 @@ public class GuiSatellitePipe extends LogisticsBaseGuiScreen {
 
         if (isPatternSatellite()) {
             String currentName = nameField != null && patternNameDirty ? nameField.getText()
-                : getPatternSatelliteName();
+                    : getPatternSatelliteName();
             nameField = new GuiTextField(fontRendererObj, guiLeft + 14, guiTop + 48, 104, 14);
             nameField.setMaxStringLength(64);
             nameField.setText(currentName);
             nameField.setFocused(true);
             buttonList.add(
-                new SmallGuiButton(
-                    SAVE_NAME_BUTTON,
-                    guiLeft + 124,
-                    guiTop + 50,
-                    38,
-                    10,
-                    StringUtils.translate("gui.satellite.Save")));
+                    new SmallGuiButton(
+                            SAVE_NAME_BUTTON,
+                            guiLeft + 124,
+                            guiTop + 50,
+                            38,
+                            10,
+                            StringUtils.translate("gui.satellite.Save")));
             updatePatternNameButton();
             return;
         }
 
         buttonList
-            .add(new GuiButton(NEXT_ID_BUTTON, (width / 2) - (30 / 2) + 35, (height / 2) - (20 / 2), 30, 20, "+"));
+                .add(new GuiButton(NEXT_ID_BUTTON, (width / 2) - (30 / 2) + 35, (height / 2) - (20 / 2), 30, 20, "+"));
         buttonList.add(
-            new GuiButton(PREVIOUS_ID_BUTTON, (width / 2) - (30 / 2) - 35, (height / 2) - (20 / 2), 30, 20, "-"));
+                new GuiButton(PREVIOUS_ID_BUTTON, (width / 2) - (30 / 2) - 35, (height / 2) - (20 / 2), 30, 20, "-"));
     }
 
     @Override
@@ -169,10 +171,10 @@ public class GuiSatellitePipe extends LogisticsBaseGuiScreen {
             String title = StringUtils.translate("gui.satellite.PatternSatellite");
             mc.fontRenderer.drawString(title, xSize / 2 - mc.fontRenderer.getStringWidth(title) / 2, 8, 0x404040);
             mc.fontRenderer.drawString(
-                StringUtils.translate("gui.satellite.SatelliteID") + ": " + getSatelliteId(),
-                14,
-                24,
-                0x404040);
+                    StringUtils.translate("gui.satellite.SatelliteID") + ": " + getSatelliteId(),
+                    14,
+                    24,
+                    0x404040);
             mc.fontRenderer.drawString(StringUtils.translate("gui.satellite.Name"), 14, 38, 0x404040);
             return;
         }
@@ -227,7 +229,7 @@ public class GuiSatellitePipe extends LogisticsBaseGuiScreen {
 
     private boolean isPatternSatellite() {
         return _satellite instanceof PipeItemsPatternSatelliteLogistics
-            || _liquidSatellite instanceof PipeFluidPatternSatelliteLogistics;
+                || _liquidSatellite instanceof PipeFluidPatternSatelliteLogistics;
     }
 
     private int getSatelliteId() {

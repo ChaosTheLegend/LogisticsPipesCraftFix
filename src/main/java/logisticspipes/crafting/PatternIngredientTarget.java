@@ -1,6 +1,7 @@
 package logisticspipes.crafting;
 
 import com.github.bsideup.jabel.Desugar;
+
 import logisticspipes.crafting.patternStack.IPatternStack;
 import logisticspipes.interfaces.routing.IRequestFluid;
 import logisticspipes.interfaces.routing.IRequestItems;
@@ -14,7 +15,7 @@ import logisticspipes.interfaces.routing.IRequestItems;
  */
 @Desugar
 record PatternIngredientTarget(int inputSlot, IPatternStack stack, IRequestItems itemTarget,
-                               IRequestFluid fluidTarget) {
+        IRequestFluid fluidTarget) {
 
     boolean isLocal() {
         return itemTarget == null && fluidTarget == null;

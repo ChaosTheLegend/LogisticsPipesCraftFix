@@ -11,6 +11,7 @@ import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
 import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
+
 import logisticspipes.gui.modularUI.LogisticsModuleMUI;
 import logisticspipes.modules.ModuleElectricManager;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
@@ -21,7 +22,7 @@ public class ModuleElectricManagerMui extends LogisticsModuleMUI {
 
     public ModuleElectricManagerMui(LogisticsModule module) {
         super(module);
-        filterInventory = new InvWrapper(((ModuleElectricManager)module).getFilterInventory());
+        filterInventory = new InvWrapper(((ModuleElectricManager) module).getFilterInventory());
     }
 
     @Override
@@ -34,36 +35,24 @@ public class ModuleElectricManagerMui extends LogisticsModuleMUI {
 
         ModuleElectricManager itemSinkModule = (ModuleElectricManager) module;
 
-        if(addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
+        if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        widget
-            .child(new Column()
-                .coverChildren()
-                .left(9)
-                .top(4)
-                .childPadding(4)
-                .crossAxisAlignment(Alignment.CrossAxis.START)
-                .child(new TextWidget<>("Electric items"))
-                .child(SlotGroupWidget.builder()
-                    .row("IIIIIIIII")
-                    .key('I', i -> new PhantomItemSlot()
-                        .slot(filterInventory, i))
-                    .build()
-                )
-                .child(new CycleButtonWidget()
-                    .width(86).height(20)
-                    .alignX(Alignment.END)
-                    .value(
-                        SyncHandlers.bool(itemSinkModule::isDischargeMode, itemSinkModule::setDischargeMode))
-                    .overlay(
-                        IKey.lang(
-                            () -> itemSinkModule.isDischargeMode() ?
-                                "Discharge items" :
-                                "Charge items"
-                        )
-                    )
-                )
-            );
+        widget.child(
+                new Column().coverChildren().left(9).top(4).childPadding(4)
+                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Electric items"))
+                        .child(
+                                SlotGroupWidget.builder().row("IIIIIIIII")
+                                        .key('I', i -> new PhantomItemSlot().slot(filterInventory, i)).build())
+                        .child(
+                                new CycleButtonWidget().width(86).height(20).alignX(Alignment.END)
+                                        .value(
+                                                SyncHandlers.bool(
+                                                        itemSinkModule::isDischargeMode,
+                                                        itemSinkModule::setDischargeMode))
+                                        .overlay(
+                                                IKey.lang(
+                                                        () -> itemSinkModule.isDischargeMode() ? "Discharge items"
+                                                                : "Charge items"))));
 
         return widget;
     }

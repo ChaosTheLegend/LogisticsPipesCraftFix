@@ -1,5 +1,26 @@
 package logisticspipes.crafting;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.WeakHashMap;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ISidedInventory;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ChatComponentText;
+import net.minecraftforge.common.util.ForgeDirection;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.interfaces.IInventoryUtil;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
@@ -24,26 +45,6 @@ import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.transactor.ITransactor;
 import lombok.Getter;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentText;
-import net.minecraftforge.common.util.ForgeDirection;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.WeakHashMap;
 
 public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogistics {
 
@@ -107,7 +108,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         Set<String> favoriteUuids = getFavoriteSatelliteUuids(player);
         List<PatternSatelliteInfo> satellites = new ArrayList<>();
         int playerDimension = player != null && player.worldObj != null
-            ? MainProxy.getDimensionForWorld(player.worldObj)
+                ? MainProxy.getDimensionForWorld(player.worldObj)
                 : Integer.MIN_VALUE;
         for (PipeItemsPatternSatelliteLogistics satellite : ALL_PATTERN_SATELLITES) {
             if (!isSelectableSatellite(satellite)) {
@@ -182,7 +183,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     }
 
     private static int getDistance(EntityPlayer player, int playerDimension,
-                                   PipeItemsPatternSatelliteLogistics satellite, int satelliteDimension) {
+            PipeItemsPatternSatelliteLogistics satellite, int satelliteDimension) {
         if (player == null || playerDimension != satelliteDimension) {
             return -1;
         }
@@ -311,7 +312,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
      * Retrieves cancelled craft ingredients and only intercepts late arrivals for the matching pattern input.
      */
     public int retrieveOrCancelToStorage(ItemIdentifierStack stack, boolean interceptMissing, int patternSlot,
-                                         int inputSlot) {
+            int inputSlot) {
         if (stack == null || stack.getStackSize() <= 0 || MainProxy.isClient(getWorld())) {
             return 0;
         }
@@ -350,17 +351,15 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             if (remaining <= 0) {
                 break;
             }
-            if (!(tile.tile instanceof IInventory base) || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
+            if (!(tile.tile instanceof IInventory base)
+                    || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
                 continue;
             }
             if (base instanceof ISidedInventory) {
-                base = new SidedInventoryMinecraftAdapter(
-                    (ISidedInventory) base,
-                    tile.orientation.getOpposite(),
-                    true);
+                base = new SidedInventoryMinecraftAdapter((ISidedInventory) base, tile.orientation.getOpposite(), true);
             }
             IInventoryUtil inventory = SimpleServiceLocator.inventoryUtilFactory
-                .getInventoryUtil(base, tile.orientation.getOpposite());
+                    .getInventoryUtil(base, tile.orientation.getOpposite());
             ItemStack removed = inventory.getMultipleItems(stack.getItem(), remaining);
             if (removed == null || removed.stackSize <= 0) {
                 continue;
@@ -382,7 +381,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             return 0;
         }
         IInventoryUtil inventoryUtil = SimpleServiceLocator.inventoryUtilFactory
-            .getInventoryUtil(inventory, target.orientation.getOpposite());
+                .getInventoryUtil(inventory, target.orientation.getOpposite());
         return inventoryUtil.roomForItem(stack.getItem(), stack.getStackSize());
     }
 
@@ -399,7 +398,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             return 0;
         }
         IInventoryUtil inventoryUtil = SimpleServiceLocator.inventoryUtilFactory
-            .getInventoryUtil(inventory, target.orientation.getOpposite());
+                .getInventoryUtil(inventory, target.orientation.getOpposite());
         return inventoryUtil.itemCount(item);
     }
 
@@ -409,7 +408,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         AdjacentTile fallback = null;
         for (AdjacentTile tile : worldUtil.getAdjacentTileEntities(true)) {
             if (!(tile.tile instanceof IInventory)
-                || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
+                    || SimpleServiceLocator.pipeInformationManager.isItemPipe(tile.tile)) {
                 continue;
             }
             if (tile.orientation == pointed) {
@@ -428,9 +427,9 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
         }
         if (inventory instanceof ISidedInventory) {
             return new SidedInventoryMinecraftAdapter(
-                (ISidedInventory) inventory,
-                target.orientation.getOpposite(),
-                false);
+                    (ISidedInventory) inventory,
+                    target.orientation.getOpposite(),
+                    false);
         }
         return inventory;
     }
@@ -568,7 +567,7 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
             IRouter router = getRouter();
             IRouter otherRouter = other.getRouter();
             return router == otherRouter
-                || (router != null && otherRouter != null && !router.getDistanceTo(otherRouter).isEmpty());
+                    || (router != null && otherRouter != null && !router.getDistanceTo(otherRouter).isEmpty());
         } catch (RuntimeException ignored) {
             return false;
         }
@@ -609,10 +608,10 @@ public class PipeItemsPatternSatelliteLogistics extends PipeItemsSatelliteLogist
     @Override
     public void onWrenchClicked(EntityPlayer entityplayer) {
         ModernPacket idPacket = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
-            .setPosY(getY()).setPosZ(getZ());
+                .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(idPacket, entityplayer);
         ModernPacket namePacket = PacketHandler.getPacket(PatternSatelliteSetName.class).setString(getSatelliteName())
-            .setPosX(getX()).setPosY(getY()).setPosZ(getZ());
+                .setPosX(getX()).setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(namePacket, entityplayer);
         entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
     }

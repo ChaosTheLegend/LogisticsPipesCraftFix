@@ -10,9 +10,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.DelayQueue;
 
-import logisticspipes.api.IMUICompatibleModule;
-import logisticspipes.gui.modularUI.LogisticsModularUI;
-import logisticspipes.gui.modularUI.dynamicModules.ModuleCraftingMuiDynamic;
 import net.minecraft.block.Block;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -28,6 +25,7 @@ import net.minecraft.util.IIcon;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTank;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -121,7 +119,6 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.string.StringUtils;
 import logisticspipes.utils.tuples.Pair;
 import lombok.Getter;
-import net.minecraftforge.fluids.FluidTank;
 
 public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IHUDModuleHandler, IModuleWatchReciver,
         ISimpleInventoryEventHandler, IModuleInventoryReceive {
@@ -1078,6 +1075,7 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
             MainProxy.sendPacketToAllWatchingChunk(getX(), getZ(), MainProxy.getDimensionForWorld(getWorld()), packet);
         }
     }
+
     public void priorityUp(EntityPlayer player) {
         priority++;
         if (MainProxy.isClient(player.worldObj)) {
@@ -1117,7 +1115,9 @@ public class ModuleCrafter extends LogisticsGuiModule implements ICraftItems, IH
     public FluidIdentifier getFluidMaterial(int slotnr) {
         var fluid = _liquidTank.get(slotnr);
 
-        if(fluid.getFluid() == null) {return null;}
+        if (fluid.getFluid() == null) {
+            return null;
+        }
 
         return FluidIdentifier.get(fluid.getFluid());
     }

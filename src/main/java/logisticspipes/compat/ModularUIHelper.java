@@ -1,6 +1,5 @@
 package logisticspipes.compat;
 
-import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.world.World;
@@ -9,6 +8,7 @@ import com.cleanroommc.modularui.drawable.UITexture;
 import com.cleanroommc.modularui.factory.GuiFactories;
 
 import logisticspipes.LogisticsPipes;
+import logisticspipes.modules.abstractmodules.LogisticsGuiModule;
 import logisticspipes.pipes.basic.CoreUnroutedPipe;
 
 public class ModularUIHelper {
@@ -17,7 +17,7 @@ public class ModularUIHelper {
             .location(LogisticsPipes.rl("textures/gui/GuiBackground.png")).imageSize(45, 45).adaptable(15).build();
 
     public static final UITexture TAB_RIGHT_TEXTURE = UITexture.builder()
-        .location(LogisticsPipes.rl("textures/gui/gui_tab_right.png")).imageSize(41, 45).adaptable(15).build();
+            .location(LogisticsPipes.rl("textures/gui/gui_tab_right.png")).imageSize(41, 45).adaptable(15).build();
 
     public static void openPipeUI(EntityPlayer player, CoreUnroutedPipe pipe) {
         World world = pipe.getWorld();

@@ -1,12 +1,13 @@
 package logisticspipes.network.packets.gui;
 
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.crafting.PatternCraftingPipeGuiProvider;
 import logisticspipes.crafting.pattern.PatternContainer;
 import logisticspipes.network.abstractpackets.IntegerCoordinatesPacket;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.pipes.PipeItemsPatternCraftingLogistics;
 import logisticspipes.pipes.basic.LogisticsTileGenericPipe;
-import net.minecraft.entity.player.EntityPlayer;
 
 public class PatternPipeSelectPacket extends IntegerCoordinatesPacket {
 
@@ -24,7 +25,7 @@ public class PatternPipeSelectPacket extends IntegerCoordinatesPacket {
             ((PatternContainer) player.openContainer).setSelectedPatternSlot(getInteger());
         }
         ((PatternCraftingPipeGuiProvider) pipe.getPatternModule().getPipeGuiProviderForModule())
-            .setSelectedPatternSlot(getInteger()).setTilePos(pipe.container).open(player);
+                .setSelectedPatternSlot(getInteger()).setTilePos(pipe.container).open(player);
     }
 
     @Override

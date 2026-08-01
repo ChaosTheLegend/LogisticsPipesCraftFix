@@ -1,5 +1,13 @@
 package logisticspipes.network.packets.crafting;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
 import logisticspipes.LogisticsPipes;
 import logisticspipes.crafting.pattern.AbstractPattern;
 import logisticspipes.crafting.pattern.DefaultPattern;
@@ -14,13 +22,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Setter
 @Getter
@@ -63,8 +64,8 @@ public class NEISetPatternCraftingRecipe extends CoordinatesPacket {
         if (patternStack == null || patternStack.getItem() != LogisticsPipes.LogisticsPattern) return;
 
         boolean processingPattern = outputs.size() > DefaultPattern.RESULT_SLOTS
-            || inputs.size() > DefaultPattern.INGREDIENT_SLOTS
-            || usesProcessingInputSlot(indices);
+                || inputs.size() > DefaultPattern.INGREDIENT_SLOTS
+                || usesProcessingInputSlot(indices);
         ItemPattern.setProcessingPattern(patternStack, processingPattern);
 
         AbstractPattern pattern = ItemPattern.fromStack(patternStack);

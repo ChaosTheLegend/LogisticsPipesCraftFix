@@ -1,14 +1,16 @@
 package logisticspipes.renderer;
 
-import logisticspipes.LogisticsPipes;
-import logisticspipes.crafting.pattern.ItemPattern;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.IItemRenderer;
+
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
+
+import logisticspipes.LogisticsPipes;
+import logisticspipes.crafting.pattern.ItemPattern;
 
 public class PatternItemRenderer implements IItemRenderer {
 

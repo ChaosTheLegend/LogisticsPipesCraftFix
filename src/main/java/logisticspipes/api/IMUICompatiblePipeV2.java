@@ -1,9 +1,10 @@
 package logisticspipes.api;
 
+import net.minecraft.entity.player.EntityPlayer;
+
 import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.pipes.basic.CoreUnroutedPipe;
-import net.minecraft.entity.player.EntityPlayer;
 
 public interface IMUICompatiblePipeV2 {
 

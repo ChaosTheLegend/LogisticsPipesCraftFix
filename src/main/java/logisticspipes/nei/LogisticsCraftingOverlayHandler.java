@@ -1,5 +1,15 @@
 package logisticspipes.nei;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.oredict.OreDictionary;
+
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
@@ -12,20 +22,10 @@ import logisticspipes.network.PacketHandler;
 import logisticspipes.network.packets.NEISetCraftingRecipe;
 import logisticspipes.proxy.MainProxy;
 import logisticspipes.utils.gui.LogisticsBaseGuiScreen;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.oredict.OreDictionary;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 
 public class LogisticsCraftingOverlayHandler implements IOverlayHandler {
 
-    public LogisticsCraftingOverlayHandler() {
-    }
+    public LogisticsCraftingOverlayHandler() {}
 
     public static final LogisticsCraftingOverlayHandler INSTANCE = new LogisticsCraftingOverlayHandler();
 

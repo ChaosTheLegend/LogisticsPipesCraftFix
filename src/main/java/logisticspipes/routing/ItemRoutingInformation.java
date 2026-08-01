@@ -1,5 +1,13 @@
 package logisticspipes.routing;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
 import logisticspipes.crafting.PatternTargetInformation;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.logisticspipes.IRoutedItem.TransportMode;
@@ -8,13 +16,6 @@ import logisticspipes.routing.order.IDistanceTracker;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
 
 public class ItemRoutingInformation {
 
@@ -101,7 +102,7 @@ public class ItemRoutingInformation {
             return null;
         }
         int inputSlot = tag.hasKey(TARGET_INPUT_SLOT_TAG) ? tag.getInteger(TARGET_INPUT_SLOT_TAG)
-            : PatternTargetInformation.NO_INPUT_SLOT;
+                : PatternTargetInformation.NO_INPUT_SLOT;
         return new PatternTargetInformation(tag.getInteger(TARGET_PATTERN_SLOT_TAG), inputSlot);
     }
 

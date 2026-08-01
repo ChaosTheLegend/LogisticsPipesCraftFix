@@ -1,16 +1,17 @@
 package logisticspipes.nei;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import net.minecraft.client.gui.inventory.GuiContainer;
+
 import codechicken.nei.PositionedStack;
 import codechicken.nei.api.IOverlayHandler;
 import codechicken.nei.recipe.IRecipeHandler;
 import logisticspipes.crafting.pattern.PatternGui;
 import logisticspipes.crafting.patternStack.IPatternStack;
-import net.minecraft.client.gui.inventory.GuiContainer;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class LogisticPatternHandler implements IOverlayHandler {
 
@@ -20,8 +21,7 @@ public class LogisticPatternHandler implements IOverlayHandler {
 
     @Override
     public void overlayRecipe(GuiContainer firstGui, IRecipeHandler recipe, int recipeIndex, boolean maxTransfer) {
-        if (!(firstGui instanceof PatternGui gui)) {
-        }
+        if (!(firstGui instanceof PatternGui gui)) {}
 
         // we can just steal ae2 fluid implementation here for now, so we dont need to rewrite all the handlers.
         // List<OrderStack<?>> in = FluidRecipe.getPackageInputs(recipe, recipeIndex, false);
