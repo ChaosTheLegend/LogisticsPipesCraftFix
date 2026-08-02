@@ -23,7 +23,6 @@ import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleActiveSupplierMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleActiveSupplierMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -187,7 +186,7 @@ public class ModuleActiveSupplier extends LogisticsGuiModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleActiveSupplierMui(this);
+        return new ModuleActiveSupplierMuiDynamic(this);
     }
 
     @Override

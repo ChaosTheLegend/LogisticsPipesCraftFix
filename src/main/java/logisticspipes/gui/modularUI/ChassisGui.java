@@ -3,6 +3,8 @@ package logisticspipes.gui.modularUI;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.cleanroommc.modularui.api.GuiAxis;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
@@ -96,7 +98,7 @@ public class ChassisGui extends LogisticsModularUI {
 
         addWidgets(panel, guiSyncManager, true);
 
-        var row = new Row().height(28).left(2).top(0);
+        var row = new Flow(GuiAxis.X).height(28).left(2).top(0);
 
         guiSyncManager.registerSlotGroup("module_inventory", pipe.getChassieSize());
 
@@ -111,7 +113,9 @@ public class ChassisGui extends LogisticsModularUI {
                             new ModularSlot(moduleInventory, i).slotGroup("module_inventory").filter(this::isModuleItem)
                                     .changeListener(((newItem, onlyAmountChanged, client, init) -> {
                                         if (client && !onlyAmountChanged) {
-                                            moduleSyncHandlers.get(slot).notifyUpdate(
+                                            moduleSyncHandlers.get(slot)
+                                                .allowC2S()
+                                                .notifyUpdate(
                                                     packet -> NetworkUtils.writeItemStack(packet, newItem));
                                         }
                                     })))
@@ -130,8 +134,9 @@ public class ChassisGui extends LogisticsModularUI {
 
     private @Nullable ParentWidget buildModuleWidget(PanelSyncManager innerSyncManager, PacketBuffer packet, int slot) {
 
+
         return addModuleUI(
-                new Row().fullWidth().height(100),
+                new Flow(GuiAxis.X).fullWidth().height(100),
                 innerSyncManager,
                 NetworkUtils.readItemStack(packet),
                 slot);

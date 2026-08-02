@@ -14,7 +14,6 @@ import cpw.mods.fml.relauncher.SideOnly;
 import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleBeeAnalyzerMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleBeeAnalyzerMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IInventoryUtil;
 import logisticspipes.interfaces.IModuleWatchReciver;
@@ -229,7 +228,7 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleBeeAnalyzerMui(this);
+        return new ModuleBeeAnalyzerMuiDynamic(this);
     }
 
     @Override

@@ -17,7 +17,6 @@ import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDElectricManager;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleElectricManagerMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleElectricManagerMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -322,7 +321,7 @@ public class ModuleElectricManager extends LogisticsGuiModule implements IClient
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleElectricManagerMui(this);
+        return new ModuleElectricManagerMuiDynamic(this);
     }
 
     @Override

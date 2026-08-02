@@ -1,5 +1,6 @@
 package logisticspipes.gui.modularUI.dynamicModules;
 
+import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -9,7 +10,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
@@ -38,20 +38,21 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
 
         if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
-        var extractionModeSync = syncManager.getOrCreateSyncHandler(
+        EnumSyncValue extractionModeSync = syncManager.getOrCreateSyncHandler(
                 getFullId() + "_extraction_mode",
                 EnumSyncValue.class,
                 () -> new EnumSyncValue<>(
                         ExtractionMode.class,
                         module::getExtractionMode,
-                        i -> module.setExtractionMode(i.ordinal())));
+                        i -> module.setExtractionMode(i.ordinal()))
+                    .allowC2S());
         BooleanSyncValue excludeFilterSync = syncManager.getOrCreateSyncHandler(
                 getFullId() + "_exclude_filter",
                 BooleanSyncValue.class,
-                () -> new BooleanSyncValue(module::isExcludeFilter, module::setFilterExcluded));
+                () -> new BooleanSyncValue(module::isExcludeFilter, module::setFilterExcluded)).allowC2S();
 
         widget.child(
-                new Column().coverChildrenHeight().fullWidth().childPadding(4)
+                new Flow(GuiAxis.Y).coverChildrenHeight().fullWidth().childPadding(4)
                         .child(new TextWidget<>("Filter items").left(4).height(10).top(4))
                         .child(
                                 new CycleButtonWidget().value(extractionModeSync)
@@ -104,7 +105,7 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
         if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         widget.child(
-                new Column().coverChildrenHeight().fullWidth().childPadding(4)
+                new Flow(GuiAxis.Y).coverChildrenHeight().fullWidth().childPadding(4)
                         .child(new TextWidget<>("Filter items").left(4).height(10).top(4))
                         .child(
                                 new CycleButtonWidget()
@@ -112,7 +113,8 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
                                                 SyncHandlers.enumValue(
                                                         ExtractionMode.class,
                                                         moduleProvider::getExtractionMode,
-                                                        i -> moduleProvider.setExtractionMode(i.ordinal())))
+                                                        i -> moduleProvider.setExtractionMode(i.ordinal()))
+                                                    .allowC2S())
                                         .overlay(IKey.lang(() -> switch (moduleProvider.getExtractionMode()) {
                                         case Normal -> "Mode: Normal";
                                         case LeaveFirst -> "Mode: Leave first";
@@ -126,7 +128,8 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
                                         .value(
                                                 SyncHandlers.bool(
                                                         moduleProvider::isExcludeFilter,
-                                                        moduleProvider::setFilterExcluded))
+                                                        moduleProvider::setFilterExcluded)
+                                                    .allowC2S())
                                         .overlay(
                                                 IKey.lang(
                                                         () -> !moduleProvider.isExcludeFilter() ? "Whitelist"

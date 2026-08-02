@@ -17,7 +17,6 @@ import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDSimpleFilterModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleEnchantmentSinkMK2MuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleEnchantmentSinkMK2Mui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -217,7 +216,7 @@ public class ModuleEnchantmentSinkMK2 extends LogisticsSimpleFilterModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleEnchantmentSinkMK2Mui(this);
+        return new ModuleEnchantmentSinkMK2MuiDynamic(this);
     }
 
     @Override

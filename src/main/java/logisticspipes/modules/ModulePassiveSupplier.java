@@ -17,7 +17,6 @@ import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDSimpleFilterModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModulePassiveSupplierMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModulePassiveSupplierMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -215,7 +214,7 @@ public class ModulePassiveSupplier extends LogisticsSimpleFilterModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModulePassiveSupplierMui(this);
+        return new ModulePassiveSupplierMuiDynamic(this);
     }
 
     @Override

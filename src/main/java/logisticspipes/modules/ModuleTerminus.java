@@ -17,7 +17,6 @@ import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDSimpleFilterModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleTerminusMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleTerminusMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -207,7 +206,7 @@ public class ModuleTerminus extends LogisticsSimpleFilterModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleTerminusMui(this);
+        return new ModuleTerminusMuiDynamic(this);
     }
 
     @Override

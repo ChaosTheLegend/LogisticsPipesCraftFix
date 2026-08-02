@@ -18,7 +18,6 @@ import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDItemSink;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleItemSinkMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleItemSinkMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -411,7 +410,7 @@ public class ModuleItemSink extends LogisticsGuiModule implements IClientInforma
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleItemSinkMui(this);
+        return new ModuleItemSinkMuiDynamic(this);
     }
 
     @Override

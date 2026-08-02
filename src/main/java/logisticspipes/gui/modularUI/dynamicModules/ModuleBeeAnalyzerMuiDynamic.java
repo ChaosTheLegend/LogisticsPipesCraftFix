@@ -28,8 +28,8 @@ public class ModuleBeeAnalyzerMuiDynamic extends GenericModuleMUI<ModuleApiarist
                 ? syncManager.getOrCreateSyncHandler(
                         getFullId() + "_extract_mode",
                         BooleanSyncValue.class,
-                        () -> new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode))
-                : new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode);
+                        () -> new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode).allowC2S())
+                : new BooleanSyncValue(module::getExtractModeBool, module::setExtractMode).allowC2S();
 
         widget.child(
                 new CycleButtonWidget().value(extractModeSync).overlay(

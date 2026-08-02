@@ -1,5 +1,6 @@
 package logisticspipes.gui.modularUI.dynamicModules;
 
+import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
 import com.cleanroommc.modularui.utils.item.InvWrapper;
@@ -8,7 +9,6 @@ import com.cleanroommc.modularui.value.sync.PhantomItemSlotSH;
 import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
@@ -36,7 +36,7 @@ public class ModulePassiveSupplierMuiDynamic extends GenericModuleMUI<ModulePass
         if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         widget.child(
-                new Column().coverChildren().left(9).top(4).childPadding(4)
+                new Flow(GuiAxis.Y).coverChildren().left(9).top(4).childPadding(4)
                         .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Requested items"))
                         .child(buildFilterSlots(syncManager)));
 

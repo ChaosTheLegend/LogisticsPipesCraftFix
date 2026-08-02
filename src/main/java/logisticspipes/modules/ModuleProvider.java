@@ -22,7 +22,6 @@ import logisticspipes.crafting.IStagedProviderReservation;
 import logisticspipes.gui.hud.modules.HUDProviderModule;
 import logisticspipes.gui.modularUI.LogisticsModularUI;
 import logisticspipes.gui.modularUI.dynamicModules.ModuleProviderMuiDynamic;
-import logisticspipes.gui.modularUI.modules.ModuleProviderMui;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -590,7 +589,7 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule
 
     @Override
     public LogisticsModularUI getHandGui() {
-        return new ModuleProviderMui(this);
+        return new ModuleProviderMuiDynamic(this);
     }
 
     @Override

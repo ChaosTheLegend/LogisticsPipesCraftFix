@@ -1,5 +1,6 @@
 package logisticspipes.gui.modularUI.dynamicModules;
 
+import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -11,7 +12,6 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
@@ -45,14 +45,14 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
                         () -> new EnumSyncValue<>(
                                 ModuleActiveSupplier.SupplyMode.class,
                                 module::getSupplyMode,
-                                module::setSupplyMode))
+                                module::setSupplyMode).allowC2S())
                 : new EnumSyncValue<>(
                         ModuleActiveSupplier.SupplyMode.class,
                         module::getSupplyMode,
-                        module::setSupplyMode);
+                        module::setSupplyMode).allowC2S();
 
         widget.child(
-                new Column().fullWidth().coverChildrenHeight().left(9).right(9).top(4).childPadding(4)
+                new Flow(GuiAxis.Y).fullWidth().coverChildrenHeight().left(9).right(9).top(4).childPadding(4)
                         .child(new TextWidget<>("Items to keep stocked").alignX(Alignment.START))
                         .child(buildSupplySlots(syncManager).coverChildren().alignX(Alignment.CENTER)).child(
                                 new CycleButtonWidget().width(120).height(16).value(supplyModeSync)

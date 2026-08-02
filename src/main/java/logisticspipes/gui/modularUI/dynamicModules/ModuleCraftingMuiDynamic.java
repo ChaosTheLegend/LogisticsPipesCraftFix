@@ -2,6 +2,7 @@ package logisticspipes.gui.modularUI.dynamicModules;
 
 import net.minecraft.client.Minecraft;
 
+import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -12,9 +13,7 @@ import com.cleanroommc.modularui.widget.ParentWidget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 
@@ -46,19 +45,19 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
         if (addPlayerInventory) widget.child(SlotGroupWidget.playerInventory(true));
 
         widget.child(
-                new Column().coverChildrenHeight().fullWidth().childPadding(4)
+                new Flow(GuiAxis.Y).coverChildrenHeight().fullWidth().childPadding(4)
                         // Input slots label
                         .child(new TextWidget<>("Inputs").left(4).height(10))
                         // 9 input phantom slots (slots 0-8)
                         .child(buildInputSlots(syncManager))
                         // Output slot row
                         .child(
-                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
                                         .child(new TextWidget<>("Output").height(10).alignY(Alignment.END))
                                         .child(buildSingleSlot(syncManager, 9, "_output")))
                         // Satellite row: < [id] >
                         .child(
-                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
                                         .child(new TextWidget<>("Satellite:").height(10).alignY(Alignment.CENTER))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str("<"))
@@ -81,7 +80,7 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                                                         })))
                         // Priority row: v [priority] ^
                         .child(
-                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
                                         .child(new TextWidget<>("Priority:").height(10).alignY(Alignment.CENTER))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str("v"))
@@ -102,7 +101,7 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                                                         })))
                         // Action buttons row
                         .child(
-                                new Row().coverChildrenHeight().widthRel(1f).childPadding(4)
+                                new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
                                         .child(
                                                 new ButtonWidget<>().width(60).height(14).overlay(IKey.str("Import"))
                                                         .onMousePressed(btn -> {

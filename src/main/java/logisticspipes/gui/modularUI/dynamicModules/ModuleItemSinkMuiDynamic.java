@@ -1,5 +1,6 @@
 package logisticspipes.gui.modularUI.dynamicModules;
 
+import com.cleanroommc.modularui.api.GuiAxis;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.utils.item.IItemHandlerModifiable;
@@ -12,9 +13,7 @@ import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.CycleButtonWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.TextWidget;
-import com.cleanroommc.modularui.widgets.layout.Column;
 import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.layout.Row;
 import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 
@@ -44,20 +43,20 @@ public class ModuleItemSinkMuiDynamic extends GenericModuleMUI<ModuleItemSink> {
                 ? syncManager.getOrCreateSyncHandler(
                         getFullId() + "_default_route",
                         BooleanSyncValue.class,
-                        () -> new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute))
-                : new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute);
+                        () -> new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute).allowC2S())
+                : new BooleanSyncValue(module::isDefaultRoute, module::setDefaultRoute).allowC2S();
 
         widget.child(
-                new Column().coverChildren().left(9).top(4).childPadding(4)
+                new Flow(GuiAxis.Y).coverChildren().left(9).top(4).childPadding(4)
                         .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Requested items"))
                         .child(buildFilterSlots(syncManager)).child(
-                                new Row().coverChildrenHeight().widthRel(1f)
+                                new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f)
                                         .child(new ButtonWidget<>().onMousePressed(i -> {
                                             if (i == 0) module.importFromInventory();
                                             return i == 0;
                                         }).overlay(IKey.lang("Import")).width(40).height(16))
-                                        .child(new Row().expanded()).child(
-                                                new Row().coverChildren().childPadding(4)
+                                        .child(new Flow(GuiAxis.X).expanded()).child(
+                                                new Flow(GuiAxis.X).coverChildren().childPadding(4)
                                                         .child(new TextWidget<>("Default route:")).child(
                                                                 new CycleButtonWidget().width(26).height(16)
                                                                         .value(defaultRouteSync).overlay(
