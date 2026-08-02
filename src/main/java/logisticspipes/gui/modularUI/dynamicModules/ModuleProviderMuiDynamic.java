@@ -75,7 +75,8 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
 
     private Flow buildFilterSlots(PanelSyncManager syncManager) {
         String id = getFullId();
-        Flow col = Flow.col().coverChildren().align(Alignment.TopCenter).top(16);
+        Flow col = Flow.col().coverChildren().leftRel(Alignment.TopCenter.x).anchorLeft(Alignment.TopCenter.x)
+                .topRel(Alignment.TopCenter.y).anchorTop(Alignment.TopCenter.y).top(16);
         for (int row = 0; row < 3; row++) {
             Flow rowWidget = Flow.row().coverChildren();
             for (int col2 = 0; col2 < 3; col2++) {

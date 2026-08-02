@@ -53,12 +53,14 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                         // Output slot row
                         .child(
                                 new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
-                                        .child(new TextWidget<>("Output").height(10).alignY(Alignment.END))
+                                        .child(
+                                                new TextWidget<>("Output").height(10).topRel(Alignment.END.y)
+                                                        .anchorTop(Alignment.END.y))
                                         .child(buildSingleSlot(syncManager, 9, "_output")))
                         // Satellite row: < [id] >
                         .child(
                                 new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
-                                        .child(new TextWidget<>("Satellite:").height(10).alignY(Alignment.CENTER))
+                                        .child(new TextWidget<>("Satellite:").height(10).topRel(Alignment.CENTER.y).anchorTop(Alignment.CENTER.y))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str("<"))
                                                         .onMousePressed(btn -> {
@@ -70,7 +72,7 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                                                 IKey.lang(
                                                         () -> module.satelliteId == 0 ? "Off"
                                                                 : String.valueOf(module.satelliteId))
-                                                        .asWidget().width(30).height(14).align(Alignment.Center))
+                                                        .asWidget().width(30).height(14).leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str(">"))
                                                         .onMousePressed(btn -> {
@@ -81,7 +83,7 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                         // Priority row: v [priority] ^
                         .child(
                                 new Flow(GuiAxis.X).coverChildrenHeight().widthRel(1f).childPadding(4)
-                                        .child(new TextWidget<>("Priority:").height(10).alignY(Alignment.CENTER))
+                                        .child(new TextWidget<>("Priority:").height(10).topRel(Alignment.CENTER.y).anchorTop(Alignment.CENTER.y))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str("v"))
                                                         .onMousePressed(btn -> {
@@ -91,7 +93,7 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
                                                         }))
                                         .child(
                                                 IKey.lang(() -> String.valueOf(module.priority)).asWidget().width(30)
-                                                        .height(14).align(Alignment.Center))
+                                                        .height(14).leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y))
                                         .child(
                                                 new ButtonWidget<>().width(14).height(14).overlay(IKey.str("^"))
                                                         .onMousePressed(btn -> {
@@ -123,7 +125,8 @@ public class ModuleCraftingMuiDynamic extends GenericModuleMUI<ModuleCrafter> {
 
     private Flow buildInputSlots(PanelSyncManager syncManager) {
         String id = getFullId();
-        Flow col = Flow.col().coverChildren().align(Alignment.TopCenter);
+        Flow col = Flow.col().coverChildren().leftRel(Alignment.TopCenter.x).anchorLeft(Alignment.TopCenter.x).topRel(Alignment.TopCenter.y)
+                .anchorTop(Alignment.TopCenter.y);
         for (int row = 0; row < 3; row++) {
             Flow rowWidget = Flow.row().coverChildren();
             for (int col2 = 0; col2 < 3; col2++) {

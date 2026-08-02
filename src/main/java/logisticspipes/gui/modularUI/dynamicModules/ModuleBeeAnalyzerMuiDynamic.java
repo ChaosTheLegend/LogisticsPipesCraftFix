@@ -34,7 +34,8 @@ public class ModuleBeeAnalyzerMuiDynamic extends GenericModuleMUI<ModuleApiarist
         widget.child(
                 new CycleButtonWidget().value(extractModeSync).overlay(
                         IKey.lang(() -> module.getExtractModeBool() ? "Extract items: On" : "Extract items: Off"))
-                        .width(120).height(22).align(Alignment.CENTER));
+                        .width(120).height(22).leftRel(Alignment.CENTER.x).anchorLeft(Alignment.CENTER.x)
+                        .topRel(Alignment.CENTER.y).anchorTop(Alignment.CENTER.y));
 
         return widget;
     }

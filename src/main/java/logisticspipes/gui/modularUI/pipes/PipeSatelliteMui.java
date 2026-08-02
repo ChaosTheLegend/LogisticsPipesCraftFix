@@ -31,7 +31,8 @@ public class PipeSatelliteMui extends LogisticsPipeMUI {
         ISatellitePipe satellitePipe = (ISatellitePipe) pipe;
 
         widget.child(
-                new Column().coverChildren().top(4).childPadding(4).align(Alignment.Center)
+                new Column().coverChildren().top(4).childPadding(4).leftRel(Alignment.Center.x)
+                        .anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y)
                         .crossAxisAlignment(Alignment.CrossAxis.CENTER).child(new TextWidget<>("Satellite id"))
                         .child(
                                 new TextFieldWidget().width(80).setNumbers(0, Integer.MAX_VALUE).value(

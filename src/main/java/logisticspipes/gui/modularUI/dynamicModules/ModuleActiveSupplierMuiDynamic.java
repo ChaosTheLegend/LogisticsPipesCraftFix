@@ -53,8 +53,8 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
 
         widget.child(
                 new Flow(GuiAxis.Y).fullWidth().coverChildrenHeight().left(9).right(9).top(4).childPadding(4)
-                        .child(new TextWidget<>("Items to keep stocked").alignX(Alignment.START))
-                        .child(buildSupplySlots(syncManager).coverChildren().alignX(Alignment.CENTER)).child(
+                        .child(new TextWidget<>("Items to keep stocked").leftRel(Alignment.START.x).anchorLeft(Alignment.START.x))
+                        .child(buildSupplySlots(syncManager).coverChildren().leftRel(Alignment.CENTER.x).anchorLeft(Alignment.CENTER.x)).child(
                                 new CycleButtonWidget().width(120).height(16).value(supplyModeSync)
                                         .overlay(IKey.lang(() -> switch (module.getSupplyMode()) {
                                         case Partial -> "Request mode: Partial";
@@ -62,7 +62,7 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
                                         case Bulk50 -> "Request mode: Bulk50";
                                         case Bulk100 -> "Request mode: Bulk100";
                                         case Infinite -> "Request mode: Infinite";
-                                        })).alignX(Alignment.START)));
+                                        })).leftRel(Alignment.START.x).anchorLeft(Alignment.START.x)));
 
         return widget;
     }

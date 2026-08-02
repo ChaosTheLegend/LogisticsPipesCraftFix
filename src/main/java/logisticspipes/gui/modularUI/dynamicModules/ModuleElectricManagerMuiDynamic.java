@@ -49,7 +49,8 @@ public class ModuleElectricManagerMuiDynamic extends GenericModuleMUI<ModuleElec
                 new Flow(GuiAxis.Y).coverChildren().left(9).top(4).childPadding(4)
                         .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Electric items"))
                         .child(buildFilterSlots(syncManager)).child(
-                                new CycleButtonWidget().width(86).height(20).alignX(Alignment.END)
+                                new CycleButtonWidget().width(86).height(20).leftRel(Alignment.END.x)
+                                        .anchorLeft(Alignment.END.x)
                                         .value(dischargeModeSync).overlay(
                                                 IKey.lang(
                                                         () -> module.isDischargeMode() ? "Discharge items"

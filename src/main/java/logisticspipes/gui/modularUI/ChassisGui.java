@@ -125,7 +125,11 @@ public class ChassisGui extends LogisticsModularUI {
         panel.child(row);
 
         var upgrades = PipeGuiFactory.getUpgradeGui(upgradeHandler, guiSyncManager);
-        upgrades.top(30).right(4);
+
+        // .right(int) resolves this axis from a left+right anchor pair, which stretches the widget's width to fill
+        // the gap instead of keeping the fixed width set in PipeGuiFactory - pin a fixed left instead so width/height
+        // stay exactly as configured, while still landing the right edge 4px from the panel's right edge.
+        upgrades.top(30).left(getWidth() - PipeGuiFactory.UPGRADE_GUI_WIDTH - 4);
 
         panel.child(upgrades);
 
@@ -153,51 +157,51 @@ public class ChassisGui extends LogisticsModularUI {
         ItemStack stack = moduleStack;
 
         if (stack == null) {
-            widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
+            widget.child(new TextWidget<>("No module in slot").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         var item = stack.getItem();
 
         if (item == null) {
-            widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
+            widget.child(new TextWidget<>("No module in slot").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         if (!(item instanceof ItemModule itemModule)) {
-            widget.child(new TextWidget<>("Item is not a module").align(Alignment.Center));
+            widget.child(new TextWidget<>("Item is not a module").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         LogisticsModule module = itemModule.getModuleForItem(stack, null, null, null);
 
         if (module == null) {
-            widget.child(new TextWidget<>("No module in slot").align(Alignment.Center));
+            widget.child(new TextWidget<>("No module in slot").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         if (module instanceof ModuleCrafter) {
             widget.child(
                     new TextWidget<>("Crafting Modules are being replaced with Pattern Crafting Pipes, please use them")
-                            .align(Alignment.Center));
+                            .leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         if (!(module instanceof IMUICompatibleModule)) {
-            widget.child(new TextWidget<>("Module not compatible with MUI yet ＞﹏＜").align(Alignment.Center));
+            widget.child(new TextWidget<>("Module not compatible with MUI yet ＞﹏＜").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
         LogisticsModularUI gui = ((IMUICompatibleModule) module).getPipeGui();
         if (gui == null) {
-            widget.child(new TextWidget<>("Module has no MUI").align(Alignment.Center));
+            widget.child(new TextWidget<>("Module has no MUI").leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x).topRel(Alignment.Center.y).anchorTop(Alignment.Center.y));
             return widget;
         }
 
-        var moduleUI = new Column().width(gui.getWidth()).fullHeight();
+        var moduleUI = new Flow(GuiAxis.Y).width(gui.getWidth()).fullHeight();
         gui.addWidgets(moduleUI, innerSyncManager, false);
 
-        moduleUI.alignX(Alignment.Center);
+        moduleUI.leftRel(Alignment.Center.x).anchorLeft(Alignment.Center.x);
 
         /*
          * var upgrades = new Column() .width(26) .child(SlotGroupWidget.builder() .row("I").row("I").row("I").row("I")
@@ -224,7 +228,7 @@ public class ChassisGui extends LogisticsModularUI {
     @Override
     public ParentWidget addWidgets(ParentWidget widget, PanelSyncManager syncManager, boolean addPlayerInventory) {
 
-        var mainPanel = new Column();
+        var mainPanel = new Flow(GuiAxis.Y);
 
         mainPanel.width(224).height(180).left(2).top(28).background(ModularUIHelper.BACKGROUND_TEXTURE);
 
