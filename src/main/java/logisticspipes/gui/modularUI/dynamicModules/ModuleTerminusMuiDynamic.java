@@ -21,7 +21,11 @@ public class ModuleTerminusMuiDynamic extends GenericModuleMUI<ModuleTerminus> {
     private final IItemHandlerModifiable filterInventory;
 
     public ModuleTerminusMuiDynamic(ModuleTerminus module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleTerminusMuiDynamic(ModuleTerminus module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
 

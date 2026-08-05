@@ -236,4 +236,9 @@ public class ModuleApiaristAnalyser extends LogisticsGuiModule
         return new ModuleBeeAnalyzerMuiDynamic(this);
     }
 
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleBeeAnalyzerMuiDynamic(this, prefix);
+    }
+
 }

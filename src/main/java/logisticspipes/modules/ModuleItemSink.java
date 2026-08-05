@@ -417,4 +417,9 @@ public class ModuleItemSink extends LogisticsGuiModule implements IClientInforma
     public LogisticsModularUI getPipeGui() {
         return new ModuleItemSinkMuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleItemSinkMuiDynamic(this, prefix);
+    }
 }

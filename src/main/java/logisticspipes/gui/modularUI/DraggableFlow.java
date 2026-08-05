@@ -14,10 +14,9 @@ import com.cleanroommc.modularui.widgets.layout.Flow;
 
 /**
  * A {@link Flow} that can be picked up and moved by the cursor, mirroring
- * {@link com.cleanroommc.modularui.widget.DraggableWidget} (which can't hold children, since it extends
- * {@code Widget} rather than {@code ParentWidget}). Add a
- * {@link com.cleanroommc.modularui.widget.DragHandle} child to give players a dedicated grab area instead of making
- * the whole widget (and anything interactive inside it, e.g. slots) draggable.
+ * {@link com.cleanroommc.modularui.widget.DraggableWidget} (which can't hold children, since it extends {@code Widget}
+ * rather than {@code ParentWidget}). Add a {@link com.cleanroommc.modularui.widget.DragHandle} child to give players a
+ * dedicated grab area instead of making the whole widget (and anything interactive inside it, e.g. slots) draggable.
  */
 public class DraggableFlow extends Flow implements IDraggable, IViewport {
 

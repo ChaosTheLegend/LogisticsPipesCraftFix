@@ -24,7 +24,11 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
     private final IItemHandlerModifiable supplyInventory;
 
     public ModuleActiveSupplierMuiDynamic(ModuleActiveSupplier module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleActiveSupplierMuiDynamic(ModuleActiveSupplier module, String prefix) {
+        super(module, prefix);
         supplyInventory = new InvWrapper(module.getDummyInventory());
     }
 
@@ -53,8 +57,13 @@ public class ModuleActiveSupplierMuiDynamic extends GenericModuleMUI<ModuleActiv
 
         widget.child(
                 new Flow(GuiAxis.Y).fullWidth().coverChildrenHeight().left(9).right(9).top(4).childPadding(4)
-                        .child(new TextWidget<>("Items to keep stocked").leftRel(Alignment.START.x).anchorLeft(Alignment.START.x))
-                        .child(buildSupplySlots(syncManager).coverChildren().leftRel(Alignment.CENTER.x).anchorLeft(Alignment.CENTER.x)).child(
+                        .child(
+                                new TextWidget<>("Items to keep stocked").leftRel(Alignment.START.x)
+                                        .anchorLeft(Alignment.START.x))
+                        .child(
+                                buildSupplySlots(syncManager).coverChildren().leftRel(Alignment.CENTER.x)
+                                        .anchorLeft(Alignment.CENTER.x))
+                        .child(
                                 new CycleButtonWidget().width(120).height(16).value(supplyModeSync)
                                         .overlay(IKey.lang(() -> switch (module.getSupplyMode()) {
                                         case Partial -> "Request mode: Partial";

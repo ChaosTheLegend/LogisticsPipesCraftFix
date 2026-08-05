@@ -25,7 +25,11 @@ public class ModuleItemSinkMuiDynamic extends GenericModuleMUI<ModuleItemSink> {
     private final IItemHandlerModifiable filterInventory;
 
     public ModuleItemSinkMuiDynamic(ModuleItemSink module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleItemSinkMuiDynamic(ModuleItemSink module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
 

@@ -21,7 +21,11 @@ public class ModuleEnchantmentSinkMK2MuiDynamic extends GenericModuleMUI<ModuleE
     private final IItemHandlerModifiable filterInventory;
 
     public ModuleEnchantmentSinkMK2MuiDynamic(ModuleEnchantmentSinkMK2 module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleEnchantmentSinkMK2MuiDynamic(ModuleEnchantmentSinkMK2 module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
 

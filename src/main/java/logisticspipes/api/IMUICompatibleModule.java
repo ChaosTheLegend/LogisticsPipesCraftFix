@@ -17,4 +17,8 @@ public interface IMUICompatibleModule {
 
     public LogisticsModularUI getPipeGui();
 
+    default LogisticsModularUI getPipeGui(String prefix) {
+        return getPipeGui();
+    }
+
 }

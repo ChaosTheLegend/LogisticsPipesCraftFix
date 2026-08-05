@@ -221,4 +221,9 @@ public class ModulePassiveSupplier extends LogisticsSimpleFilterModule
     public LogisticsModularUI getPipeGui() {
         return new ModulePassiveSupplierMuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModulePassiveSupplierMuiDynamic(this, prefix);
+    }
 }

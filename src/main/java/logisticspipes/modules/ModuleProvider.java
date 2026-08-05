@@ -596,4 +596,9 @@ public class ModuleProvider extends LogisticsSneakyDirectionModule
     public LogisticsModularUI getPipeGui() {
         return new ModuleProviderMuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleProviderMuiDynamic(this, prefix);
+    }
 }

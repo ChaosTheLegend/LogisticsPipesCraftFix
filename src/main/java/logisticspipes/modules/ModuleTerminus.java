@@ -213,4 +213,9 @@ public class ModuleTerminus extends LogisticsSimpleFilterModule
     public LogisticsModularUI getPipeGui() {
         return new ModuleTerminusMuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleTerminusMuiDynamic(this, prefix);
+    }
 }

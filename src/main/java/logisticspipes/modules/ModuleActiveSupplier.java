@@ -194,6 +194,11 @@ public class ModuleActiveSupplier extends LogisticsGuiModule
         return new ModuleActiveSupplierMuiDynamic(this);
     }
 
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleActiveSupplierMuiDynamic(this, prefix);
+    }
+
     public enum SupplyMode {
         Partial,
         Full,

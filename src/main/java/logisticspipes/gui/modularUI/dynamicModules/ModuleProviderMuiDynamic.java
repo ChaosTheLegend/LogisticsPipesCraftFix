@@ -23,7 +23,11 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
     private final IItemHandlerModifiable filterInventory;
 
     public ModuleProviderMuiDynamic(ModuleProvider module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleProviderMuiDynamic(ModuleProvider module, String prefix) {
+        super(module, prefix);
 
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
@@ -44,8 +48,7 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
                 () -> new EnumSyncValue<>(
                         ExtractionMode.class,
                         module::getExtractionMode,
-                        i -> module.setExtractionMode(i.ordinal()))
-                    .allowC2S());
+                        i -> module.setExtractionMode(i.ordinal())).allowC2S());
         BooleanSyncValue excludeFilterSync = syncManager.getOrCreateSyncHandler(
                 getFullId() + "_exclude_filter",
                 BooleanSyncValue.class,
@@ -107,15 +110,17 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
 
         widget.child(
                 new Flow(GuiAxis.Y).coverChildrenHeight().fullWidth().childPadding(4)
-                        .child(new TextWidget<>("Filter items").left(4).height(10).top(4))
+                        .child(
+                                new TextWidget<>("Filter items").left(4).height(10).top(4))
                         .child(
                                 new CycleButtonWidget()
                                         .value(
-                                                SyncHandlers.enumValue(
-                                                        ExtractionMode.class,
-                                                        moduleProvider::getExtractionMode,
-                                                        i -> moduleProvider.setExtractionMode(i.ordinal()))
-                                                    .allowC2S())
+                                                SyncHandlers
+                                                        .enumValue(
+                                                                ExtractionMode.class,
+                                                                moduleProvider::getExtractionMode,
+                                                                i -> moduleProvider.setExtractionMode(i.ordinal()))
+                                                        .allowC2S())
                                         .overlay(IKey.lang(() -> switch (moduleProvider.getExtractionMode()) {
                                         case Normal -> "Mode: Normal";
                                         case LeaveFirst -> "Mode: Leave first";
@@ -129,8 +134,7 @@ public class ModuleProviderMuiDynamic extends GenericModuleMUI<ModuleProvider> {
                                         .value(
                                                 SyncHandlers.bool(
                                                         moduleProvider::isExcludeFilter,
-                                                        moduleProvider::setFilterExcluded)
-                                                    .allowC2S())
+                                                        moduleProvider::setFilterExcluded).allowC2S())
                                         .overlay(
                                                 IKey.lang(
                                                         () -> !moduleProvider.isExcludeFilter() ? "Whitelist"

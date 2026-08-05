@@ -62,11 +62,9 @@ public class PipeGuiFactory {
                 .child(
                         SlotGroupWidget.builder().row("I").row("I").row("I").row("I").key(
                                 'I',
-                                i -> new ItemSlot()
-                                        .slot(
-                                                new ModularSlot(upgradeHandler, i).slotGroup("upgrade_inventory")
-                                                        .filter(PipeGuiFactory::isUpgradeItem)
-                                                        .accessibility(true, true))
+                                i -> new ItemSlot().slot(
+                                        new ModularSlot(upgradeHandler, i).slotGroup("upgrade_inventory")
+                                                .filter(PipeGuiFactory::isUpgradeItem).accessibility(true, true))
                                         .background(UITexture.fullImage(UpgradeSlotTexture)))
                                 .build())
                 .padding(4).coverChildrenHeight();
@@ -78,15 +76,13 @@ public class PipeGuiFactory {
         var column = new DraggableFlow(GuiAxis.Y).background(ModularUIHelper.BACKGROUND_TEXTURE).width(24)
                 .child(dragHandle())
                 .child(
-                        SlotGroupWidget.builder().row("I").row("I").row("I").row("I")
-                                .key(
-                                        'I',
-                                        i -> new ItemSlot()
-                                                .slot(
-                                                        new ModularSlot(upgradeHandler, i)
-                                                                .filter(PipeGuiFactory::isUpgradeItem)
-                                                                .accessibility(true, true))
-                                                .background(UITexture.fullImage(UpgradeSlotTexture)))
+                        SlotGroupWidget.builder().row("I").row("I").row("I").row("I").key(
+                                'I',
+                                i -> new ItemSlot()
+                                        .slot(
+                                                new ModularSlot(upgradeHandler, i).filter(PipeGuiFactory::isUpgradeItem)
+                                                        .accessibility(true, true))
+                                        .background(UITexture.fullImage(UpgradeSlotTexture)))
                                 .build())
                 .padding(4).coverChildrenHeight();
 

@@ -617,6 +617,11 @@ public abstract class PipeLogisticsChassi extends CoreRoutedPipe
     }
 
     @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ChassisGui(this);
+    }
+
+    @Override
     public void setTile(TileEntity tile) {
         super.setTile(tile);
         for (int i = 0; i < _moduleInventory.getSizeInventory(); i++) {
@@ -788,11 +793,6 @@ public abstract class PipeLogisticsChassi extends CoreRoutedPipe
         // probably not needed, the chasi order manager handles the count, would need to store origin to specifically
         // know this.
         return 0;
-    }
-
-    @Override
-    public LogisticsModularUI getPipeGui() {
-        return new ChassisGui(this);
     }
 
     public static class ChassiTargetInformation implements IAdditionalTargetInformation {

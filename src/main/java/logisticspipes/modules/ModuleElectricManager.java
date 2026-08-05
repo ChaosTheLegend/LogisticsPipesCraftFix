@@ -328,4 +328,9 @@ public class ModuleElectricManager extends LogisticsGuiModule implements IClient
     public LogisticsModularUI getPipeGui() {
         return new ModuleElectricManagerMuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleElectricManagerMuiDynamic(this, prefix);
+    }
 }

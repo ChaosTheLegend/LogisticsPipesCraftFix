@@ -21,7 +21,11 @@ public class ModulePassiveSupplierMuiDynamic extends GenericModuleMUI<ModulePass
     private final IItemHandlerModifiable filterInventory;
 
     public ModulePassiveSupplierMuiDynamic(ModulePassiveSupplier module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModulePassiveSupplierMuiDynamic(ModulePassiveSupplier module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
 

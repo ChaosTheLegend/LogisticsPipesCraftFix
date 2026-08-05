@@ -13,7 +13,11 @@ import logisticspipes.modules.ModuleApiaristAnalyser;
 public class ModuleBeeAnalyzerMuiDynamic extends GenericModuleMUI<ModuleApiaristAnalyser> {
 
     public ModuleBeeAnalyzerMuiDynamic(ModuleApiaristAnalyser module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleBeeAnalyzerMuiDynamic(ModuleApiaristAnalyser module, String prefix) {
+        super(module, prefix);
     }
 
     @Override

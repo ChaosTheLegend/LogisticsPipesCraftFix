@@ -24,7 +24,11 @@ public class ModuleElectricManagerMuiDynamic extends GenericModuleMUI<ModuleElec
     private final IItemHandlerModifiable filterInventory;
 
     public ModuleElectricManagerMuiDynamic(ModuleElectricManager module) {
-        super(module);
+        this(module, "");
+    }
+
+    public ModuleElectricManagerMuiDynamic(ModuleElectricManager module, String prefix) {
+        super(module, prefix);
         filterInventory = new InvWrapper(module.getFilterInventory());
     }
 
@@ -50,8 +54,7 @@ public class ModuleElectricManagerMuiDynamic extends GenericModuleMUI<ModuleElec
                         .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Electric items"))
                         .child(buildFilterSlots(syncManager)).child(
                                 new CycleButtonWidget().width(86).height(20).leftRel(Alignment.END.x)
-                                        .anchorLeft(Alignment.END.x)
-                                        .value(dischargeModeSync).overlay(
+                                        .anchorLeft(Alignment.END.x).value(dischargeModeSync).overlay(
                                                 IKey.lang(
                                                         () -> module.isDischargeMode() ? "Discharge items"
                                                                 : "Charge items"))));

@@ -223,4 +223,9 @@ public class ModuleEnchantmentSinkMK2 extends LogisticsSimpleFilterModule
     public LogisticsModularUI getPipeGui() {
         return new ModuleEnchantmentSinkMK2MuiDynamic(this);
     }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleEnchantmentSinkMK2MuiDynamic(this, prefix);
+    }
 }
