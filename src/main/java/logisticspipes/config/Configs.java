@@ -56,6 +56,10 @@ public class Configs {
 
     public static boolean OPAQUE = false;
 
+    public static boolean TELEPORTING_ITEMS = false;
+
+    public static int TELEPORT_TICKS_PER_PIPE = 5;
+
     public static int MAX_ROBOT_DISTANCE = 64;
 
     public static int MAX_LOGISTICS_FLUID_TRANSPORT_INNER_CAPACITY = 10000;
@@ -248,6 +252,24 @@ public class Configs {
         Configs.OPAQUE = Configs.CONFIGURATION
                 .get(Configuration.CATEGORY_GENERAL, "OpaquePipes", Configs.OPAQUE, "Render every LP pipe opaque.")
                 .getBoolean(false);
+
+        Configs.TELEPORTING_ITEMS = Configs.CONFIGURATION
+            .get(
+                Configuration.CATEGORY_GENERAL,
+                "TeleportingItems",
+                Configs.TELEPORTING_ITEMS,
+                "Instead of spawning traveling item entities that move through pipes tick by tick, "
+                    + "teleport items directly to the next pipe after a delay based on distance. "
+                    + "Disables item rendering entirely and is meant as a lower-lag alternative to Opaque upgrades.")
+            .getBoolean(true);
+
+        Configs.TELEPORT_TICKS_PER_PIPE = Configs.CONFIGURATION
+                .get(
+                        Configuration.CATEGORY_GENERAL,
+                        "TeleportTicksPerPipe",
+                        Configs.TELEPORT_TICKS_PER_PIPE,
+                        "When TeleportingItems is enabled, the number of ticks an item takes to teleport across one pipe segment.")
+                .getInt(5);
 
         Configs.EASTER_EGGS = Configs.CONFIGURATION
                 .get(Configuration.CATEGORY_GENERAL, "easterEggs", Configs.EASTER_EGGS, "Do you fancy easter eggs?")

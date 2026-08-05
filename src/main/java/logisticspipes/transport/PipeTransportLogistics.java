@@ -772,7 +772,7 @@ public class PipeTransportLogistics {
         }
     }
 
-    private void dropItem(LPTravelingItemServer item) {
+    protected void dropItem(LPTravelingItemServer item) {
         if (container.getWorldObj().isRemote) {
             return;
         }

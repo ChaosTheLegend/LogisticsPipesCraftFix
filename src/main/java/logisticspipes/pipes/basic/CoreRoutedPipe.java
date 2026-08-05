@@ -110,6 +110,7 @@ import logisticspipes.textures.Textures;
 import logisticspipes.textures.Textures.TextureType;
 import logisticspipes.transport.LPTravelingItem.LPTravelingItemServer;
 import logisticspipes.transport.PipeTransportLogistics;
+import logisticspipes.transport.PipeTransportLogisticsOpaque;
 import logisticspipes.utils.AdjacentTile;
 import logisticspipes.utils.CacheHolder;
 import logisticspipes.utils.FluidIdentifier;
@@ -204,7 +205,7 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
     private CacheHolder cacheHolder;
 
     public CoreRoutedPipe(Item item) {
-        this(new PipeTransportLogistics(true), item);
+        this(Configs.TELEPORTING_ITEMS ? new PipeTransportLogisticsOpaque(true) : new PipeTransportLogistics(true), item);
     }
 
     public CoreRoutedPipe(PipeTransportLogistics transport, Item item) {
@@ -1905,9 +1906,9 @@ public abstract class CoreRoutedPipe extends CoreUnroutedPipe
     @Override
     public boolean isOpaque() {
         if (MainProxy.isClient(getWorld())) {
-            return Configs.OPAQUE || isOpaqueClientSide;
+            return Configs.OPAQUE || Configs.TELEPORTING_ITEMS || isOpaqueClientSide;
         } else {
-            return Configs.OPAQUE || this.getUpgradeManager().isOpaque();
+            return Configs.OPAQUE || Configs.TELEPORTING_ITEMS || this.getUpgradeManager().isOpaque();
         }
     }
 

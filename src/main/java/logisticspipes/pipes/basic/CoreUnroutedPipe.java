@@ -310,7 +310,7 @@ public abstract class CoreUnroutedPipe implements IClientState, ILPPipe, ILPCCTy
     public void addStatusInformation(List<StatusEntry> status) {}
 
     public boolean isOpaque() {
-        return Configs.OPAQUE;
+        return Configs.OPAQUE || Configs.TELEPORTING_ITEMS;
     }
 
     @Override
