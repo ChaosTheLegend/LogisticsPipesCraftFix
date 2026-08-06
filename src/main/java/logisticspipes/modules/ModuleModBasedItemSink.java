@@ -41,8 +41,8 @@ import logisticspipes.utils.SinkReply.FixedPriority;
 import logisticspipes.utils.item.ItemIdentifier;
 import logisticspipes.utils.item.ItemIdentifierInventory;
 
-public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStringBasedModule,
-        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IMUICompatibleModule {
+public class ModuleModBasedItemSink extends LogisticsGuiModule implements
+        IClientInformationProvider, IModuleWatchReciver, IMUICompatibleModule {
 
     public static final int MAX_ENTRIES = 9;
 
@@ -51,8 +51,6 @@ public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStrin
 
     // scratch, single-slot inventory used only by the MUI to identify an item's owning mod - never persisted
     private final ItemIdentifierInventory analyseInventory = new ItemIdentifierInventory(1, "Analyse Slot", 1);
-
-    private final IHUDModuleRenderer HUD = new HUDStringBasedItemSink(this);
 
     private final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
 
@@ -139,16 +137,6 @@ public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStrin
     }
 
     @Override
-    public void startHUDWatching() {
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(HUDStartModuleWatchingPacket.class).setModulePos(this));
-    }
-
-    @Override
-    public void stopHUDWatching() {
-        MainProxy.sendPacketToServer(PacketHandler.getPacket(HUDStopModuleWatchingPacket.class).setModulePos(this));
-    }
-
-    @Override
     public void startWatching(EntityPlayer player) {
         localModeWatchers.add(player);
         NBTTagCompound nbt = new NBTTagCompound();
@@ -161,27 +149,6 @@ public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStrin
     @Override
     public void stopWatching(EntityPlayer player) {
         localModeWatchers.remove(player);
-    }
-
-    @Override
-    public void listChanged() {
-        if (MainProxy.isServer(_world.getWorld())) {
-            NBTTagCompound nbt = new NBTTagCompound();
-            writeToNBT(nbt);
-            MainProxy.sendToPlayerList(
-                    PacketHandler.getPacket(ItemSinkListPacket.class).setNbt(nbt).setModulePos(this),
-                    localModeWatchers);
-        } else {
-            NBTTagCompound nbt = new NBTTagCompound();
-            writeToNBT(nbt);
-            MainProxy.sendPacketToServer(
-                    PacketHandler.getPacket(ItemSinkListPacket.class).setNbt(nbt).setModulePos(this));
-        }
-    }
-
-    @Override
-    public IHUDModuleRenderer getHUDRenderer() {
-        return HUD;
     }
 
     @Override
@@ -215,36 +182,20 @@ public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStrin
         return register.registerIcon("logisticspipes:itemModule/ModuleModBasedItemSink");
     }
 
-    @Override
-    public List<String> getStringList() {
-        return modList;
-    }
-
-    @Override
-    public String getStringForItem(ItemIdentifier ident) {
-        return ident.getModName();
-    }
-
     public ItemIdentifierInventory getAnalyseInventory() {
         return analyseInventory;
     }
 
-    public void addMod(ItemIdentifier ident) {
-        if (ident == null) {
-            return;
-        }
-        String mod = getStringForItem(ident);
+    public void addMod(String mod) {
         if (!modList.contains(mod) && modList.size() < MAX_ENTRIES) {
             modList.add(mod);
             buildModIdSet();
-            listChanged();
         }
     }
 
     public void removeMod(String mod) {
         if (modList.remove(mod)) {
             buildModIdSet();
-            listChanged();
         }
     }
 

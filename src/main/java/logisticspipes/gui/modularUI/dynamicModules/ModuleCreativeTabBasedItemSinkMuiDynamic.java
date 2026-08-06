@@ -26,26 +26,26 @@ import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.cleanroommc.modularui.widgets.slot.PhantomItemSlot;
 
 import logisticspipes.gui.modularUI.GenericModuleMUI;
-import logisticspipes.modules.ModuleModBasedItemSink;
+import logisticspipes.modules.ModuleCreativeTabBasedItemSink;
 import logisticspipes.utils.item.ItemIdentifier;
 
-public class ModuleModBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleModBasedItemSink> {
+public class ModuleCreativeTabBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleCreativeTabBasedItemSink> {
 
     private final IItemHandlerModifiable analyseInventory;
-    private GenericListSyncHandler<String> modListSync;
+    private GenericListSyncHandler<String> tabListSync;
 
-    public ModuleModBasedItemSinkMuiDynamic(ModuleModBasedItemSink module) {
+    public ModuleCreativeTabBasedItemSinkMuiDynamic(ModuleCreativeTabBasedItemSink module) {
         this(module, "");
     }
 
-    public ModuleModBasedItemSinkMuiDynamic(ModuleModBasedItemSink module, String prefix) {
+    public ModuleCreativeTabBasedItemSinkMuiDynamic(ModuleCreativeTabBasedItemSink module, String prefix) {
         super(module, prefix);
         analyseInventory = new InvWrapper(module.getAnalyseInventory());
     }
 
     @Override
     public String getId() {
-        return "module_mod_based_item_sink";
+        return "module_creative_tab_based_item_sink";
     }
 
     @Override
@@ -55,7 +55,7 @@ public class ModuleModBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleMod
 
         widget.child(
                 new Flow(GuiAxis.Y).coverChildren().left(9).top(4).childPadding(3)
-                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Mod name sink"))
+                        .crossAxisAlignment(Alignment.CrossAxis.START).child(new TextWidget<>("Creative tab sink"))
                         .child(buildAnalyseRow(syncManager))
                         .child(buildEntryList(syncManager))
         );
@@ -91,43 +91,43 @@ public class ModuleModBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleMod
         }
         addSyncHandler.setOnMousePressed(i -> {
             if (i.mouseButton != 0) return;
-            module.addMod(getPhantomModName());
+            module.addTab(getPhantomTabName());
         });
 
         return Flow.row().fullWidth().coverChildrenHeight().childPadding(4)
             .child(slotWidget)
-            .child(new TextWidget<>(IKey.dynamic(this::getPhantomModName)).expanded())
+            .child(new TextWidget<>(IKey.dynamic(this::getPhantomTabName)).expanded())
             .child(
                 new ButtonWidget<>().syncHandler(addSyncHandler).overlay(IKey.lang("Add")).width(40).height(16));
     }
 
-    private String getPhantomModName(){
+    private String getPhantomTabName(){
         var stack = analyseInventory.getStackInSlot(0);
         if(stack == null) return "";
 
-        return ItemIdentifier.get(stack).getModName();
+        return ItemIdentifier.get(stack).getCreativeTabName();
     }
 
     private ListWidget<IWidget, ?> buildEntryList(PanelSyncManager syncManager) {
         String id = getFullId();
 
         if (syncManager != null) {
-            modListSync = syncManager.getOrCreateSyncHandler(
-                    id + "_modlist",
+            tabListSync = syncManager.getOrCreateSyncHandler(
+                    id + "_tablist",
                     0,
                     GenericListSyncHandler.class,
-                    () -> GenericListSyncHandler.<String>builder().getter(() -> module.modList).setter(v -> {
-                        module.modList.clear();
-                        module.modList.addAll(v);
+                    () -> GenericListSyncHandler.<String>builder().getter(() -> module.tabList).setter(v -> {
+                        module.tabList.clear();
+                        module.tabList.addAll(v);
                     }).serializer(NetworkUtils::writeStringSafe).deserializer(NetworkUtils::readStringSafe)
                             .immutableCopy().build());
-            if (!syncManager.isClient() && modListSync.isValid()) {
-                modListSync.notifyUpdate();
+            if (!syncManager.isClient() && tabListSync.isValid()) {
+                tabListSync.notifyUpdate();
             }
         }
 
         ListWidget<IWidget, ?> list = new ListWidget<>().width(160).height(56);
-        for (int i = 0; i < ModuleModBasedItemSink.MAX_ENTRIES; i++) {
+        for (int i = 0; i < ModuleCreativeTabBasedItemSink.MAX_ENTRIES; i++) {
             int idx = i;
             InteractionSyncHandler removeSyncHandler = syncManager != null
                     ? syncManager.getOrCreateSyncHandler(
@@ -138,8 +138,8 @@ public class ModuleModBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleMod
                     : new InteractionSyncHandler();
             removeSyncHandler.setOnMousePressed(btn -> {
                 if (btn.mouseButton != 0) return;
-                String mod = entryAt(idx);
-                if (!mod.isEmpty()) module.removeMod(mod);
+                String tab = entryAt(idx);
+                if (!tab.isEmpty()) module.removeTab(tab);
             });
             list.child(
                     Flow.row().coverChildren()
@@ -154,7 +154,7 @@ public class ModuleModBasedItemSinkMuiDynamic extends GenericModuleMUI<ModuleMod
     }
 
     private String entryAt(int idx) {
-        List<String> source = modListSync != null ? modListSync.getValue() : module.modList;
+        List<String> source = tabListSync != null ? tabListSync.getValue() : module.tabList;
         return idx < source.size() ? source.get(idx) : "";
     }
 
