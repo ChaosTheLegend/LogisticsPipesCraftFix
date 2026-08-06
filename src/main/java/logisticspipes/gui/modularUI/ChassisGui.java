@@ -234,18 +234,8 @@ public class ChassisGui extends LogisticsModularUI {
     private ParentWidget buildModuleWidget(PanelSyncManager innerSyncManager, int slot) {
         ParentWidget widget = addModuleUI(new Flow(GuiAxis.X).fullWidth().height(100), innerSyncManager, slot);
 
-        // sync handlers created via this dynamic rebuild path never get PanelSyncManager's one-time "first
-        // sync" push - that only covers handlers registered during the panel's original, synchronous build.
-        // A freshly-created handler's cache starts out already matching its own local getter (trivially true
-        // at construction), so the server never detects a "change" to push on its own, leaving the client
-        // stuck on whatever its own local module held at construction (often blank/default) for the rest of
-        // the session. Force every handler in the freshly-built tree to push its current value once, right
-        // now - server side only, since doing this on the client would send its own (possibly stale) values
-        // up and overwrite the server's authoritative state.
+        // Force widget updafe for the inner panel since without it, game doesn't load fresh data
         if (!innerSyncManager.isClient()) {
-            // explicit <IWidget> type witness is required: without it, javac infers T from `widget`'s
-            // static type (ParentWidget), and the traversal's internal cast of every descendant to T then
-            // throws ClassCastException on the first non-ParentWidget child (e.g. a TextWidget)
             WidgetTree.<IWidget>foreachChildBFS(widget, w -> {
                 if (w instanceof ISynced<?>synced && synced.isSynced()) {
                     SyncHandler<?> handler = synced.getSyncHandler();

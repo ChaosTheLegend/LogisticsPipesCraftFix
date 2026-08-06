@@ -13,7 +13,10 @@ import net.minecraft.util.IIcon;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import logisticspipes.api.IMUICompatibleModule;
 import logisticspipes.gui.hud.modules.HUDStringBasedItemSink;
+import logisticspipes.gui.modularUI.LogisticsModularUI;
+import logisticspipes.gui.modularUI.dynamicModules.ModuleModBasedItemSinkMuiDynamic;
 import logisticspipes.interfaces.IClientInformationProvider;
 import logisticspipes.interfaces.IHUDModuleHandler;
 import logisticspipes.interfaces.IHUDModuleRenderer;
@@ -36,12 +39,18 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.SinkReply;
 import logisticspipes.utils.SinkReply.FixedPriority;
 import logisticspipes.utils.item.ItemIdentifier;
+import logisticspipes.utils.item.ItemIdentifierInventory;
 
-public class ModuleModBasedItemSink extends LogisticsGuiModule
-        implements IStringBasedModule, IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver {
+public class ModuleModBasedItemSink extends LogisticsGuiModule implements IStringBasedModule,
+        IClientInformationProvider, IHUDModuleHandler, IModuleWatchReciver, IMUICompatibleModule {
+
+    public static final int MAX_ENTRIES = 9;
 
     public final List<String> modList = new LinkedList<>();
     private final Set<String> modIdSet = new HashSet<>();
+
+    // scratch, single-slot inventory used only by the MUI to identify an item's owning mod - never persisted
+    private final ItemIdentifierInventory analyseInventory = new ItemIdentifierInventory(1, "Analyse Slot", 1);
 
     private final IHUDModuleRenderer HUD = new HUDStringBasedItemSink(this);
 
@@ -214,5 +223,43 @@ public class ModuleModBasedItemSink extends LogisticsGuiModule
     @Override
     public String getStringForItem(ItemIdentifier ident) {
         return ident.getModName();
+    }
+
+    public ItemIdentifierInventory getAnalyseInventory() {
+        return analyseInventory;
+    }
+
+    public void addMod(ItemIdentifier ident) {
+        if (ident == null) {
+            return;
+        }
+        String mod = getStringForItem(ident);
+        if (!modList.contains(mod) && modList.size() < MAX_ENTRIES) {
+            modList.add(mod);
+            buildModIdSet();
+            listChanged();
+        }
+    }
+
+    public void removeMod(String mod) {
+        if (modList.remove(mod)) {
+            buildModIdSet();
+            listChanged();
+        }
+    }
+
+    @Override
+    public LogisticsModularUI getHandGui() {
+        return new ModuleModBasedItemSinkMuiDynamic(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui() {
+        return new ModuleModBasedItemSinkMuiDynamic(this);
+    }
+
+    @Override
+    public LogisticsModularUI getPipeGui(String prefix) {
+        return new ModuleModBasedItemSinkMuiDynamic(this, prefix);
     }
 }
